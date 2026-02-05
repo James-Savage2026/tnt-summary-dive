@@ -188,11 +188,27 @@
 
         <!-- Charts Row -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <!-- Trend Chart -->
-            <div class="bg-white rounded-lg shadow p-4">
-                <h2 class="text-lg font-semibold text-gray-800 mb-4" id="trendChartTitle">TnT % Trend (Weekly)</h2>
-                <div style="height: 300px;">
-                    <canvas id="trendChart"></canvas>
+            <!-- Bottom 10 Stores -->
+            <div class="bg-white rounded-lg shadow p-4 border-l-4 border-red-500">
+                <h2 class="text-lg font-semibold text-red-600 mb-4 flex items-center">
+                    <span class="mr-2">⚠️</span> <span id="bottom10Title">Bottom 10 Stores - Needs Attention</span>
+                </h2>
+                <div class="overflow-x-auto" style="max-height: 280px; overflow-y: auto;">
+                    <table class="min-w-full text-sm">
+                        <thead class="bg-red-50 sticky top-0">
+                            <tr>
+                                <th class="px-2 py-2 text-left text-xs font-medium text-gray-600">Store</th>
+                                <th class="px-2 py-2 text-left text-xs font-medium text-gray-600">Banner</th>
+                                <th class="px-2 py-2 text-center text-xs font-medium text-gray-600">30d TnT</th>
+                                <th class="px-2 py-2 text-center text-xs font-medium text-gray-600">HVAC</th>
+                                <th class="px-2 py-2 text-center text-xs font-medium text-gray-600">Loss</th>
+                                <th class="px-2 py-2 text-center text-xs font-medium text-gray-600">Link</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bottom10Body" class="divide-y divide-gray-100">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
             <!-- Dynamic Breakdown Chart -->
@@ -246,19 +262,14 @@
         
         // Global data
         let storeData = [];
-        let trendData = [];
         let filteredData = [];
-        let filteredTrendData = [];
         let currentSort = { field: 'twt_ref_30_day', direction: 'desc' };
-        let trendChart, breakdownChart;
+        let breakdownChart;
 
         // Load data
         async function loadData() {
             try {
-                const [storeRes, trendRes] = await Promise.all([
-                    fetch('store_data.json'),
-                    fetch('trend_data.json')
-                ]);
+                const storeRes = await fetch('store_data.json');
                 storeData = (await storeRes.json()).map(d => ({
                     ...d,
                     store_number: d.store_number,
@@ -275,18 +286,7 @@
                     cases_out_of_target: parseInt(d.cases_out_of_target) || 0,
                     total_loss: parseFloat(d.total_loss) || 0
                 }));
-                trendData = (await trendRes.json()).map(d => ({
-                    ...d,
-                    avg_weekly_tit: parseFloat(d.avg_weekly_tit) || null,
-                    avg_monthly_tit: parseFloat(d.avg_monthly_tit) || null,
-                    wmt_year_nbr: parseInt(d.wmt_year_nbr),
-                    wmt_week_nbr: parseInt(d.wmt_week_nbr),
-                    fm_sr_director: d.fm_sr_director,
-                    fm_director: d.fm_director,
-                    fm_regional_mgr: d.fm_regional_mgr
-                }));
                 filteredData = [...storeData];
-                filteredTrendData = [...trendData];
                 
                 document.getElementById('lastUpdated').textContent = new Date().toLocaleDateString();
                 
@@ -418,22 +418,6 @@
                 if (mgr && d.fm_regional_manager_name !== mgr) return false;
                 if (fsMgr && d.fs_manager_name !== fsMgr) return false;
                 if (mkt && d.fs_market !== mkt) return false;
-                return true;
-            });
-
-            // Filter trend data (case-insensitive matching since trend data is UPPERCASE)
-            const srDirUpper = srDir ? srDir.toUpperCase() : '';
-            const dirUpper = dir ? dir.toUpperCase() : '';
-            const mgrUpper = mgr ? mgr.toUpperCase() : '';
-            
-            filteredTrendData = trendData.filter(d => {
-                const trendSrDir = (d.fm_sr_director || '').toUpperCase();
-                const trendDir = (d.fm_director || '').toUpperCase();
-                const trendMgr = (d.fm_regional_mgr || '').toUpperCase();
-                
-                if (srDirUpper && trendSrDir !== srDirUpper) return false;
-                if (dirUpper && trendDir !== dirUpper) return false;
-                if (mgrUpper && trendMgr !== mgrUpper) return false;
                 return true;
             });
 
@@ -652,84 +636,43 @@
 
         // Charts
         function updateCharts() {
-            updateTrendChart();
+            updateBottom10Stores();
             updateBreakdownChart();
         }
-
-        function updateTrendChart() {
-            const srDir = document.getElementById('filterSrDirector').value;
-            const dir = document.getElementById('filterDirector').value;
-            const mgr = document.getElementById('filterManager').value;
-            let titleSuffix = '';
-            if (mgr) titleSuffix = ` - ${mgr}`;
-            else if (dir) titleSuffix = ` - ${dir}`;
-            else if (srDir) titleSuffix = ` - ${srDir}`;
-            document.getElementById('trendChartTitle').textContent = `TnT % Trend (FY26 Latest)${titleSuffix}`;
-
-            // Aggregate trend data by week - wmt_week_nbr is in format YYYYWW (e.g., 202501)
-            const weekMap = new Map();
-            filteredTrendData.forEach(d => {
-                // wmt_week_nbr is like 202501, 202502, etc.
-                const weekNum = parseInt(d.wmt_week_nbr) || 0;
-                if (weekNum === 0) return;
-                
-                const year = Math.floor(weekNum / 100);
-                const week = weekNum % 100;
-                const key = weekNum; // Use numeric for sorting
-                const label = `W${week} '${String(year).slice(-2)}`; // e.g., "W01 '25"
-                
-                if (!weekMap.has(key)) {
-                    weekMap.set(key, {
-                        label: label,
-                        weekly_sum: 0, weekly_count: 0,
-                        monthly_sum: 0, monthly_count: 0
-                    });
-                }
-                const w = weekMap.get(key);
-                if (d.avg_weekly_tit != null) { w.weekly_sum += d.avg_weekly_tit; w.weekly_count++; }
-                if (d.avg_monthly_tit != null) { w.monthly_sum += d.avg_monthly_tit; w.monthly_count++; }
-            });
-
-            const weeks = Array.from(weekMap.entries())
-                .map(([key, w]) => ({
-                    sortKey: key,
-                    label: w.label,
-                    weekly: w.weekly_count ? w.weekly_sum / w.weekly_count : null
-                }))
-                .sort((a, b) => a.sortKey - b.sortKey)
-                .slice(-11); // Last 11 weeks only
-
-            if (trendChart) trendChart.destroy();
-
-            const trendCtx = document.getElementById('trendChart').getContext('2d');
-            trendChart = new Chart(trendCtx, {
-                type: 'line',
-                data: {
-                    labels: weeks.map(d => d.label),
-                    datasets: [{
-                        label: 'Weekly TnT %',
-                        data: weeks.map(d => d.weekly),
-                        borderColor: '#0071ce',
-                        backgroundColor: 'rgba(0, 113, 206, 0.1)',
-                        fill: true,
-                        tension: 0.3,
-                        pointRadius: 4,
-                        pointBackgroundColor: '#0071ce'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom' },
-                        datalabels: { display: false }
-                    },
-                    scales: {
-                        y: { min: 80, max: 100, ticks: { callback: v => v + '%' } },
-                        x: { ticks: { maxRotation: 45, minRotation: 45 } }
-                    }
-                }
-            });
+        
+        // Bottom 10 Stores
+        function updateBottom10Stores() {
+            // Sort by worst 30-day TnT and take bottom 10
+            const bottom10 = [...filteredData]
+                .filter(d => d.twt_ref_30_day != null && !isNaN(d.twt_ref_30_day))
+                .sort((a, b) => (a.twt_ref_30_day || 0) - (b.twt_ref_30_day || 0))
+                .slice(0, 10);
+            
+            // Update title with context
+            const context = getFilterContext();
+            document.getElementById('bottom10Title').textContent = 
+                `Bottom 10 Stores - Needs Attention`;
+            
+            const tbody = document.getElementById('bottom10Body');
+            tbody.innerHTML = bottom10.map(store => `
+                <tr class="hover:bg-red-50">
+                    <td class="px-2 py-2 font-medium text-gray-900">${store.store_number}</td>
+                    <td class="px-2 py-2 text-gray-600 text-xs">${(store.banner_desc || '-').replace('WM ', '')}</td>
+                    <td class="px-2 py-2 text-center font-bold text-red-600">${formatPct(store.twt_ref_30_day)}</td>
+                    <td class="px-2 py-2 text-center ${getColorClass(store.twt_hvac_30_day)}">${formatPct(store.twt_hvac_30_day)}</td>
+                    <td class="px-2 py-2 text-center text-red-600">$${(store.total_loss || 0).toLocaleString(undefined, {maximumFractionDigits: 0})}</td>
+                    <td class="px-2 py-2 text-center">
+                        <a href="https://crystal.walmart.com/us/stores/search/${store.store_number}" target="_blank" 
+                           class="inline-flex items-center px-2 py-1 bg-walmart-blue text-white text-xs rounded hover:bg-walmart-dark">
+                            🔍
+                        </a>
+                    </td>
+                </tr>
+            `).join('');
+            
+            if (bottom10.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">No stores in current filter</td></tr>';
+            }
         }
 
         function updateBreakdownChart() {
