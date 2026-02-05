@@ -335,19 +335,34 @@
                             <p>Loading work orders...</p>
                         </div>
                         <div id="workOrdersContent" class="hidden">
-                            <div class="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3" id="woSummary">
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3" id="woSummary">
                                 <!-- WO summary stats -->
                             </div>
-                            <div class="overflow-x-auto" style="max-height: 200px; overflow-y: auto;">
+                            
+                            <!-- Filters Row -->
+                            <div class="flex flex-wrap gap-2 mb-2 items-center">
+                                <label class="text-xs text-gray-600">Filters:</label>
+                                <select id="woStatusFilter" class="text-xs border rounded px-2 py-1">
+                                    <option value="">All Status</option>
+                                </select>
+                                <select id="woPriorityFilter" class="text-xs border rounded px-2 py-1">
+                                    <option value="">All Priority</option>
+                                </select>
+                                <button id="woSortAge" class="text-xs bg-gray-200 hover:bg-gray-300 rounded px-2 py-1">
+                                    Sort by Age ↓
+                                </button>
+                                <span id="woFilterCount" class="text-xs text-gray-500 ml-auto"></span>
+                            </div>
+                            
+                            <div class="overflow-x-auto" style="max-height: 300px; overflow-y: auto;">
                                 <table class="min-w-full text-sm">
                                     <thead class="bg-gray-100 sticky top-0">
                                         <tr>
                                             <th class="px-2 py-2 text-left text-xs font-medium text-gray-600">Tracking #</th>
-                                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-600">Trade</th>
                                             <th class="px-2 py-2 text-left text-xs font-medium text-gray-600">Status</th>
                                             <th class="px-2 py-2 text-left text-xs font-medium text-gray-600">Priority</th>
-                                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-600">Age</th>
-                                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-600">Equipment</th>
+                                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-600 cursor-pointer hover:bg-gray-200" onclick="toggleWoSort()">Age ↕</th>
+                                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-600" style="min-width: 250px;">🤖 AI Analysis</th>
                                         </tr>
                                     </thead>
                                     <tbody id="woTableBody" class="divide-y divide-gray-100">
@@ -385,6 +400,8 @@
         let breakdownChart;
         let selectedBannerFilter = 'all'; // 'all', 'walmart', 'sams'
         let selectedStore = null;
+        let currentStoreWOs = [];
+        let woSortAsc = false; // false = descending (oldest first)
 
         // Load data
         async function loadData() {
@@ -865,12 +882,12 @@
             document.getElementById('workOrdersEmpty').classList.add('hidden');
             
             // Filter work orders for this store
-            const storeWOs = workOrderData.filter(wo => String(wo.store_nbr) === String(storeNum));
+            currentStoreWOs = workOrderData.filter(wo => String(wo.store_nbr) === String(storeNum));
             
             setTimeout(() => {
                 document.getElementById('workOrdersLoading').classList.add('hidden');
                 
-                if (storeWOs.length === 0) {
+                if (currentStoreWOs.length === 0) {
                     document.getElementById('workOrdersEmpty').classList.remove('hidden');
                     return;
                 }
@@ -878,10 +895,10 @@
                 document.getElementById('workOrdersContent').classList.remove('hidden');
                 
                 // Calculate summary stats
-                const totalWOs = storeWOs.length;
-                const hvacWOs = storeWOs.filter(wo => (wo.trade_group_name || '').toUpperCase().includes('HVAC')).length;
-                const refWOs = storeWOs.filter(wo => (wo.trade_group_name || '').toUpperCase().includes('REFRIG')).length;
-                const inProgressWOs = storeWOs.filter(wo => (wo.status_name || '').toUpperCase() === 'IN PROGRESS').length;
+                const totalWOs = currentStoreWOs.length;
+                const hvacWOs = currentStoreWOs.filter(wo => (wo.trade_group_name || '').toUpperCase().includes('HVAC')).length;
+                const refWOs = currentStoreWOs.filter(wo => (wo.trade_group_name || '').toUpperCase().includes('REFRIG')).length;
+                const inProgressWOs = currentStoreWOs.filter(wo => (wo.status_name || '').toUpperCase() === 'IN PROGRESS').length;
                 
                 document.getElementById('woSummary').innerHTML = `
                     <div class="text-center p-2 bg-gray-100 rounded">
@@ -902,28 +919,174 @@
                     </div>
                 `;
                 
-                // Populate WO table
-                const woTable = document.getElementById('woTableBody');
-                woTable.innerHTML = storeWOs
-                    .sort((a, b) => (parseInt(b.age_days) || 0) - (parseInt(a.age_days) || 0))
-                    .map(wo => {
-                        const age = parseInt(wo.age_days) || 0;
-                        const ageClass = age > 7 ? 'text-red-600 font-bold' : 
-                                        age > 3 ? 'text-yellow-600' : 'text-gray-600';
-                        const statusClass = (wo.status_name === 'Completed' || wo.status_name === 'Closed') ? 'text-green-600' :
-                                           wo.status_name === 'IN PROGRESS' ? 'text-blue-600' : 'text-orange-600';
-                        const tradeShort = (wo.trade_group_name || '-').replace('REFRIGERATION', 'REF').replace('HVAC', 'HVAC');
-                        return `
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-2 py-1 font-mono text-xs"><a href="https://www.servicechannel.com/sc/wo/Workorders/index?id=${wo.tracking_nbr}" target="_blank" class="text-walmart-blue hover:underline font-semibold">${wo.tracking_nbr || '-'}</a></td>
-                            <td class="px-2 py-1 text-gray-600 text-xs">${tradeShort}</td>
-                            <td class="px-2 py-1 text-xs font-medium ${statusClass}">${wo.status_name || '-'}</td>
-                            <td class="px-2 py-1 text-gray-600 text-xs">${(wo.priority_name || '-').substring(0, 12)}</td>
-                            <td class="px-2 py-1 ${ageClass} text-center">${age}d</td>
-                            <td class="px-2 py-1 text-gray-600 text-xs" title="${wo.equipment_desc || ''}">${(wo.equipment_desc || '-').substring(0, 18)}</td>
-                        </tr>
-                    `}).join('');
+                // Populate filter dropdowns
+                populateWoFilters(currentStoreWOs);
+                
+                // Render WO table
+                renderWoTable();
             }, 100);
+        }
+        
+        // Populate WO filter dropdowns
+        function populateWoFilters(wos) {
+            const statuses = [...new Set(wos.map(wo => wo.status_name).filter(Boolean))].sort();
+            const priorities = [...new Set(wos.map(wo => wo.priority_name).filter(Boolean))].sort();
+            
+            const statusSelect = document.getElementById('woStatusFilter');
+            statusSelect.innerHTML = '<option value="">All Status</option>' + 
+                statuses.map(s => `<option value="${s}">${s}</option>`).join('');
+            
+            const prioritySelect = document.getElementById('woPriorityFilter');
+            prioritySelect.innerHTML = '<option value="">All Priority</option>' + 
+                priorities.map(p => `<option value="${p}">${p.substring(0, 20)}</option>`).join('');
+        }
+        
+        // AI Analysis function - generates callouts based on WO data
+        function generateAIAnalysis(wo) {
+            const status = (wo.status_name || '').toUpperCase();
+            const priority = (wo.priority_name || '').toUpperCase();
+            const problem = (wo.problem_desc || '').toLowerCase();
+            const equipment = (wo.equipment_desc || '').toLowerCase();
+            const trade = (wo.trade_group_name || '').toUpperCase();
+            const age = parseInt(wo.age_days) || 0;
+            
+            let icon = '';
+            let callout = '';
+            let cssClass = 'text-gray-600';
+            
+            // Completed WOs - summarize what was done
+            if (status === 'COMPLETED' || status === 'CLOSED') {
+                icon = '✅';
+                cssClass = 'text-green-600';
+                // Extract key info from problem description
+                if (problem.includes('pm ') || problem.includes('preventive') || problem.includes('maintenance')) {
+                    callout = 'PM completed';
+                } else if (problem.includes('leak')) {
+                    callout = 'Leak repaired';
+                } else if (problem.includes('not cooling') || problem.includes('temp') || problem.includes('temperature')) {
+                    callout = 'Temp issue resolved';
+                } else if (problem.includes('ice') || problem.includes('frost')) {
+                    callout = 'Ice/frost issue fixed';
+                } else if (problem.includes('alarm')) {
+                    callout = 'Alarm addressed';
+                } else {
+                    callout = wo.problem_type_desc || 'Issue resolved';
+                }
+            } 
+            // In Progress - what needs attention
+            else if (status === 'IN PROGRESS') {
+                icon = '🔧';
+                cssClass = 'text-blue-600';
+                if (priority.includes('EMERGENCY') || priority.includes('P1')) {
+                    icon = '🚨';
+                    cssClass = 'text-red-600 font-bold';
+                    callout = 'URGENT: ';
+                }
+                // Determine the issue
+                if (problem.includes('not cooling') || problem.includes('warm') || problem.includes('high temp')) {
+                    callout += 'Unit not cooling - check compressor';
+                } else if (problem.includes('leak')) {
+                    callout += 'Leak detected - needs repair';
+                } else if (problem.includes('ice') || problem.includes('frost')) {
+                    callout += 'Ice buildup - defrost issue';
+                } else if (problem.includes('alarm')) {
+                    callout += 'Alarm triggered - investigate';
+                } else if (problem.includes('noise') || problem.includes('loud')) {
+                    callout += 'Unusual noise - motor/fan issue';
+                } else if (problem.includes('door') || problem.includes('seal')) {
+                    callout += 'Door/seal problem';
+                } else {
+                    callout += (wo.problem_type_desc || equipment || 'Repair in progress').substring(0, 30);
+                }
+                
+                // Add age warning
+                if (age > 7) {
+                    callout += ' ⚠️ AGING';
+                }
+            }
+            // Other statuses
+            else {
+                icon = '📋';
+                if (priority.includes('EMERGENCY') || priority.includes('P1')) {
+                    icon = '🚨';
+                    cssClass = 'text-red-600';
+                    callout = 'EMERGENCY: ';
+                } else if (priority.includes('P2') || priority.includes('URGENT')) {
+                    icon = '⚡';
+                    cssClass = 'text-orange-600';
+                    callout = 'Priority: ';
+                }
+                
+                // Extract issue from problem desc
+                const issueMatch = problem.match(/\/ ([^/]+) \/ name:/i);
+                if (issueMatch) {
+                    callout += issueMatch[1].trim();
+                } else if (wo.problem_code_desc) {
+                    callout += wo.problem_code_desc.substring(0, 35);
+                } else if (wo.problem_type_desc) {
+                    callout += wo.problem_type_desc.substring(0, 35);
+                } else {
+                    callout += equipment.substring(0, 35) || 'Needs review';
+                }
+            }
+            
+            return `<span class="${cssClass}">${icon} ${callout}</span>`;
+        }
+        
+        // Render WO table with current filters and sort
+        function renderWoTable() {
+            const statusFilter = document.getElementById('woStatusFilter').value;
+            const priorityFilter = document.getElementById('woPriorityFilter').value;
+            
+            let filtered = [...currentStoreWOs];
+            
+            if (statusFilter) {
+                filtered = filtered.filter(wo => wo.status_name === statusFilter);
+            }
+            if (priorityFilter) {
+                filtered = filtered.filter(wo => wo.priority_name === priorityFilter);
+            }
+            
+            // Sort by age
+            filtered.sort((a, b) => {
+                const ageA = parseInt(a.age_days) || 0;
+                const ageB = parseInt(b.age_days) || 0;
+                return woSortAsc ? ageA - ageB : ageB - ageA;
+            });
+            
+            // Update filter count
+            document.getElementById('woFilterCount').textContent = 
+                `Showing ${filtered.length} of ${currentStoreWOs.length}`;
+            
+            // Populate WO table
+            const woTable = document.getElementById('woTableBody');
+            woTable.innerHTML = filtered.map(wo => {
+                const age = parseInt(wo.age_days) || 0;
+                const ageClass = age > 7 ? 'text-red-600 font-bold' : 
+                                age > 3 ? 'text-yellow-600' : 'text-gray-600';
+                const statusClass = (wo.status_name === 'Completed' || wo.status_name === 'Closed') ? 'text-green-600' :
+                                   wo.status_name === 'IN PROGRESS' ? 'text-blue-600' : 'text-orange-600';
+                const aiAnalysis = generateAIAnalysis(wo);
+                return `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-2 py-1 font-mono text-xs"><a href="https://www.servicechannel.com/sc/wo/Workorders/index?id=${wo.tracking_nbr}" target="_blank" class="text-walmart-blue hover:underline font-semibold">${wo.tracking_nbr || '-'}</a></td>
+                    <td class="px-2 py-1 text-xs font-medium ${statusClass}">${wo.status_name || '-'}</td>
+                    <td class="px-2 py-1 text-gray-600 text-xs">${(wo.priority_name || '-').substring(0, 15)}</td>
+                    <td class="px-2 py-1 ${ageClass} text-center">${age}d</td>
+                    <td class="px-2 py-1 text-xs" title="${(wo.problem_desc || '').replace(/"/g, '&quot;')}">${aiAnalysis}</td>
+                </tr>
+            `}).join('');
+            
+            if (filtered.length === 0) {
+                woTable.innerHTML = '<tr><td colspan="5" class="px-4 py-4 text-center text-gray-500">No work orders match filters</td></tr>';
+            }
+        }
+        
+        // Toggle WO sort
+        function toggleWoSort() {
+            woSortAsc = !woSortAsc;
+            document.getElementById('woSortAge').textContent = woSortAsc ? 'Sort by Age ↑' : 'Sort by Age ↓';
+            renderWoTable();
         }
         
         // Close store detail
@@ -1081,6 +1244,11 @@
         document.querySelectorAll('#bannerToggle button').forEach(btn => {
             btn.addEventListener('click', () => handleBannerToggle(btn.dataset.banner));
         });
+        
+        // WO filter event listeners
+        document.getElementById('woStatusFilter').addEventListener('change', renderWoTable);
+        document.getElementById('woPriorityFilter').addEventListener('change', renderWoTable);
+        document.getElementById('woSortAge').addEventListener('click', toggleWoSort);
 
         // Initialize
         loadData();
