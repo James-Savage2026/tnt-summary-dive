@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TnT Manager View - HVAC/R Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        walmart: {
+                            blue: '#0071ce',
+                            yellow: '#ffc220',
+                            dark: '#004f9a',
+                            light: '#f2f8fd'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .kpi-card { transition: transform 0.2s; }
+        .kpi-card:hover { transform: translateY(-2px); }
+        .table-row:hover { background-color: #f2f8fd; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-walmart-blue text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold">TnT - Manager View</h1>
+                    <p class="text-blue-100 text-sm">Time in Target Dashboard | HVAC/R Performance</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-sm text-blue-100">Last Updated</p>
+                    <p class="font-semibold" id="lastUpdated">Loading...</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-6">
+        <!-- Filters -->
+        <div class="bg-white rounded-lg shadow p-4 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Sr. Director</label>
+                    <select id="filterSrDirector" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-walmart-blue focus:border-walmart-blue">
+                        <option value="">All Sr. Directors</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">FM Director</label>
+                    <select id="filterDirector" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-walmart-blue focus:border-walmart-blue">
+                        <option value="">All Directors</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Regional Manager</label>
+                    <select id="filterManager" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-walmart-blue focus:border-walmart-blue">
+                        <option value="">All Managers</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Market</label>
+                    <select id="filterMarket" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-walmart-blue focus:border-walmart-blue">
+                        <option value="">All Markets</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+            <div class="kpi-card bg-white rounded-lg shadow p-4 border-l-4 border-walmart-blue">
+                <p class="text-sm text-gray-500 uppercase tracking-wide">Current TWT Ref</p>
+                <p class="text-3xl font-bold text-walmart-blue" id="kpiCurrentRef">--</p>
+                <p class="text-xs text-gray-400">Refrigeration</p>
+            </div>
+            <div class="kpi-card bg-white rounded-lg shadow p-4 border-l-4 border-blue-400">
+                <p class="text-sm text-gray-500 uppercase tracking-wide">7-Day Avg</p>
+                <p class="text-3xl font-bold text-blue-600" id="kpi7DayRef">--</p>
+                <p class="text-xs text-gray-400">Refrigeration</p>
+            </div>
+            <div class="kpi-card bg-white rounded-lg shadow p-4 border-l-4 border-green-500">
+                <p class="text-sm text-gray-500 uppercase tracking-wide">30-Day Avg</p>
+                <p class="text-3xl font-bold text-green-600" id="kpi30DayRef">--</p>
+                <p class="text-xs text-gray-400">Refrigeration</p>
+            </div>
+            <div class="kpi-card bg-white rounded-lg shadow p-4 border-l-4 border-purple-500">
+                <p class="text-sm text-gray-500 uppercase tracking-wide">90-Day Avg</p>
+                <p class="text-3xl font-bold text-purple-600" id="kpi90DayRef">--</p>
+                <p class="text-xs text-gray-400">Refrigeration</p>
+            </div>
+            <div class="kpi-card bg-white rounded-lg shadow p-4 border-l-4 border-walmart-yellow">
+                <p class="text-sm text-gray-500 uppercase tracking-wide">HVAC 30-Day</p>
+                <p class="text-3xl font-bold text-yellow-600" id="kpiHVAC">--</p>
+                <p class="text-xs text-gray-400">HVAC Systems</p>
+            </div>
+        </div>
+
+        <!-- Summary Stats -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white rounded-lg shadow p-4 text-center">
+                <p class="text-4xl font-bold text-gray-800" id="totalStores">--</p>
+                <p class="text-sm text-gray-500">Total Stores</p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-4 text-center">
+                <p class="text-4xl font-bold text-gray-800" id="totalCases">--</p>
+                <p class="text-sm text-gray-500">Total Cases</p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-4 text-center">
+                <p class="text-4xl font-bold text-red-600" id="casesOutOfTarget">--</p>
+                <p class="text-sm text-gray-500">Cases Out of Target</p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-4 text-center">
+                <p class="text-4xl font-bold text-gray-800" id="totalManagers">--</p>
+                <p class="text-sm text-gray-500">Regional Managers</p>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <!-- Trend Chart -->
+            <div class="bg-white rounded-lg shadow p-4">
+                <h2 class="text-lg font-semibold text-gray-800 mb-4">TWT % Trend (Weekly)</h2>
+                <div style="height: 300px;">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+            <!-- Sr Director Breakdown -->
+            <div class="bg-white rounded-lg shadow p-4">
+                <h2 class="text-lg font-semibold text-gray-800 mb-4">Performance by Sr. Director</h2>
+                <div style="height: 300px;">
+                    <canvas id="directorChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manager Performance Table -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+                <h2 class="text-lg font-semibold text-gray-800">Manager Performance</h2>
+                <input type="text" id="tableSearch" placeholder="Search managers..." 
+                       class="border border-gray-300 rounded-md px-3 py-1 text-sm focus:ring-walmart-blue focus:border-walmart-blue">
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onclick="sortTable('fm_director_name')">FM Director ↕</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onclick="sortTable('fm_regional_manager_name')">Regional Manager ↕</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onclick="sortTable('store_count')">Stores ↕</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onclick="sortTable('twt_ref')">Current % ↕</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onclick="sortTable('twt_ref_7_day')">7-Day ↕</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onclick="sortTable('twt_ref_30_day')">30-Day ↕</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onclick="sortTable('twt_hvac_30_day')">HVAC 30d ↕</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onclick="sortTable('cases_out_of_target')">Cases OOT ↕</th>
+                        </tr>
+                    </thead>
+                    <tbody id="managerTableBody" class="bg-white divide-y divide-gray-200">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Analysis Section -->
+        <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 class="text-lg font-semibold text-blue-800 mb-2">📊 Insights & Analysis</h3>
+            <div id="insightsContent" class="text-sm text-blue-700 space-y-2">
+                <p>Loading insights...</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-gray-400 py-4 mt-8">
+        <div class="max-w-7xl mx-auto px-4 text-center text-sm">
+            <p>TnT Manager View Dashboard | Built with 🐶 Code Puppy</p>
+            <p class="text-xs mt-1">Data Source: BigQuery (re-crystal-mdm-prod.crystal.store_tabular_view)</p>
+        </div>
+    </footer>
+
+    <script>
+        // Global data
+        let storeData = [];
+        let trendData = [];
+        let filteredData = [];
+        let currentSort = { field: 'twt_ref_30_day', direction: 'desc' };
+        let trendChart, directorChart;
+
+        // Load data
+        async function loadData() {
+            try {
+                const [storeRes, trendRes] = await Promise.all([
+                    fetch('store_data.json'),
+                    fetch('trend_data.json')
+                ]);
+                storeData = await storeRes.json();
+                trendData = await trendRes.json();
+                filteredData = [...storeData];
+                
+                document.getElementById('lastUpdated').textContent = new Date().toLocaleDateString();
+                
+                populateFilters();
+                updateDashboard();
+                initCharts();
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('lastUpdated').textContent = 'Error loading data';
+            }
+        }
+
+        // Populate filter dropdowns
+        function populateFilters() {
+            const srDirectors = [...new Set(storeData.map(d => d.fm_sr_director_name).filter(Boolean))].sort();
+            const directors = [...new Set(storeData.map(d => d.fm_director_name).filter(Boolean))].sort();
+            const managers = [...new Set(storeData.map(d => d.fm_regional_manager_name).filter(Boolean))].sort();
+            const markets = [...new Set(storeData.map(d => d.fs_market).filter(Boolean))].sort();
+
+            populateSelect('filterSrDirector', srDirectors);
+            populateSelect('filterDirector', directors);
+            populateSelect('filterManager', managers);
+            populateSelect('filterMarket', markets);
+        }
+
+        function populateSelect(id, options) {
+            const select = document.getElementById(id);
+            const currentValue = select.value;
+            select.innerHTML = `<option value="">All</option>` + 
+                options.map(o => `<option value="${o}">${o}</option>`).join('');
+            select.value = currentValue;
+        }
+
+        // Filter data
+        function applyFilters() {
+            const srDir = document.getElementById('filterSrDirector').value;
+            const dir = document.getElementById('filterDirector').value;
+            const mgr = document.getElementById('filterManager').value;
+            const mkt = document.getElementById('filterMarket').value;
+
+            filteredData = storeData.filter(d => {
+                if (srDir && d.fm_sr_director_name !== srDir) return false;
+                if (dir && d.fm_director_name !== dir) return false;
+                if (mgr && d.fm_regional_manager_name !== mgr) return false;
+                if (mkt && d.fs_market !== mkt) return false;
+                return true;
+            });
+
+            updateDashboard();
+            updateCharts();
+        }
+
+        // Update KPIs and table
+        function updateDashboard() {
+            const validRef = filteredData.filter(d => d.twt_ref != null);
+            const validHvac = filteredData.filter(d => d.twt_hvac_30_day != null);
+
+            // KPIs
+            const avgRef = validRef.length ? (validRef.reduce((s, d) => s + d.twt_ref, 0) / validRef.length) : 0;
+            const avg7d = validRef.length ? (validRef.reduce((s, d) => s + (d.twt_ref_7_day || 0), 0) / validRef.length) : 0;
+            const avg30d = validRef.length ? (validRef.reduce((s, d) => s + (d.twt_ref_30_day || 0), 0) / validRef.length) : 0;
+            const avg90d = validRef.length ? (validRef.reduce((s, d) => s + (d.twt_ref_90_day || 0), 0) / validRef.length) : 0;
+            const avgHvac = validHvac.length ? (validHvac.reduce((s, d) => s + d.twt_hvac_30_day, 0) / validHvac.length) : 0;
+
+            document.getElementById('kpiCurrentRef').textContent = avgRef.toFixed(1) + '%';
+            document.getElementById('kpi7DayRef').textContent = avg7d.toFixed(1) + '%';
+            document.getElementById('kpi30DayRef').textContent = avg30d.toFixed(1) + '%';
+            document.getElementById('kpi90DayRef').textContent = avg90d.toFixed(1) + '%';
+            document.getElementById('kpiHVAC').textContent = avgHvac.toFixed(1) + '%';
+
+            // Summary stats
+            const totalCases = filteredData.reduce((s, d) => s + (d.case_count || 0), 0);
+            const casesOOT = filteredData.reduce((s, d) => s + (d.cases_out_of_target || 0), 0);
+            const managers = [...new Set(filteredData.map(d => d.fm_regional_manager_name))];
+
+            document.getElementById('totalStores').textContent = filteredData.length.toLocaleString();
+            document.getElementById('totalCases').textContent = totalCases.toLocaleString();
+            document.getElementById('casesOutOfTarget').textContent = casesOOT.toLocaleString();
+            document.getElementById('totalManagers').textContent = managers.length;
+
+            // Update table
+            updateManagerTable();
+            updateInsights(avgRef, avg30d, avgHvac, casesOOT, filteredData.length);
+        }
+
+        // Aggregate by manager and update table
+        function updateManagerTable() {
+            const searchTerm = document.getElementById('tableSearch').value.toLowerCase();
+            
+            // Aggregate by manager
+            const managerMap = new Map();
+            filteredData.forEach(d => {
+                const key = d.fm_regional_manager_name;
+                if (!key) return;
+                if (!managerMap.has(key)) {
+                    managerMap.set(key, {
+                        fm_director_name: d.fm_director_name,
+                        fm_regional_manager_name: key,
+                        stores: [],
+                        twt_ref_sum: 0, twt_ref_count: 0,
+                        twt_ref_7_day_sum: 0, twt_ref_7_day_count: 0,
+                        twt_ref_30_day_sum: 0, twt_ref_30_day_count: 0,
+                        twt_hvac_30_day_sum: 0, twt_hvac_30_day_count: 0,
+                        cases_out_of_target: 0
+                    });
+                }
+                const m = managerMap.get(key);
+                m.stores.push(d.store_number);
+                if (d.twt_ref != null) { m.twt_ref_sum += d.twt_ref; m.twt_ref_count++; }
+                if (d.twt_ref_7_day != null) { m.twt_ref_7_day_sum += d.twt_ref_7_day; m.twt_ref_7_day_count++; }
+                if (d.twt_ref_30_day != null) { m.twt_ref_30_day_sum += d.twt_ref_30_day; m.twt_ref_30_day_count++; }
+                if (d.twt_hvac_30_day != null) { m.twt_hvac_30_day_sum += d.twt_hvac_30_day; m.twt_hvac_30_day_count++; }
+                m.cases_out_of_target += d.cases_out_of_target || 0;
+            });
+
+            let managers = Array.from(managerMap.values()).map(m => ({
+                fm_director_name: m.fm_director_name,
+                fm_regional_manager_name: m.fm_regional_manager_name,
+                store_count: m.stores.length,
+                twt_ref: m.twt_ref_count ? m.twt_ref_sum / m.twt_ref_count : null,
+                twt_ref_7_day: m.twt_ref_7_day_count ? m.twt_ref_7_day_sum / m.twt_ref_7_day_count : null,
+                twt_ref_30_day: m.twt_ref_30_day_count ? m.twt_ref_30_day_sum / m.twt_ref_30_day_count : null,
+                twt_hvac_30_day: m.twt_hvac_30_day_count ? m.twt_hvac_30_day_sum / m.twt_hvac_30_day_count : null,
+                cases_out_of_target: m.cases_out_of_target
+            }));
+
+            // Filter by search
+            if (searchTerm) {
+                managers = managers.filter(m => 
+                    m.fm_regional_manager_name.toLowerCase().includes(searchTerm) ||
+                    m.fm_director_name.toLowerCase().includes(searchTerm)
+                );
+            }
+
+            // Sort
+            managers.sort((a, b) => {
+                let aVal = a[currentSort.field];
+                let bVal = b[currentSort.field];
+                if (aVal == null) aVal = currentSort.direction === 'asc' ? Infinity : -Infinity;
+                if (bVal == null) bVal = currentSort.direction === 'asc' ? Infinity : -Infinity;
+                if (typeof aVal === 'string') {
+                    return currentSort.direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+                }
+                return currentSort.direction === 'asc' ? aVal - bVal : bVal - aVal;
+            });
+
+            // Render
+            const tbody = document.getElementById('managerTableBody');
+            tbody.innerHTML = managers.map(m => `
+                <tr class="table-row hover:bg-blue-50">
+                    <td class="px-4 py-2 text-sm text-gray-900">${m.fm_director_name || '-'}</td>
+                    <td class="px-4 py-2 text-sm font-medium text-gray-900">${m.fm_regional_manager_name}</td>
+                    <td class="px-4 py-2 text-sm text-center text-gray-600">${m.store_count}</td>
+                    <td class="px-4 py-2 text-sm text-center font-semibold ${getColorClass(m.twt_ref)}">${formatPct(m.twt_ref)}</td>
+                    <td class="px-4 py-2 text-sm text-center ${getColorClass(m.twt_ref_7_day)}">${formatPct(m.twt_ref_7_day)}</td>
+                    <td class="px-4 py-2 text-sm text-center ${getColorClass(m.twt_ref_30_day)}">${formatPct(m.twt_ref_30_day)}</td>
+                    <td class="px-4 py-2 text-sm text-center ${getColorClass(m.twt_hvac_30_day)}">${formatPct(m.twt_hvac_30_day)}</td>
+                    <td class="px-4 py-2 text-sm text-center text-red-600 font-medium">${m.cases_out_of_target || 0}</td>
+                </tr>
+            `).join('');
+        }
+
+        function getColorClass(val) {
+            if (val == null) return 'text-gray-400';
+            if (val >= 90) return 'text-green-600';
+            if (val >= 85) return 'text-yellow-600';
+            return 'text-red-600';
+        }
+
+        function formatPct(val) {
+            return val != null ? val.toFixed(1) + '%' : '-';
+        }
+
+        function sortTable(field) {
+            if (currentSort.field === field) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.field = field;
+                currentSort.direction = 'desc';
+            }
+            updateManagerTable();
+        }
+
+        // Charts
+        function initCharts() {
+            // Trend chart
+            const trendCtx = document.getElementById('trendChart').getContext('2d');
+            const sortedTrend = [...trendData].sort((a, b) => {
+                if (a.wmt_year_nbr !== b.wmt_year_nbr) return a.wmt_year_nbr - b.wmt_year_nbr;
+                return a.wmt_week_nbr - b.wmt_week_nbr;
+            });
+
+            trendChart = new Chart(trendCtx, {
+                type: 'line',
+                data: {
+                    labels: sortedTrend.map(d => `W${d.wmt_week_nbr}`),
+                    datasets: [{
+                        label: 'Weekly TWT %',
+                        data: sortedTrend.map(d => d.avg_weekly_tit),
+                        borderColor: '#0071ce',
+                        backgroundColor: 'rgba(0, 113, 206, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    }, {
+                        label: 'Monthly TWT %',
+                        data: sortedTrend.map(d => d.avg_monthly_tit),
+                        borderColor: '#ffc220',
+                        borderDash: [5, 5],
+                        fill: false,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    },
+                    scales: {
+                        y: { min: 80, max: 100, ticks: { callback: v => v + '%' } }
+                    }
+                }
+            });
+
+            updateCharts();
+        }
+
+        function updateCharts() {
+            // Director breakdown
+            const directorMap = new Map();
+            filteredData.forEach(d => {
+                const key = d.fm_sr_director_name;
+                if (!key) return;
+                if (!directorMap.has(key)) {
+                    directorMap.set(key, { sum: 0, count: 0 });
+                }
+                if (d.twt_ref_30_day != null) {
+                    directorMap.get(key).sum += d.twt_ref_30_day;
+                    directorMap.get(key).count++;
+                }
+            });
+
+            const directors = Array.from(directorMap.entries())
+                .map(([name, data]) => ({ name, avg: data.count ? data.sum / data.count : 0 }))
+                .sort((a, b) => b.avg - a.avg);
+
+            if (directorChart) directorChart.destroy();
+            
+            const dirCtx = document.getElementById('directorChart').getContext('2d');
+            directorChart = new Chart(dirCtx, {
+                type: 'bar',
+                data: {
+                    labels: directors.map(d => d.name),
+                    datasets: [{
+                        label: '30-Day TWT %',
+                        data: directors.map(d => d.avg),
+                        backgroundColor: directors.map(d => d.avg >= 87 ? '#22c55e' : d.avg >= 85 ? '#eab308' : '#ef4444'),
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: { min: 80, max: 100, ticks: { callback: v => v + '%' } }
+                    }
+                }
+            });
+        }
+
+        function updateInsights(avgRef, avg30d, avgHvac, casesOOT, storeCount) {
+            const insights = [];
+            
+            if (avg30d >= 87) {
+                insights.push(`✅ <strong>Strong Performance:</strong> 30-day refrigeration TWT is at ${avg30d.toFixed(1)}%, above the 87% target.`);
+            } else {
+                insights.push(`⚠️ <strong>Attention Needed:</strong> 30-day refrigeration TWT is at ${avg30d.toFixed(1)}%, below the 87% target.`);
+            }
+
+            if (avgHvac >= 90) {
+                insights.push(`✅ <strong>HVAC Systems:</strong> Performing well at ${avgHvac.toFixed(1)}% time in target.`);
+            } else {
+                insights.push(`⚠️ <strong>HVAC Opportunity:</strong> HVAC systems at ${avgHvac.toFixed(1)}% - review underperforming stores.`);
+            }
+
+            const ootPct = storeCount ? ((casesOOT / storeCount) * 100).toFixed(1) : 0;
+            insights.push(`📊 <strong>Cases Out of Target:</strong> ${casesOOT.toLocaleString()} cases across ${storeCount.toLocaleString()} stores (avg ${ootPct} per store).`);
+
+            // Find best/worst performers
+            const managerMap = new Map();
+            filteredData.forEach(d => {
+                const key = d.fm_regional_manager_name;
+                if (!key || d.twt_ref_30_day == null) return;
+                if (!managerMap.has(key)) managerMap.set(key, { sum: 0, count: 0 });
+                managerMap.get(key).sum += d.twt_ref_30_day;
+                managerMap.get(key).count++;
+            });
+            
+            const managerAvgs = Array.from(managerMap.entries())
+                .map(([name, data]) => ({ name, avg: data.sum / data.count }))
+                .sort((a, b) => b.avg - a.avg);
+            
+            if (managerAvgs.length > 0) {
+                const best = managerAvgs[0];
+                const worst = managerAvgs[managerAvgs.length - 1];
+                insights.push(`🏆 <strong>Top Performer:</strong> ${best.name} at ${best.avg.toFixed(1)}%`);
+                insights.push(`📉 <strong>Needs Support:</strong> ${worst.name} at ${worst.avg.toFixed(1)}%`);
+            }
+
+            document.getElementById('insightsContent').innerHTML = insights.map(i => `<p>${i}</p>`).join('');
+        }
+
+        // Event listeners
+        document.getElementById('filterSrDirector').addEventListener('change', applyFilters);
+        document.getElementById('filterDirector').addEventListener('change', applyFilters);
+        document.getElementById('filterManager').addEventListener('change', applyFilters);
+        document.getElementById('filterMarket').addEventListener('change', applyFilters);
+        document.getElementById('tableSearch').addEventListener('input', updateManagerTable);
+
+        // Initialize
+        loadData();
+    </script>
+</body>
+</html>
