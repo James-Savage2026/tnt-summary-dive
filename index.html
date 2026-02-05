@@ -190,19 +190,27 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             <!-- Bottom 10 Stores -->
             <div class="bg-white rounded-lg shadow p-4 border-l-4 border-red-500">
-                <h2 class="text-lg font-semibold text-red-600 mb-4 flex items-center">
-                    <span class="mr-2">⚠️</span> <span id="bottom10Title">Bottom 10 Stores - Needs Attention</span>
-                </h2>
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-lg font-semibold text-red-600 flex items-center">
+                        <span class="mr-2">⚠️</span> <span id="bottom10Title">Bottom 10 Stores</span>
+                    </h2>
+                    <div class="flex gap-1" id="bannerToggle">
+                        <button data-banner="all" class="px-2 py-1 text-xs rounded bg-walmart-blue text-white">All</button>
+                        <button data-banner="walmart" class="px-2 py-1 text-xs rounded bg-gray-200 text-gray-700 hover:bg-gray-300">Walmart</button>
+                        <button data-banner="sams" class="px-2 py-1 text-xs rounded bg-gray-200 text-gray-700 hover:bg-gray-300">Sam's</button>
+                    </div>
+                </div>
                 <div class="overflow-x-auto" style="max-height: 280px; overflow-y: auto;">
                     <table class="min-w-full text-sm">
                         <thead class="bg-red-50 sticky top-0">
                             <tr>
                                 <th class="px-2 py-2 text-left text-xs font-medium text-gray-600">Store</th>
-                                <th class="px-2 py-2 text-left text-xs font-medium text-gray-600">Banner</th>
+                                <th class="px-2 py-2 text-left text-xs font-medium text-gray-600">RFM</th>
+                                <th class="px-2 py-2 text-left text-xs font-medium text-gray-600">FSM</th>
                                 <th class="px-2 py-2 text-center text-xs font-medium text-gray-600">30d TnT</th>
                                 <th class="px-2 py-2 text-center text-xs font-medium text-gray-600">HVAC</th>
                                 <th class="px-2 py-2 text-center text-xs font-medium text-gray-600">Loss</th>
-                                <th class="px-2 py-2 text-center text-xs font-medium text-gray-600">Link</th>
+                                <th class="px-2 py-2 text-center text-xs font-medium text-gray-600">Action</th>
                             </tr>
                         </thead>
                         <tbody id="bottom10Body" class="divide-y divide-gray-100">
@@ -246,6 +254,115 @@
                 <p>Loading insights...</p>
             </div>
         </div>
+
+        <!-- Store Detail Section (hidden until store selected) -->
+        <div id="storeDetailSection" class="mt-6 hidden">
+            <div class="bg-white rounded-lg shadow-lg border-2 border-walmart-blue overflow-hidden">
+                <div class="bg-walmart-blue text-white px-4 py-3 flex justify-between items-center">
+                    <h3 class="text-lg font-bold flex items-center">
+                        <span class="mr-2">🏪</span> Store <span id="selectedStoreNum" class="ml-1"></span> - Detailed View
+                    </h3>
+                    <button id="closeStoreDetail" class="text-white hover:text-gray-200 text-xl">&times;</button>
+                </div>
+                <div class="p-4">
+                    <!-- Store Info Row -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-4">
+                        <div class="text-center p-2 bg-gray-50 rounded">
+                            <p class="text-xs text-gray-500">Banner</p>
+                            <p class="font-semibold" id="detailBanner">--</p>
+                        </div>
+                        <div class="text-center p-2 bg-gray-50 rounded">
+                            <p class="text-xs text-gray-500">Regional Manager</p>
+                            <p class="font-semibold text-sm" id="detailRFM">--</p>
+                        </div>
+                        <div class="text-center p-2 bg-gray-50 rounded">
+                            <p class="text-xs text-gray-500">FS Manager</p>
+                            <p class="font-semibold text-sm" id="detailFSM">--</p>
+                        </div>
+                        <div class="text-center p-2 bg-gray-50 rounded">
+                            <p class="text-xs text-gray-500">Market</p>
+                            <p class="font-semibold text-sm" id="detailMarket">--</p>
+                        </div>
+                        <div class="text-center p-2 bg-blue-50 rounded">
+                            <p class="text-xs text-gray-500">Smart Insights</p>
+                            <a id="detailSmartLink" href="#" target="_blank" class="text-walmart-blue font-semibold hover:underline">🔍 Open</a>
+                        </div>
+                    </div>
+                    
+                    <!-- TnT Stats -->
+                    <div class="mb-4">
+                        <h4 class="font-semibold text-gray-700 mb-2">Time in Target Performance</h4>
+                        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2">
+                            <div class="text-center p-2 border rounded">
+                                <p class="text-xs text-gray-500">Ref Current</p>
+                                <p class="font-bold" id="detailTnTCurrent">--</p>
+                            </div>
+                            <div class="text-center p-2 border rounded">
+                                <p class="text-xs text-gray-500">Ref 7-Day</p>
+                                <p class="font-bold" id="detailTnT7">--</p>
+                            </div>
+                            <div class="text-center p-2 border rounded">
+                                <p class="text-xs text-gray-500">Ref 30-Day</p>
+                                <p class="font-bold" id="detailTnT30">--</p>
+                            </div>
+                            <div class="text-center p-2 border rounded">
+                                <p class="text-xs text-gray-500">Ref 90-Day</p>
+                                <p class="font-bold" id="detailTnT90">--</p>
+                            </div>
+                            <div class="text-center p-2 border rounded">
+                                <p class="text-xs text-gray-500">HVAC Current</p>
+                                <p class="font-bold" id="detailHVACCurrent">--</p>
+                            </div>
+                            <div class="text-center p-2 border rounded">
+                                <p class="text-xs text-gray-500">HVAC 30-Day</p>
+                                <p class="font-bold" id="detailHVAC30">--</p>
+                            </div>
+                            <div class="text-center p-2 border rounded">
+                                <p class="text-xs text-gray-500">Total Loss</p>
+                                <p class="font-bold text-red-600" id="detailLoss">--</p>
+                            </div>
+                            <div class="text-center p-2 border rounded">
+                                <p class="text-xs text-gray-500">Cases OOT</p>
+                                <p class="font-bold text-red-600" id="detailCasesOOT">--</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Work Orders Section -->
+                    <div>
+                        <h4 class="font-semibold text-gray-700 mb-2">Open Work Orders</h4>
+                        <div id="workOrdersLoading" class="text-center py-4 text-gray-500">
+                            <p>Loading work orders...</p>
+                        </div>
+                        <div id="workOrdersContent" class="hidden">
+                            <div class="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3" id="woSummary">
+                                <!-- WO summary stats -->
+                            </div>
+                            <div class="overflow-x-auto" style="max-height: 200px; overflow-y: auto;">
+                                <table class="min-w-full text-sm">
+                                    <thead class="bg-gray-100 sticky top-0">
+                                        <tr>
+                                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-600">WO #</th>
+                                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-600">Trade</th>
+                                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-600">Status</th>
+                                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-600">Priority</th>
+                                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-600">Age (Days)</th>
+                                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-600">Equipment</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="woTableBody" class="divide-y divide-gray-100">
+                                        <!-- Populated by JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div id="workOrdersEmpty" class="hidden text-center py-4 text-green-600">
+                            <p>✅ No open work orders for this store!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </main>
 
     <!-- Footer -->
@@ -262,14 +379,27 @@
         
         // Global data
         let storeData = [];
+        let workOrderData = [];
         let filteredData = [];
         let currentSort = { field: 'twt_ref_30_day', direction: 'desc' };
         let breakdownChart;
+        let selectedBannerFilter = 'all'; // 'all', 'walmart', 'sams'
+        let selectedStore = null;
 
         // Load data
         async function loadData() {
             try {
-                const storeRes = await fetch('store_data.json');
+                const [storeRes, woRes] = await Promise.all([
+                    fetch('store_data.json'),
+                    fetch('workorder_data.json').catch(() => ({ json: () => [] }))
+                ]);
+                
+                try {
+                    workOrderData = await woRes.json();
+                } catch(e) {
+                    workOrderData = [];
+                }
+                
                 storeData = (await storeRes.json()).map(d => ({
                     ...d,
                     store_number: d.store_number,
@@ -642,37 +772,179 @@
         
         // Bottom 10 Stores
         function updateBottom10Stores() {
+            // Apply banner filter
+            let dataToFilter = [...filteredData];
+            if (selectedBannerFilter === 'walmart') {
+                dataToFilter = dataToFilter.filter(d => d.banner_desc !== "Sam's Club");
+            } else if (selectedBannerFilter === 'sams') {
+                dataToFilter = dataToFilter.filter(d => d.banner_desc === "Sam's Club");
+            }
+            
             // Sort by worst 30-day TnT and take bottom 10
-            const bottom10 = [...filteredData]
+            const bottom10 = dataToFilter
                 .filter(d => d.twt_ref_30_day != null && !isNaN(d.twt_ref_30_day))
                 .sort((a, b) => (a.twt_ref_30_day || 0) - (b.twt_ref_30_day || 0))
                 .slice(0, 10);
             
-            // Update title with context
-            const context = getFilterContext();
-            document.getElementById('bottom10Title').textContent = 
-                `Bottom 10 Stores - Needs Attention`;
+            // Update title
+            const bannerLabel = selectedBannerFilter === 'all' ? '' : 
+                (selectedBannerFilter === 'sams' ? " (Sam's)" : ' (Walmart)');
+            document.getElementById('bottom10Title').textContent = `Bottom 10 Stores${bannerLabel}`;
             
             const tbody = document.getElementById('bottom10Body');
-            tbody.innerHTML = bottom10.map(store => `
-                <tr class="hover:bg-red-50">
+            tbody.innerHTML = bottom10.map(store => {
+                const rfm = (store.fm_regional_manager_name || '-').split(' ').slice(0, 2).join(' ');
+                const fsm = (store.fs_manager_name || '-').split(' ').slice(0, 2).join(' ');
+                return `
+                <tr class="hover:bg-red-50 cursor-pointer" onclick="selectStore('${store.store_number}')">
                     <td class="px-2 py-2 font-medium text-gray-900">${store.store_number}</td>
-                    <td class="px-2 py-2 text-gray-600 text-xs">${(store.banner_desc || '-').replace('WM ', '')}</td>
+                    <td class="px-2 py-2 text-gray-600 text-xs" title="${store.fm_regional_manager_name}">${rfm}</td>
+                    <td class="px-2 py-2 text-gray-600 text-xs" title="${store.fs_manager_name}">${fsm}</td>
                     <td class="px-2 py-2 text-center font-bold text-red-600">${formatPct(store.twt_ref_30_day)}</td>
                     <td class="px-2 py-2 text-center ${getColorClass(store.twt_hvac_30_day)}">${formatPct(store.twt_hvac_30_day)}</td>
                     <td class="px-2 py-2 text-center text-red-600">$${(store.total_loss || 0).toLocaleString(undefined, {maximumFractionDigits: 0})}</td>
                     <td class="px-2 py-2 text-center">
-                        <a href="https://crystal.walmart.com/us/stores/search/${store.store_number}" target="_blank" 
+                        <button onclick="event.stopPropagation(); selectStore('${store.store_number}')" 
                            class="inline-flex items-center px-2 py-1 bg-walmart-blue text-white text-xs rounded hover:bg-walmart-dark">
-                            🔍
-                        </a>
+                            Details
+                        </button>
                     </td>
                 </tr>
-            `).join('');
+            `}).join('');
             
             if (bottom10.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">No stores in current filter</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-500">No stores in current filter</td></tr>';
             }
+        }
+        
+        // Select a store to show details
+        function selectStore(storeNum) {
+            const store = storeData.find(d => String(d.store_number) === String(storeNum));
+            if (!store) return;
+            
+            selectedStore = store;
+            
+            // Show the detail section
+            document.getElementById('storeDetailSection').classList.remove('hidden');
+            
+            // Populate store info
+            document.getElementById('selectedStoreNum').textContent = store.store_number;
+            document.getElementById('detailBanner').textContent = store.banner_desc || '-';
+            document.getElementById('detailRFM').textContent = store.fm_regional_manager_name || '-';
+            document.getElementById('detailFSM').textContent = store.fs_manager_name || '-';
+            document.getElementById('detailMarket').textContent = store.fs_market || '-';
+            document.getElementById('detailSmartLink').href = `https://crystal.walmart.com/us/stores/search/${store.store_number}`;
+            
+            // TnT stats
+            document.getElementById('detailTnTCurrent').textContent = formatPct(store.twt_ref);
+            document.getElementById('detailTnTCurrent').className = `font-bold ${getColorClass(store.twt_ref)}`;
+            document.getElementById('detailTnT7').textContent = formatPct(store.twt_ref_7_day);
+            document.getElementById('detailTnT7').className = `font-bold ${getColorClass(store.twt_ref_7_day)}`;
+            document.getElementById('detailTnT30').textContent = formatPct(store.twt_ref_30_day);
+            document.getElementById('detailTnT30').className = `font-bold ${getColorClass(store.twt_ref_30_day)}`;
+            document.getElementById('detailTnT90').textContent = formatPct(store.twt_ref_90_day);
+            document.getElementById('detailTnT90').className = `font-bold ${getColorClass(store.twt_ref_90_day)}`;
+            document.getElementById('detailHVACCurrent').textContent = formatPct(store.twt_hvac);
+            document.getElementById('detailHVACCurrent').className = `font-bold ${getColorClass(store.twt_hvac)}`;
+            document.getElementById('detailHVAC30').textContent = formatPct(store.twt_hvac_30_day);
+            document.getElementById('detailHVAC30').className = `font-bold ${getColorClass(store.twt_hvac_30_day)}`;
+            document.getElementById('detailLoss').textContent = '$' + (store.total_loss || 0).toLocaleString(undefined, {maximumFractionDigits: 0});
+            document.getElementById('detailCasesOOT').textContent = (store.cases_out_of_target || 0).toLocaleString();
+            
+            // Load work orders
+            loadStoreWorkOrders(store.store_number);
+            
+            // Scroll to detail section
+            document.getElementById('storeDetailSection').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Load work orders for a store
+        function loadStoreWorkOrders(storeNum) {
+            document.getElementById('workOrdersLoading').classList.remove('hidden');
+            document.getElementById('workOrdersContent').classList.add('hidden');
+            document.getElementById('workOrdersEmpty').classList.add('hidden');
+            
+            // Filter work orders for this store
+            const storeWOs = workOrderData.filter(wo => String(wo.store_nbr) === String(storeNum));
+            
+            setTimeout(() => {
+                document.getElementById('workOrdersLoading').classList.add('hidden');
+                
+                if (storeWOs.length === 0) {
+                    document.getElementById('workOrdersEmpty').classList.remove('hidden');
+                    return;
+                }
+                
+                document.getElementById('workOrdersContent').classList.remove('hidden');
+                
+                // Calculate summary stats
+                const totalWOs = storeWOs.length;
+                const hvacWOs = storeWOs.filter(wo => (wo.trade_group_name || '').toUpperCase().includes('HVAC')).length;
+                const refWOs = storeWOs.filter(wo => (wo.trade_group_name || '').toUpperCase().includes('REFRIG')).length;
+                const urgentWOs = storeWOs.filter(wo => (wo.priority_name || '').toUpperCase().includes('EMERGENCY') || (wo.priority_name || '').toUpperCase().includes('URGENT')).length;
+                const avgAge = storeWOs.reduce((sum, wo) => sum + (wo.age_days || 0), 0) / totalWOs;
+                
+                document.getElementById('woSummary').innerHTML = `
+                    <div class="text-center p-2 bg-gray-100 rounded">
+                        <p class="text-xs text-gray-500">Total Open</p>
+                        <p class="font-bold text-lg">${totalWOs}</p>
+                    </div>
+                    <div class="text-center p-2 bg-blue-100 rounded">
+                        <p class="text-xs text-gray-500">HVAC</p>
+                        <p class="font-bold text-lg text-blue-600">${hvacWOs}</p>
+                    </div>
+                    <div class="text-center p-2 bg-cyan-100 rounded">
+                        <p class="text-xs text-gray-500">Refrigeration</p>
+                        <p class="font-bold text-lg text-cyan-600">${refWOs}</p>
+                    </div>
+                    <div class="text-center p-2 bg-red-100 rounded">
+                        <p class="text-xs text-gray-500">Urgent/Emergency</p>
+                        <p class="font-bold text-lg text-red-600">${urgentWOs}</p>
+                    </div>
+                    <div class="text-center p-2 bg-yellow-100 rounded">
+                        <p class="text-xs text-gray-500">Avg Age (Days)</p>
+                        <p class="font-bold text-lg text-yellow-700">${avgAge.toFixed(1)}</p>
+                    </div>
+                `;
+                
+                // Populate WO table
+                const woTable = document.getElementById('woTableBody');
+                woTable.innerHTML = storeWOs
+                    .sort((a, b) => (b.age_days || 0) - (a.age_days || 0))
+                    .map(wo => {
+                        const ageClass = (wo.age_days || 0) > 7 ? 'text-red-600 font-bold' : 
+                                        (wo.age_days || 0) > 3 ? 'text-yellow-600' : 'text-gray-600';
+                        return `
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-2 py-1 text-gray-900">${wo.tracking_nbr || wo.workorder_nbr || '-'}</td>
+                            <td class="px-2 py-1 text-gray-600">${(wo.trade_group_name || '-').substring(0, 15)}</td>
+                            <td class="px-2 py-1 text-gray-600">${wo.status_name || '-'}</td>
+                            <td class="px-2 py-1 text-gray-600">${wo.priority_name || '-'}</td>
+                            <td class="px-2 py-1 ${ageClass}">${wo.age_days || 0}</td>
+                            <td class="px-2 py-1 text-gray-600 text-xs">${(wo.equipment_desc || '-').substring(0, 20)}</td>
+                        </tr>
+                    `}).join('');
+            }, 100);
+        }
+        
+        // Close store detail
+        function closeStoreDetail() {
+            document.getElementById('storeDetailSection').classList.add('hidden');
+            selectedStore = null;
+        }
+        
+        // Banner toggle click handler
+        function handleBannerToggle(banner) {
+            selectedBannerFilter = banner;
+            // Update button styles
+            document.querySelectorAll('#bannerToggle button').forEach(btn => {
+                if (btn.dataset.banner === banner) {
+                    btn.className = 'px-2 py-1 text-xs rounded bg-walmart-blue text-white';
+                } else {
+                    btn.className = 'px-2 py-1 text-xs rounded bg-gray-200 text-gray-700 hover:bg-gray-300';
+                }
+            });
+            updateBottom10Stores();
         }
 
         function updateBreakdownChart() {
@@ -804,6 +1076,12 @@
         document.getElementById('filterMarket').addEventListener('change', applyFilters);
         document.getElementById('tableSearch').addEventListener('input', updateManagerTable);
         document.getElementById('clearFilters').addEventListener('click', clearAllFilters);
+        document.getElementById('closeStoreDetail').addEventListener('click', closeStoreDetail);
+        
+        // Banner toggle buttons
+        document.querySelectorAll('#bannerToggle button').forEach(btn => {
+            btn.addEventListener('click', () => handleBannerToggle(btn.dataset.banner));
+        });
 
         // Initialize
         loadData();
