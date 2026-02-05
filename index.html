@@ -17,6 +17,10 @@
                             yellow: '#ffc220',
                             dark: '#004f9a',
                             light: '#f2f8fd'
+                        },
+                        sams: {
+                            green: '#0067a0',
+                            dark: '#00508f'
                         }
                     }
                 }
@@ -132,6 +136,50 @@
             </div>
         </div>
 
+        <!-- Sam's Club vs Walmart Split -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <!-- Walmart Card -->
+            <div class="bg-blue-50 border-2 border-walmart-blue rounded-lg p-4">
+                <h3 class="text-lg font-bold text-walmart-blue mb-3 flex items-center">
+                    <span class="mr-2">🏪</span> Walmart Stores
+                </h3>
+                <div class="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                        <p class="text-2xl font-bold text-walmart-blue" id="wmStoreCount">--</p>
+                        <p class="text-xs text-gray-500">Stores</p>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-bold" id="wmTnT30">--</p>
+                        <p class="text-xs text-gray-500">30-Day TnT</p>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-bold" id="wmHvac30">--</p>
+                        <p class="text-xs text-gray-500">HVAC 30-Day</p>
+                    </div>
+                </div>
+            </div>
+            <!-- Sam's Club Card -->
+            <div class="bg-cyan-50 border-2 border-sams-green rounded-lg p-4">
+                <h3 class="text-lg font-bold text-sams-green mb-3 flex items-center">
+                    <span class="mr-2">🏬</span> Sam's Club
+                </h3>
+                <div class="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                        <p class="text-2xl font-bold text-sams-green" id="samsStoreCount">--</p>
+                        <p class="text-xs text-gray-500">Stores</p>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-bold" id="samsTnT30">--</p>
+                        <p class="text-xs text-gray-500">30-Day TnT</p>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-bold" id="samsHvac30">--</p>
+                        <p class="text-xs text-gray-500">HVAC 30-Day</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Charts Row -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             <!-- Trend Chart -->
@@ -208,6 +256,7 @@
                 storeData = (await storeRes.json()).map(d => ({
                     ...d,
                     store_number: d.store_number,
+                    banner_desc: d.banner_desc || 'Unknown',
                     twt_ref: parseFloat(d.twt_ref) || null,
                     twt_ref_7_day: parseFloat(d.twt_ref_7_day) || null,
                     twt_ref_30_day: parseFloat(d.twt_ref_30_day) || null,
@@ -237,14 +286,14 @@
                 
                 populateFilters();
                 updateDashboard();
-                initCharts();
+                updateCharts();
             } catch (error) {
                 console.error('Error loading data:', error);
                 document.getElementById('lastUpdated').textContent = 'Error loading data';
             }
         }
 
-        // Get current filter context to determine chart/table display level
+        // Get current filter context
         function getFilterContext() {
             const srDir = document.getElementById('filterSrDirector').value;
             const dir = document.getElementById('filterDirector').value;
@@ -281,7 +330,7 @@
             select.value = currentValue;
         }
 
-        // Update dependent filters based on selection
+        // Update dependent filters
         function updateDependentFilters() {
             const srDir = document.getElementById('filterSrDirector').value;
             const dir = document.getElementById('filterDirector').value;
@@ -308,7 +357,7 @@
             }
         }
 
-        // Filter data
+        // Apply filters
         function applyFilters() {
             const srDir = document.getElementById('filterSrDirector').value;
             const dir = document.getElementById('filterDirector').value;
@@ -339,20 +388,20 @@
             updateCharts();
         }
 
-        // Update KPIs and table
-        function updateDashboard() {
-            const validRef = filteredData.filter(d => d.twt_ref !== null && !isNaN(d.twt_ref));
-            const valid7d = filteredData.filter(d => d.twt_ref_7_day !== null && !isNaN(d.twt_ref_7_day));
-            const valid30d = filteredData.filter(d => d.twt_ref_30_day !== null && !isNaN(d.twt_ref_30_day));
-            const valid90d = filteredData.filter(d => d.twt_ref_90_day !== null && !isNaN(d.twt_ref_90_day));
-            const validHvac = filteredData.filter(d => d.twt_hvac_30_day !== null && !isNaN(d.twt_hvac_30_day));
+        // Calculate average for a field
+        function calcAvg(data, field) {
+            const valid = data.filter(d => d[field] !== null && !isNaN(d[field]));
+            return valid.length ? valid.reduce((s, d) => s + d[field], 0) / valid.length : 0;
+        }
 
+        // Update dashboard
+        function updateDashboard() {
             // KPIs
-            const avgRef = validRef.length ? (validRef.reduce((s, d) => s + d.twt_ref, 0) / validRef.length) : 0;
-            const avg7d = valid7d.length ? (valid7d.reduce((s, d) => s + d.twt_ref_7_day, 0) / valid7d.length) : 0;
-            const avg30d = valid30d.length ? (valid30d.reduce((s, d) => s + d.twt_ref_30_day, 0) / valid30d.length) : 0;
-            const avg90d = valid90d.length ? (valid90d.reduce((s, d) => s + d.twt_ref_90_day, 0) / valid90d.length) : 0;
-            const avgHvac = validHvac.length ? (validHvac.reduce((s, d) => s + d.twt_hvac_30_day, 0) / validHvac.length) : 0;
+            const avgRef = calcAvg(filteredData, 'twt_ref');
+            const avg7d = calcAvg(filteredData, 'twt_ref_7_day');
+            const avg30d = calcAvg(filteredData, 'twt_ref_30_day');
+            const avg90d = calcAvg(filteredData, 'twt_ref_90_day');
+            const avgHvac = calcAvg(filteredData, 'twt_hvac_30_day');
 
             document.getElementById('kpiCurrentRef').textContent = avgRef.toFixed(1) + '%';
             document.getElementById('kpi7DayRef').textContent = avg7d.toFixed(1) + '%';
@@ -373,29 +422,48 @@
             document.getElementById('totalManagers').textContent = uniqueItems.length;
             document.getElementById('managersLabel').textContent = context.label;
 
+            // Sam's Club vs Walmart split
+            const wmStores = filteredData.filter(d => d.banner_desc !== "Sam's Club");
+            const samsStores = filteredData.filter(d => d.banner_desc === "Sam's Club");
+
+            document.getElementById('wmStoreCount').textContent = wmStores.length.toLocaleString();
+            const wmTnT = calcAvg(wmStores, 'twt_ref_30_day');
+            const wmHvac = calcAvg(wmStores, 'twt_hvac_30_day');
+            document.getElementById('wmTnT30').textContent = wmTnT.toFixed(1) + '%';
+            document.getElementById('wmTnT30').className = `text-2xl font-bold ${getColorClass(wmTnT)}`;
+            document.getElementById('wmHvac30').textContent = wmHvac.toFixed(1) + '%';
+            document.getElementById('wmHvac30').className = `text-2xl font-bold ${getColorClass(wmHvac)}`;
+
+            document.getElementById('samsStoreCount').textContent = samsStores.length.toLocaleString();
+            const samsTnT = calcAvg(samsStores, 'twt_ref_30_day');
+            const samsHvac = calcAvg(samsStores, 'twt_hvac_30_day');
+            document.getElementById('samsTnT30').textContent = samsTnT.toFixed(1) + '%';
+            document.getElementById('samsTnT30').className = `text-2xl font-bold ${getColorClass(samsTnT)}`;
+            document.getElementById('samsHvac30').textContent = samsHvac.toFixed(1) + '%';
+            document.getElementById('samsHvac30').className = `text-2xl font-bold ${getColorClass(samsHvac)}`;
+
             // Update table
             updateManagerTable();
             updateInsights(avgRef, avg30d, avgHvac, casesOOT, filteredData.length, totalLoss);
         }
 
-        // Aggregate and update table based on context
+        // Update table
         function updateManagerTable() {
             const searchTerm = document.getElementById('tableSearch').value.toLowerCase();
             const context = getFilterContext();
             
-            // Update table title
             document.getElementById('tableTitle').textContent = `Performance by ${context.label}`;
             
-            // Update table header
+            // Dynamic header
             const headerHtml = context.level === 'store' ? `
                 <tr>
                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Store #</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Banner</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">FS Manager</th>
-                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortTable('twt_ref')">Current % ⇅</th>
-                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortTable('twt_ref_7_day')">7-Day ⇅</th>
                     <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortTable('twt_ref_30_day')">30-Day ⇅</th>
                     <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortTable('twt_hvac_30_day')">HVAC 30d ⇅</th>
                     <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Loss $</th>
+                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Smart Insights</th>
                 </tr>
             ` : `
                 <tr>
@@ -415,10 +483,10 @@
             if (context.level === 'store') {
                 rows = filteredData.map(d => ({
                     name: d.store_number,
+                    banner: d.banner_desc || '-',
                     parent: d.fs_manager_name || '-',
                     store_count: 1,
                     twt_ref: d.twt_ref,
-                    twt_ref_7_day: d.twt_ref_7_day,
                     twt_ref_30_day: d.twt_ref_30_day,
                     twt_hvac_30_day: d.twt_hvac_30_day,
                     total_loss: d.total_loss || 0
@@ -481,12 +549,17 @@
                 rows.map(r => `
                     <tr class="table-row hover:bg-blue-50">
                         <td class="px-4 py-2 text-sm font-medium text-gray-900">${r.name}</td>
+                        <td class="px-4 py-2 text-sm text-gray-600">${r.banner}</td>
                         <td class="px-4 py-2 text-sm text-gray-600">${r.parent}</td>
-                        <td class="px-4 py-2 text-sm text-center font-semibold ${getColorClass(r.twt_ref)}">${formatPct(r.twt_ref)}</td>
-                        <td class="px-4 py-2 text-sm text-center ${getColorClass(r.twt_ref_7_day)}">${formatPct(r.twt_ref_7_day)}</td>
-                        <td class="px-4 py-2 text-sm text-center ${getColorClass(r.twt_ref_30_day)}">${formatPct(r.twt_ref_30_day)}</td>
+                        <td class="px-4 py-2 text-sm text-center font-semibold ${getColorClass(r.twt_ref_30_day)}">${formatPct(r.twt_ref_30_day)}</td>
                         <td class="px-4 py-2 text-sm text-center ${getColorClass(r.twt_hvac_30_day)}">${formatPct(r.twt_hvac_30_day)}</td>
                         <td class="px-4 py-2 text-sm text-center text-red-600 font-medium">$${r.total_loss.toLocaleString(undefined, {maximumFractionDigits: 0})}</td>
+                        <td class="px-4 py-2 text-sm text-center">
+                            <a href="https://crystal.walmart.com/us/stores/search/${r.name}" target="_blank" 
+                               class="inline-flex items-center px-2 py-1 bg-walmart-blue text-white text-xs rounded hover:bg-walmart-dark">
+                                🔍 View
+                            </a>
+                        </td>
                     </tr>
                 `).join('') :
                 rows.map(r => `
@@ -524,19 +597,12 @@
         }
 
         // Charts
-        function initCharts() {
-            updateCharts();
-        }
-
         function updateCharts() {
             updateTrendChart();
             updateBreakdownChart();
         }
 
         function updateTrendChart() {
-            const context = getFilterContext();
-            
-            // Update title based on filter
             const srDir = document.getElementById('filterSrDirector').value;
             const dir = document.getElementById('filterDirector').value;
             const mgr = document.getElementById('filterManager').value;
@@ -552,8 +618,7 @@
                 const key = `${d.wmt_year_nbr}-W${String(d.wmt_week_nbr).padStart(2, '0')}`;
                 if (!weekMap.has(key)) {
                     weekMap.set(key, {
-                        label: key,
-                        year_month: d.year_month,
+                        label: d.year_month || key,
                         weekly_sum: 0, weekly_count: 0,
                         monthly_sum: 0, monthly_count: 0
                     });
@@ -563,13 +628,14 @@
                 if (d.avg_monthly_tit != null) { w.monthly_sum += d.avg_monthly_tit; w.monthly_count++; }
             });
 
-            const weeks = Array.from(weekMap.values())
-                .map(w => ({
-                    label: w.year_month || w.label,
+            const weeks = Array.from(weekMap.entries())
+                .map(([key, w]) => ({
+                    sortKey: key,
+                    label: w.label,
                     weekly: w.weekly_count ? w.weekly_sum / w.weekly_count : null,
                     monthly: w.monthly_count ? w.monthly_sum / w.monthly_count : null
                 }))
-                .sort((a, b) => a.label.localeCompare(b.label));
+                .sort((a, b) => a.sortKey.localeCompare(b.sortKey));
 
             if (trendChart) trendChart.destroy();
 
@@ -603,12 +669,7 @@
                     },
                     scales: {
                         y: { min: 80, max: 100, ticks: { callback: v => v + '%' } },
-                        x: { 
-                            ticks: { 
-                                maxRotation: 45,
-                                minRotation: 45
-                            }
-                        }
+                        x: { ticks: { maxRotation: 45, minRotation: 45 } }
                     }
                 }
             });
@@ -695,7 +756,20 @@
             }
 
             insights.push(`💰 <strong>Total Loss:</strong> $${totalLoss.toLocaleString(undefined, {maximumFractionDigits: 0})} across ${storeCount.toLocaleString()} stores.`);
-            insights.push(`📊 <strong>Cases Out of Target:</strong> ${casesOOT.toLocaleString()} cases need attention.`);
+
+            // Sam's Club comparison
+            const samsStores = filteredData.filter(d => d.banner_desc === "Sam's Club");
+            const wmStores = filteredData.filter(d => d.banner_desc !== "Sam's Club");
+            if (samsStores.length > 0 && wmStores.length > 0) {
+                const samsTnT = calcAvg(samsStores, 'twt_ref_30_day');
+                const wmTnT = calcAvg(wmStores, 'twt_ref_30_day');
+                const diff = samsTnT - wmTnT;
+                if (diff > 0) {
+                    insights.push(`🏬 <strong>Sam's Club:</strong> Outperforming Walmart by ${diff.toFixed(1)} percentage points (${samsTnT.toFixed(1)}% vs ${wmTnT.toFixed(1)}%)`);
+                } else {
+                    insights.push(`🏪 <strong>Walmart:</strong> Outperforming Sam's Club by ${Math.abs(diff).toFixed(1)} percentage points (${wmTnT.toFixed(1)}% vs ${samsTnT.toFixed(1)}%)`);
+                }
+            }
 
             const groupMap = new Map();
             filteredData.forEach(d => {
