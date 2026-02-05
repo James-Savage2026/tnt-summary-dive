@@ -881,30 +881,24 @@
                 const totalWOs = storeWOs.length;
                 const hvacWOs = storeWOs.filter(wo => (wo.trade_group_name || '').toUpperCase().includes('HVAC')).length;
                 const refWOs = storeWOs.filter(wo => (wo.trade_group_name || '').toUpperCase().includes('REFRIG')).length;
-                const openWOs = storeWOs.filter(wo => !['Completed', 'Closed', 'Cancelled', 'Canceled'].includes(wo.status_name)).length;
-                const completedWOs = storeWOs.filter(wo => wo.status_name === 'Completed' || wo.status_name === 'Closed').length;
-                const avgAge = storeWOs.reduce((sum, wo) => sum + (parseInt(wo.age_days) || 0), 0) / totalWOs;
+                const inProgressWOs = storeWOs.filter(wo => (wo.status_name || '').toUpperCase() === 'IN PROGRESS').length;
                 
                 document.getElementById('woSummary').innerHTML = `
                     <div class="text-center p-2 bg-gray-100 rounded">
                         <p class="text-xs text-gray-500">Total (30d)</p>
                         <p class="font-bold text-lg">${totalWOs}</p>
                     </div>
-                    <div class="text-center p-2 bg-orange-100 rounded">
-                        <p class="text-xs text-gray-500">Open</p>
-                        <p class="font-bold text-lg text-orange-600">${openWOs}</p>
-                    </div>
-                    <div class="text-center p-2 bg-green-100 rounded">
-                        <p class="text-xs text-gray-500">Completed</p>
-                        <p class="font-bold text-lg text-green-600">${completedWOs}</p>
+                    <div class="text-center p-2 bg-blue-100 rounded">
+                        <p class="text-xs text-gray-500">In Progress</p>
+                        <p class="font-bold text-lg text-blue-600">${inProgressWOs}</p>
                     </div>
                     <div class="text-center p-2 bg-cyan-100 rounded">
                         <p class="text-xs text-gray-500">Refrigeration</p>
                         <p class="font-bold text-lg text-cyan-600">${refWOs}</p>
                     </div>
-                    <div class="text-center p-2 bg-blue-100 rounded">
+                    <div class="text-center p-2 bg-purple-100 rounded">
                         <p class="text-xs text-gray-500">HVAC</p>
-                        <p class="font-bold text-lg text-blue-600">${hvacWOs}</p>
+                        <p class="font-bold text-lg text-purple-600">${hvacWOs}</p>
                     </div>
                 `;
                 
@@ -921,7 +915,7 @@
                         const tradeShort = (wo.trade_group_name || '-').replace('REFRIGERATION', 'REF').replace('HVAC', 'HVAC');
                         return `
                         <tr class="hover:bg-gray-50">
-                            <td class="px-2 py-1 font-mono text-xs font-semibold text-gray-900">${wo.tracking_nbr || '-'}</td>
+                            <td class="px-2 py-1 font-mono text-xs"><a href="https://www.servicechannel.com/sc/wo/Workorders/index?id=${wo.tracking_nbr}" target="_blank" class="text-walmart-blue hover:underline font-semibold">${wo.tracking_nbr || '-'}</a></td>
                             <td class="px-2 py-1 text-gray-600 text-xs">${tradeShort}</td>
                             <td class="px-2 py-1 text-xs font-medium ${statusClass}">${wo.status_name || '-'}</td>
                             <td class="px-2 py-1 text-gray-600 text-xs">${(wo.priority_name || '-').substring(0, 12)}</td>
