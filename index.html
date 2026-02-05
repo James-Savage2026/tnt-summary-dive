@@ -203,8 +203,27 @@
                     fetch('store_data.json'),
                     fetch('trend_data.json')
                 ]);
-                storeData = await storeRes.json();
-                trendData = await trendRes.json();
+                storeData = (await storeRes.json()).map(d => ({
+                    ...d,
+                    store_number: d.store_number,
+                    twt_ref: parseFloat(d.twt_ref) || null,
+                    twt_ref_7_day: parseFloat(d.twt_ref_7_day) || null,
+                    twt_ref_30_day: parseFloat(d.twt_ref_30_day) || null,
+                    twt_ref_90_day: parseFloat(d.twt_ref_90_day) || null,
+                    twt_hvac: parseFloat(d.twt_hvac) || null,
+                    twt_hvac_7_day: parseFloat(d.twt_hvac_7_day) || null,
+                    twt_hvac_30_day: parseFloat(d.twt_hvac_30_day) || null,
+                    twt_hvac_90_day: parseFloat(d.twt_hvac_90_day) || null,
+                    case_count: parseInt(d.case_count) || 0,
+                    cases_out_of_target: parseInt(d.cases_out_of_target) || 0
+                }));
+                trendData = (await trendRes.json()).map(d => ({
+                    ...d,
+                    avg_weekly_tit: parseFloat(d.avg_weekly_tit) || null,
+                    avg_monthly_tit: parseFloat(d.avg_monthly_tit) || null,
+                    wmt_year_nbr: parseInt(d.wmt_year_nbr),
+                    wmt_week_nbr: parseInt(d.wmt_week_nbr)
+                }));
                 filteredData = [...storeData];
                 
                 document.getElementById('lastUpdated').textContent = new Date().toLocaleDateString();
@@ -260,14 +279,17 @@
 
         // Update KPIs and table
         function updateDashboard() {
-            const validRef = filteredData.filter(d => d.twt_ref != null);
-            const validHvac = filteredData.filter(d => d.twt_hvac_30_day != null);
+            const validRef = filteredData.filter(d => d.twt_ref !== null && !isNaN(d.twt_ref));
+            const valid7d = filteredData.filter(d => d.twt_ref_7_day !== null && !isNaN(d.twt_ref_7_day));
+            const valid30d = filteredData.filter(d => d.twt_ref_30_day !== null && !isNaN(d.twt_ref_30_day));
+            const valid90d = filteredData.filter(d => d.twt_ref_90_day !== null && !isNaN(d.twt_ref_90_day));
+            const validHvac = filteredData.filter(d => d.twt_hvac_30_day !== null && !isNaN(d.twt_hvac_30_day));
 
             // KPIs
             const avgRef = validRef.length ? (validRef.reduce((s, d) => s + d.twt_ref, 0) / validRef.length) : 0;
-            const avg7d = validRef.length ? (validRef.reduce((s, d) => s + (d.twt_ref_7_day || 0), 0) / validRef.length) : 0;
-            const avg30d = validRef.length ? (validRef.reduce((s, d) => s + (d.twt_ref_30_day || 0), 0) / validRef.length) : 0;
-            const avg90d = validRef.length ? (validRef.reduce((s, d) => s + (d.twt_ref_90_day || 0), 0) / validRef.length) : 0;
+            const avg7d = valid7d.length ? (valid7d.reduce((s, d) => s + d.twt_ref_7_day, 0) / valid7d.length) : 0;
+            const avg30d = valid30d.length ? (valid30d.reduce((s, d) => s + d.twt_ref_30_day, 0) / valid30d.length) : 0;
+            const avg90d = valid90d.length ? (valid90d.reduce((s, d) => s + d.twt_ref_90_day, 0) / valid90d.length) : 0;
             const avgHvac = validHvac.length ? (validHvac.reduce((s, d) => s + d.twt_hvac_30_day, 0) / validHvac.length) : 0;
 
             document.getElementById('kpiCurrentRef').textContent = avgRef.toFixed(1) + '%';
