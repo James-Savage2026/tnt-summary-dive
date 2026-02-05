@@ -1,0 +1,11 @@
+{
+  "navigationFallback": {
+    "rewrite": "/index.html"
+  },
+  "globalHeaders": {
+    "Cache-Control": "max-age=3600"
+  },
+  "mimeTypes": {
+    ".html": "text/html"
+  }
+}
