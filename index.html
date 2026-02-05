@@ -664,7 +664,7 @@
             if (mgr) titleSuffix = ` - ${mgr}`;
             else if (dir) titleSuffix = ` - ${dir}`;
             else if (srDir) titleSuffix = ` - ${srDir}`;
-            document.getElementById('trendChartTitle').textContent = `TnT % Trend${titleSuffix}`;
+            document.getElementById('trendChartTitle').textContent = `TnT % Trend (Last 11 Weeks)${titleSuffix}`;
 
             // Aggregate trend data by week - wmt_week_nbr is in format YYYYWW (e.g., 202501)
             const weekMap = new Map();
@@ -694,10 +694,10 @@
                 .map(([key, w]) => ({
                     sortKey: key,
                     label: w.label,
-                    weekly: w.weekly_count ? w.weekly_sum / w.weekly_count : null,
-                    monthly: w.monthly_count ? w.monthly_sum / w.monthly_count : null
+                    weekly: w.weekly_count ? w.weekly_sum / w.weekly_count : null
                 }))
-                .sort((a, b) => a.sortKey - b.sortKey); // Numeric sort
+                .sort((a, b) => a.sortKey - b.sortKey)
+                .slice(-11); // Last 11 weeks only
 
             if (trendChart) trendChart.destroy();
 
@@ -712,14 +712,9 @@
                         borderColor: '#0071ce',
                         backgroundColor: 'rgba(0, 113, 206, 0.1)',
                         fill: true,
-                        tension: 0.3
-                    }, {
-                        label: 'Monthly TnT %',
-                        data: weeks.map(d => d.monthly),
-                        borderColor: '#ffc220',
-                        borderDash: [5, 5],
-                        fill: false,
-                        tension: 0.3
+                        tension: 0.3,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#0071ce'
                     }]
                 },
                 options: {
