@@ -53,6 +53,12 @@
     <main class="max-w-7xl mx-auto px-4 py-6">
         <!-- Filters -->
         <div class="bg-white rounded-lg shadow p-4 mb-6">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-sm font-medium text-gray-700">Filters</h3>
+                <button id="clearFilters" class="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm rounded-md transition">
+                    ✕ Clear All Filters
+                </button>
+            </div>
             <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Sr. Director</label>
@@ -330,7 +336,7 @@
             select.value = currentValue;
         }
 
-        // Update dependent filters
+        // Update dependent filters - cascade downstream based on selection
         function updateDependentFilters() {
             const srDir = document.getElementById('filterSrDirector').value;
             const dir = document.getElementById('filterDirector').value;
@@ -338,23 +344,63 @@
             
             let filtered = [...storeData];
             
+            // Filter by Sr Director if selected
             if (srDir) {
                 filtered = filtered.filter(d => d.fm_sr_director_name === srDir);
-                const directors = [...new Set(filtered.map(d => d.fm_director_name).filter(Boolean))].sort();
-                populateSelect('filterDirector', directors, 'All Directors');
             }
             
-            if (dir) {
+            // Update Directors dropdown
+            const directors = [...new Set(filtered.map(d => d.fm_director_name).filter(Boolean))].sort();
+            const currentDir = document.getElementById('filterDirector').value;
+            populateSelect('filterDirector', directors, 'All Directors');
+            if (directors.includes(currentDir)) {
+                document.getElementById('filterDirector').value = currentDir;
+            }
+            
+            // Filter by Director if selected and valid
+            if (dir && directors.includes(dir)) {
                 filtered = filtered.filter(d => d.fm_director_name === dir);
-                const managers = [...new Set(filtered.map(d => d.fm_regional_manager_name).filter(Boolean))].sort();
-                populateSelect('filterManager', managers, 'All Managers');
             }
             
-            if (mgr) {
-                filtered = filtered.filter(d => d.fm_regional_manager_name === mgr);
-                const fsManagers = [...new Set(filtered.map(d => d.fs_manager_name).filter(Boolean))].sort();
-                populateSelect('filterFSManager', fsManagers, 'All FS Managers');
+            // Update Regional Managers dropdown
+            const managers = [...new Set(filtered.map(d => d.fm_regional_manager_name).filter(Boolean))].sort();
+            const currentMgr = document.getElementById('filterManager').value;
+            populateSelect('filterManager', managers, 'All Managers');
+            if (managers.includes(currentMgr)) {
+                document.getElementById('filterManager').value = currentMgr;
             }
+            
+            // Filter by Manager if selected and valid
+            if (mgr && managers.includes(mgr)) {
+                filtered = filtered.filter(d => d.fm_regional_manager_name === mgr);
+            }
+            
+            // Update FS Managers dropdown
+            const fsManagers = [...new Set(filtered.map(d => d.fs_manager_name).filter(Boolean))].sort();
+            const currentFsMgr = document.getElementById('filterFSManager').value;
+            populateSelect('filterFSManager', fsManagers, 'All FS Managers');
+            if (fsManagers.includes(currentFsMgr)) {
+                document.getElementById('filterFSManager').value = currentFsMgr;
+            }
+            
+            // Update Markets dropdown
+            const markets = [...new Set(filtered.map(d => d.fs_market).filter(Boolean))].sort();
+            const currentMkt = document.getElementById('filterMarket').value;
+            populateSelect('filterMarket', markets, 'All Markets');
+            if (markets.includes(currentMkt)) {
+                document.getElementById('filterMarket').value = currentMkt;
+            }
+        }
+        
+        // Clear all filters
+        function clearAllFilters() {
+            document.getElementById('filterSrDirector').value = '';
+            document.getElementById('filterDirector').value = '';
+            document.getElementById('filterManager').value = '';
+            document.getElementById('filterFSManager').value = '';
+            document.getElementById('filterMarket').value = '';
+            populateFilters();
+            applyFilters();
         }
 
         // Apply filters
@@ -375,11 +421,19 @@
                 return true;
             });
 
-            // Filter trend data
+            // Filter trend data (case-insensitive matching since trend data is UPPERCASE)
+            const srDirUpper = srDir ? srDir.toUpperCase() : '';
+            const dirUpper = dir ? dir.toUpperCase() : '';
+            const mgrUpper = mgr ? mgr.toUpperCase() : '';
+            
             filteredTrendData = trendData.filter(d => {
-                if (srDir && d.fm_sr_director !== srDir) return false;
-                if (dir && d.fm_director !== dir) return false;
-                if (mgr && d.fm_regional_mgr !== mgr) return false;
+                const trendSrDir = (d.fm_sr_director || '').toUpperCase();
+                const trendDir = (d.fm_director || '').toUpperCase();
+                const trendMgr = (d.fm_regional_mgr || '').toUpperCase();
+                
+                if (srDirUpper && trendSrDir !== srDirUpper) return false;
+                if (dirUpper && trendDir !== dirUpper) return false;
+                if (mgrUpper && trendMgr !== mgrUpper) return false;
                 return true;
             });
 
@@ -803,6 +857,7 @@
         document.getElementById('filterFSManager').addEventListener('change', applyFilters);
         document.getElementById('filterMarket').addEventListener('change', applyFilters);
         document.getElementById('tableSearch').addEventListener('input', updateManagerTable);
+        document.getElementById('clearFilters').addEventListener('click', clearAllFilters);
 
         // Initialize
         loadData();
