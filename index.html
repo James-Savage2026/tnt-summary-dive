@@ -6,6 +6,7 @@
     <title>TnT Manager View - HVAC/R Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -118,8 +119,8 @@
                 <p class="text-sm text-gray-500">Total Stores</p>
             </div>
             <div class="bg-white rounded-lg shadow p-4 text-center">
-                <p class="text-4xl font-bold text-gray-800" id="totalCases">--</p>
-                <p class="text-sm text-gray-500">Total Cases</p>
+                <p class="text-4xl font-bold text-red-600" id="totalLoss">--</p>
+                <p class="text-sm text-gray-500">Total Loss ($)</p>
             </div>
             <div class="bg-white rounded-lg shadow p-4 text-center">
                 <p class="text-4xl font-bold text-red-600" id="casesOutOfTarget">--</p>
@@ -135,7 +136,7 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             <!-- Trend Chart -->
             <div class="bg-white rounded-lg shadow p-4">
-                <h2 class="text-lg font-semibold text-gray-800 mb-4">TnT % Trend (Weekly)</h2>
+                <h2 class="text-lg font-semibold text-gray-800 mb-4" id="trendChartTitle">TnT % Trend (Weekly)</h2>
                 <div style="height: 300px;">
                     <canvas id="trendChart"></canvas>
                 </div>
@@ -186,10 +187,14 @@
     </footer>
 
     <script>
+        // Register Chart.js datalabels plugin
+        Chart.register(ChartDataLabels);
+        
         // Global data
         let storeData = [];
         let trendData = [];
         let filteredData = [];
+        let filteredTrendData = [];
         let currentSort = { field: 'twt_ref_30_day', direction: 'desc' };
         let trendChart, breakdownChart;
 
@@ -212,16 +217,21 @@
                     twt_hvac_30_day: parseFloat(d.twt_hvac_30_day) || null,
                     twt_hvac_90_day: parseFloat(d.twt_hvac_90_day) || null,
                     case_count: parseInt(d.case_count) || 0,
-                    cases_out_of_target: parseInt(d.cases_out_of_target) || 0
+                    cases_out_of_target: parseInt(d.cases_out_of_target) || 0,
+                    total_loss: parseFloat(d.total_loss) || 0
                 }));
                 trendData = (await trendRes.json()).map(d => ({
                     ...d,
                     avg_weekly_tit: parseFloat(d.avg_weekly_tit) || null,
                     avg_monthly_tit: parseFloat(d.avg_monthly_tit) || null,
                     wmt_year_nbr: parseInt(d.wmt_year_nbr),
-                    wmt_week_nbr: parseInt(d.wmt_week_nbr)
+                    wmt_week_nbr: parseInt(d.wmt_week_nbr),
+                    fm_sr_director: d.fm_sr_director,
+                    fm_director: d.fm_director,
+                    fm_regional_mgr: d.fm_regional_mgr
                 }));
                 filteredData = [...storeData];
+                filteredTrendData = [...trendData];
                 
                 document.getElementById('lastUpdated').textContent = new Date().toLocaleDateString();
                 
@@ -306,12 +316,21 @@
             const fsMgr = document.getElementById('filterFSManager').value;
             const mkt = document.getElementById('filterMarket').value;
 
+            // Filter store data
             filteredData = storeData.filter(d => {
                 if (srDir && d.fm_sr_director_name !== srDir) return false;
                 if (dir && d.fm_director_name !== dir) return false;
                 if (mgr && d.fm_regional_manager_name !== mgr) return false;
                 if (fsMgr && d.fs_manager_name !== fsMgr) return false;
                 if (mkt && d.fs_market !== mkt) return false;
+                return true;
+            });
+
+            // Filter trend data
+            filteredTrendData = trendData.filter(d => {
+                if (srDir && d.fm_sr_director !== srDir) return false;
+                if (dir && d.fm_director !== dir) return false;
+                if (mgr && d.fm_regional_mgr !== mgr) return false;
                 return true;
             });
 
@@ -342,21 +361,21 @@
             document.getElementById('kpiHVAC').textContent = avgHvac.toFixed(1) + '%';
 
             // Summary stats
-            const totalCases = filteredData.reduce((s, d) => s + (d.case_count || 0), 0);
+            const totalLoss = filteredData.reduce((s, d) => s + (d.total_loss || 0), 0);
             const casesOOT = filteredData.reduce((s, d) => s + (d.cases_out_of_target || 0), 0);
             
             const context = getFilterContext();
             const uniqueItems = [...new Set(filteredData.map(d => d[context.groupBy]))];
 
             document.getElementById('totalStores').textContent = filteredData.length.toLocaleString();
-            document.getElementById('totalCases').textContent = totalCases.toLocaleString();
+            document.getElementById('totalLoss').textContent = '$' + totalLoss.toLocaleString(undefined, {maximumFractionDigits: 0});
             document.getElementById('casesOutOfTarget').textContent = casesOOT.toLocaleString();
             document.getElementById('totalManagers').textContent = uniqueItems.length;
             document.getElementById('managersLabel').textContent = context.label;
 
             // Update table
             updateManagerTable();
-            updateInsights(avgRef, avg30d, avgHvac, casesOOT, filteredData.length);
+            updateInsights(avgRef, avg30d, avgHvac, casesOOT, filteredData.length, totalLoss);
         }
 
         // Aggregate and update table based on context
@@ -376,18 +395,17 @@
                     <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortTable('twt_ref_7_day')">7-Day ⇅</th>
                     <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortTable('twt_ref_30_day')">30-Day ⇅</th>
                     <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortTable('twt_hvac_30_day')">HVAC 30d ⇅</th>
-                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Cases OOT</th>
+                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Loss $</th>
                 </tr>
             ` : `
                 <tr>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortTable('parent')">${context.parent ? context.parent.replace(/_/g, ' ').replace('name', '').replace('fm ', '').trim() : 'Parent'} ⇅</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortTable('parent')">Parent ⇅</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortTable('name')">${context.label.slice(0, -1)} ⇅</th>
                     <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortTable('store_count')">Stores ⇅</th>
                     <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortTable('twt_ref')">Current % ⇅</th>
-                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortTable('twt_ref_7_day')">7-Day ⇅</th>
                     <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortTable('twt_ref_30_day')">30-Day ⇅</th>
                     <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortTable('twt_hvac_30_day')">HVAC 30d ⇅</th>
-                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortTable('cases_out_of_target')">Cases OOT ⇅</th>
+                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortTable('total_loss')">Loss $ ⇅</th>
                 </tr>
             `;
             document.getElementById('tableHeader').innerHTML = headerHtml;
@@ -395,7 +413,6 @@
             let rows = [];
             
             if (context.level === 'store') {
-                // Show individual stores
                 rows = filteredData.map(d => ({
                     name: d.store_number,
                     parent: d.fs_manager_name || '-',
@@ -404,10 +421,9 @@
                     twt_ref_7_day: d.twt_ref_7_day,
                     twt_ref_30_day: d.twt_ref_30_day,
                     twt_hvac_30_day: d.twt_hvac_30_day,
-                    cases_out_of_target: d.cases_out_of_target || 0
+                    total_loss: d.total_loss || 0
                 }));
             } else {
-                // Aggregate by groupBy field
                 const groupMap = new Map();
                 filteredData.forEach(d => {
                     const key = d[context.groupBy];
@@ -418,19 +434,17 @@
                             parent: context.parent ? d[context.parent] : '-',
                             stores: [],
                             twt_ref_sum: 0, twt_ref_count: 0,
-                            twt_ref_7_day_sum: 0, twt_ref_7_day_count: 0,
                             twt_ref_30_day_sum: 0, twt_ref_30_day_count: 0,
                             twt_hvac_30_day_sum: 0, twt_hvac_30_day_count: 0,
-                            cases_out_of_target: 0
+                            total_loss: 0
                         });
                     }
                     const g = groupMap.get(key);
                     g.stores.push(d.store_number);
                     if (d.twt_ref != null && !isNaN(d.twt_ref)) { g.twt_ref_sum += d.twt_ref; g.twt_ref_count++; }
-                    if (d.twt_ref_7_day != null && !isNaN(d.twt_ref_7_day)) { g.twt_ref_7_day_sum += d.twt_ref_7_day; g.twt_ref_7_day_count++; }
                     if (d.twt_ref_30_day != null && !isNaN(d.twt_ref_30_day)) { g.twt_ref_30_day_sum += d.twt_ref_30_day; g.twt_ref_30_day_count++; }
                     if (d.twt_hvac_30_day != null && !isNaN(d.twt_hvac_30_day)) { g.twt_hvac_30_day_sum += d.twt_hvac_30_day; g.twt_hvac_30_day_count++; }
-                    g.cases_out_of_target += d.cases_out_of_target || 0;
+                    g.total_loss += d.total_loss || 0;
                 });
 
                 rows = Array.from(groupMap.values()).map(g => ({
@@ -438,14 +452,12 @@
                     parent: g.parent || '-',
                     store_count: g.stores.length,
                     twt_ref: g.twt_ref_count ? g.twt_ref_sum / g.twt_ref_count : null,
-                    twt_ref_7_day: g.twt_ref_7_day_count ? g.twt_ref_7_day_sum / g.twt_ref_7_day_count : null,
                     twt_ref_30_day: g.twt_ref_30_day_count ? g.twt_ref_30_day_sum / g.twt_ref_30_day_count : null,
                     twt_hvac_30_day: g.twt_hvac_30_day_count ? g.twt_hvac_30_day_sum / g.twt_hvac_30_day_count : null,
-                    cases_out_of_target: g.cases_out_of_target
+                    total_loss: g.total_loss
                 }));
             }
 
-            // Filter by search
             if (searchTerm) {
                 rows = rows.filter(r => 
                     String(r.name).toLowerCase().includes(searchTerm) ||
@@ -453,7 +465,6 @@
                 );
             }
 
-            // Sort
             rows.sort((a, b) => {
                 let aVal = a[currentSort.field];
                 let bVal = b[currentSort.field];
@@ -465,7 +476,6 @@
                 return currentSort.direction === 'asc' ? aVal - bVal : bVal - aVal;
             });
 
-            // Render
             const tbody = document.getElementById('managerTableBody');
             tbody.innerHTML = context.level === 'store' ? 
                 rows.map(r => `
@@ -476,7 +486,7 @@
                         <td class="px-4 py-2 text-sm text-center ${getColorClass(r.twt_ref_7_day)}">${formatPct(r.twt_ref_7_day)}</td>
                         <td class="px-4 py-2 text-sm text-center ${getColorClass(r.twt_ref_30_day)}">${formatPct(r.twt_ref_30_day)}</td>
                         <td class="px-4 py-2 text-sm text-center ${getColorClass(r.twt_hvac_30_day)}">${formatPct(r.twt_hvac_30_day)}</td>
-                        <td class="px-4 py-2 text-sm text-center text-red-600 font-medium">${r.cases_out_of_target}</td>
+                        <td class="px-4 py-2 text-sm text-center text-red-600 font-medium">$${r.total_loss.toLocaleString(undefined, {maximumFractionDigits: 0})}</td>
                     </tr>
                 `).join('') :
                 rows.map(r => `
@@ -485,10 +495,9 @@
                         <td class="px-4 py-2 text-sm font-medium text-gray-900">${r.name}</td>
                         <td class="px-4 py-2 text-sm text-center text-gray-600">${r.store_count}</td>
                         <td class="px-4 py-2 text-sm text-center font-semibold ${getColorClass(r.twt_ref)}">${formatPct(r.twt_ref)}</td>
-                        <td class="px-4 py-2 text-sm text-center ${getColorClass(r.twt_ref_7_day)}">${formatPct(r.twt_ref_7_day)}</td>
                         <td class="px-4 py-2 text-sm text-center ${getColorClass(r.twt_ref_30_day)}">${formatPct(r.twt_ref_30_day)}</td>
                         <td class="px-4 py-2 text-sm text-center ${getColorClass(r.twt_hvac_30_day)}">${formatPct(r.twt_hvac_30_day)}</td>
-                        <td class="px-4 py-2 text-sm text-center text-red-600 font-medium">${r.cases_out_of_target}</td>
+                        <td class="px-4 py-2 text-sm text-center text-red-600 font-medium">$${r.total_loss.toLocaleString(undefined, {maximumFractionDigits: 0})}</td>
                     </tr>
                 `).join('');
         }
@@ -516,27 +525,69 @@
 
         // Charts
         function initCharts() {
-            // Trend chart
-            const trendCtx = document.getElementById('trendChart').getContext('2d');
-            const sortedTrend = [...trendData].sort((a, b) => {
-                if (a.wmt_year_nbr !== b.wmt_year_nbr) return a.wmt_year_nbr - b.wmt_year_nbr;
-                return a.wmt_week_nbr - b.wmt_week_nbr;
+            updateCharts();
+        }
+
+        function updateCharts() {
+            updateTrendChart();
+            updateBreakdownChart();
+        }
+
+        function updateTrendChart() {
+            const context = getFilterContext();
+            
+            // Update title based on filter
+            const srDir = document.getElementById('filterSrDirector').value;
+            const dir = document.getElementById('filterDirector').value;
+            const mgr = document.getElementById('filterManager').value;
+            let titleSuffix = '';
+            if (mgr) titleSuffix = ` - ${mgr}`;
+            else if (dir) titleSuffix = ` - ${dir}`;
+            else if (srDir) titleSuffix = ` - ${srDir}`;
+            document.getElementById('trendChartTitle').textContent = `TnT % Trend${titleSuffix}`;
+
+            // Aggregate trend data by week
+            const weekMap = new Map();
+            filteredTrendData.forEach(d => {
+                const key = `${d.wmt_year_nbr}-W${String(d.wmt_week_nbr).padStart(2, '0')}`;
+                if (!weekMap.has(key)) {
+                    weekMap.set(key, {
+                        label: key,
+                        year_month: d.year_month,
+                        weekly_sum: 0, weekly_count: 0,
+                        monthly_sum: 0, monthly_count: 0
+                    });
+                }
+                const w = weekMap.get(key);
+                if (d.avg_weekly_tit != null) { w.weekly_sum += d.avg_weekly_tit; w.weekly_count++; }
+                if (d.avg_monthly_tit != null) { w.monthly_sum += d.avg_monthly_tit; w.monthly_count++; }
             });
 
+            const weeks = Array.from(weekMap.values())
+                .map(w => ({
+                    label: w.year_month || w.label,
+                    weekly: w.weekly_count ? w.weekly_sum / w.weekly_count : null,
+                    monthly: w.monthly_count ? w.monthly_sum / w.monthly_count : null
+                }))
+                .sort((a, b) => a.label.localeCompare(b.label));
+
+            if (trendChart) trendChart.destroy();
+
+            const trendCtx = document.getElementById('trendChart').getContext('2d');
             trendChart = new Chart(trendCtx, {
                 type: 'line',
                 data: {
-                    labels: sortedTrend.map(d => `W${d.wmt_week_nbr}`),
+                    labels: weeks.map(d => d.label),
                     datasets: [{
                         label: 'Weekly TnT %',
-                        data: sortedTrend.map(d => d.avg_weekly_tit),
+                        data: weeks.map(d => d.weekly),
                         borderColor: '#0071ce',
                         backgroundColor: 'rgba(0, 113, 206, 0.1)',
                         fill: true,
                         tension: 0.3
                     }, {
                         label: 'Monthly TnT %',
-                        data: sortedTrend.map(d => d.avg_monthly_tit),
+                        data: weeks.map(d => d.monthly),
                         borderColor: '#ffc220',
                         borderDash: [5, 5],
                         fill: false,
@@ -547,24 +598,27 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { position: 'bottom' }
+                        legend: { position: 'bottom' },
+                        datalabels: { display: false }
                     },
                     scales: {
-                        y: { min: 80, max: 100, ticks: { callback: v => v + '%' } }
+                        y: { min: 80, max: 100, ticks: { callback: v => v + '%' } },
+                        x: { 
+                            ticks: { 
+                                maxRotation: 45,
+                                minRotation: 45
+                            }
+                        }
                     }
                 }
             });
-
-            updateCharts();
         }
 
-        function updateCharts() {
+        function updateBreakdownChart() {
             const context = getFilterContext();
             
-            // Update chart title
             document.getElementById('breakdownChartTitle').textContent = `Performance by ${context.label}`;
             
-            // Aggregate by current groupBy
             const groupMap = new Map();
             filteredData.forEach(d => {
                 const key = d[context.groupBy];
@@ -581,7 +635,7 @@
             const groups = Array.from(groupMap.entries())
                 .map(([name, data]) => ({ name, avg: data.count ? data.sum / data.count : 0 }))
                 .sort((a, b) => b.avg - a.avg)
-                .slice(0, 15); // Limit to top 15 for readability
+                .slice(0, 15);
 
             if (breakdownChart) breakdownChart.destroy();
             
@@ -589,7 +643,7 @@
             breakdownChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: groups.map(d => d.name.length > 20 ? d.name.substring(0, 20) + '...' : d.name),
+                    labels: groups.map(d => d.name.length > 18 ? d.name.substring(0, 18) + '...' : d.name),
                     datasets: [{
                         label: '30-Day TnT %',
                         data: groups.map(d => d.avg),
@@ -607,6 +661,14 @@
                             callbacks: {
                                 title: (items) => groups[items[0].dataIndex].name
                             }
+                        },
+                        datalabels: {
+                            anchor: 'end',
+                            align: 'start',
+                            offset: 4,
+                            color: '#fff',
+                            font: { weight: 'bold', size: 11 },
+                            formatter: (value) => value.toFixed(1) + '%'
                         }
                     },
                     scales: {
@@ -616,7 +678,7 @@
             });
         }
 
-        function updateInsights(avgRef, avg30d, avgHvac, casesOOT, storeCount) {
+        function updateInsights(avgRef, avg30d, avgHvac, casesOOT, storeCount, totalLoss) {
             const context = getFilterContext();
             const insights = [];
             
@@ -632,10 +694,9 @@
                 insights.push(`⚠️ <strong>HVAC Opportunity:</strong> HVAC systems at ${avgHvac.toFixed(1)}% - review underperforming stores.`);
             }
 
-            const ootPct = storeCount ? ((casesOOT / storeCount)).toFixed(1) : 0;
-            insights.push(`📊 <strong>Cases Out of Target:</strong> ${casesOOT.toLocaleString()} cases across ${storeCount.toLocaleString()} stores (avg ${ootPct} per store).`);
+            insights.push(`💰 <strong>Total Loss:</strong> $${totalLoss.toLocaleString(undefined, {maximumFractionDigits: 0})} across ${storeCount.toLocaleString()} stores.`);
+            insights.push(`📊 <strong>Cases Out of Target:</strong> ${casesOOT.toLocaleString()} cases need attention.`);
 
-            // Find best/worst performers at current level
             const groupMap = new Map();
             filteredData.forEach(d => {
                 const key = d[context.groupBy];
