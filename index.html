@@ -42,9 +42,15 @@
                     <h1 class="text-2xl font-bold">TnT - Manager View</h1>
                     <p class="text-blue-100 text-sm">Time in Target Dashboard | HVAC/R Performance</p>
                 </div>
-                <div class="text-right">
-                    <p class="text-sm text-blue-100">Last Updated</p>
-                    <p class="font-semibold" id="lastUpdated">Loading...</p>
+                <div class="flex items-center gap-4">
+                    <button id="shareBtn" onclick="copyShareLink()" 
+                            class="bg-white text-walmart-blue px-3 py-2 rounded-lg text-sm font-semibold hover:bg-blue-50 flex items-center gap-2">
+                        <span>🔗</span> Share View
+                    </button>
+                    <div class="text-right">
+                        <p class="text-sm text-blue-100">Last Updated</p>
+                        <p class="font-semibold" id="lastUpdated">Loading...</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -403,6 +409,110 @@
         let currentStoreWOs = [];
         let woSortAsc = false; // false = descending (oldest first)
 
+        // =====================
+        // URL SHARING FUNCTIONS
+        // =====================
+        
+        // Encode current filter state to URL hash
+        function encodeStateToURL() {
+            const params = new URLSearchParams();
+            
+            const sr = document.getElementById('filterSrDirector').value;
+            const dir = document.getElementById('filterDirector').value;
+            const mgr = document.getElementById('filterManager').value;
+            const fsm = document.getElementById('filterFSManager').value;
+            const mkt = document.getElementById('filterMarket').value;
+            
+            if (sr) params.set('sr', sr);
+            if (dir) params.set('dir', dir);
+            if (mgr) params.set('mgr', mgr);
+            if (fsm) params.set('fsm', fsm);
+            if (mkt) params.set('mkt', mkt);
+            if (selectedBannerFilter !== 'all') params.set('banner', selectedBannerFilter);
+            if (selectedStore) params.set('store', selectedStore.store_number);
+            
+            const hash = params.toString();
+            if (hash) {
+                history.replaceState(null, '', '#' + hash);
+            } else {
+                history.replaceState(null, '', window.location.pathname);
+            }
+        }
+        
+        // Decode URL hash and apply filter state
+        function decodeStateFromURL() {
+            const hash = window.location.hash.substring(1);
+            if (!hash) return null;
+            
+            const params = new URLSearchParams(hash);
+            return {
+                sr: params.get('sr') || '',
+                dir: params.get('dir') || '',
+                mgr: params.get('mgr') || '',
+                fsm: params.get('fsm') || '',
+                mkt: params.get('mkt') || '',
+                banner: params.get('banner') || 'all',
+                store: params.get('store') || ''
+            };
+        }
+        
+        // Apply URL state to filters
+        function applyURLState(state) {
+            if (!state) return;
+            
+            // Apply filters in cascade order
+            if (state.sr) {
+                document.getElementById('filterSrDirector').value = state.sr;
+                updateCascadingFilters();
+            }
+            if (state.dir) {
+                document.getElementById('filterDirector').value = state.dir;
+                updateCascadingFilters();
+            }
+            if (state.mgr) {
+                document.getElementById('filterManager').value = state.mgr;
+                updateCascadingFilters();
+            }
+            if (state.fsm) {
+                document.getElementById('filterFSManager').value = state.fsm;
+            }
+            if (state.mkt) {
+                document.getElementById('filterMarket').value = state.mkt;
+            }
+            if (state.banner && state.banner !== 'all') {
+                handleBannerToggle(state.banner);
+            }
+            
+            // Apply filters
+            applyFilters();
+            
+            // Open store detail if specified
+            if (state.store) {
+                setTimeout(() => selectStore(state.store), 500);
+            }
+        }
+        
+        // Copy share link to clipboard
+        function copyShareLink() {
+            encodeStateToURL();
+            const url = window.location.href;
+            
+            navigator.clipboard.writeText(url).then(() => {
+                const btn = document.getElementById('shareBtn');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<span>✅</span> Copied!';
+                btn.classList.add('bg-green-100');
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.classList.remove('bg-green-100');
+                }, 2000);
+            }).catch(err => {
+                // Fallback for older browsers
+                prompt('Copy this link:', url);
+            });
+        }
+
         // Load data
         async function loadData() {
             try {
@@ -438,8 +548,15 @@
                 document.getElementById('lastUpdated').textContent = new Date().toLocaleDateString();
                 
                 populateFilters();
-                updateDashboard();
-                updateCharts();
+                
+                // Check for URL state and apply if present
+                const urlState = decodeStateFromURL();
+                if (urlState && (urlState.sr || urlState.dir || urlState.mgr || urlState.fsm || urlState.mkt || urlState.store)) {
+                    applyURLState(urlState);
+                } else {
+                    updateDashboard();
+                    updateCharts();
+                }
             } catch (error) {
                 console.error('Error loading data:', error);
                 document.getElementById('lastUpdated').textContent = 'Error loading data';
@@ -571,6 +688,9 @@
             updateDependentFilters();
             updateDashboard();
             updateCharts();
+            
+            // Update URL with current state
+            encodeStateToURL();
         }
 
         // Calculate average for a field
@@ -871,6 +991,9 @@
             // Load work orders
             loadStoreWorkOrders(store.store_number);
             
+            // Update URL with store selection
+            encodeStateToURL();
+            
             // Scroll to detail section
             document.getElementById('storeDetailSection').scrollIntoView({ behavior: 'smooth' });
         }
@@ -1093,6 +1216,7 @@
         function closeStoreDetail() {
             document.getElementById('storeDetailSection').classList.add('hidden');
             selectedStore = null;
+            encodeStateToURL();
         }
         
         // Banner toggle click handler
@@ -1107,6 +1231,7 @@
                 }
             });
             updateBottom10Stores();
+            encodeStateToURL();
         }
 
         function updateBreakdownChart() {
