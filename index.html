@@ -666,13 +666,21 @@
             else if (srDir) titleSuffix = ` - ${srDir}`;
             document.getElementById('trendChartTitle').textContent = `TnT % Trend${titleSuffix}`;
 
-            // Aggregate trend data by week
+            // Aggregate trend data by week - wmt_week_nbr is in format YYYYWW (e.g., 202501)
             const weekMap = new Map();
             filteredTrendData.forEach(d => {
-                const key = `${d.wmt_year_nbr}-W${String(d.wmt_week_nbr).padStart(2, '0')}`;
+                // wmt_week_nbr is like 202501, 202502, etc.
+                const weekNum = parseInt(d.wmt_week_nbr) || 0;
+                if (weekNum === 0) return;
+                
+                const year = Math.floor(weekNum / 100);
+                const week = weekNum % 100;
+                const key = weekNum; // Use numeric for sorting
+                const label = `W${week} '${String(year).slice(-2)}`; // e.g., "W01 '25"
+                
                 if (!weekMap.has(key)) {
                     weekMap.set(key, {
-                        label: d.year_month || key,
+                        label: label,
                         weekly_sum: 0, weekly_count: 0,
                         monthly_sum: 0, monthly_count: 0
                     });
@@ -689,7 +697,7 @@
                     weekly: w.weekly_count ? w.weekly_sum / w.weekly_count : null,
                     monthly: w.monthly_count ? w.monthly_sum / w.monthly_count : null
                 }))
-                .sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+                .sort((a, b) => a.sortKey - b.sortKey); // Numeric sort
 
             if (trendChart) trendChart.destroy();
 
