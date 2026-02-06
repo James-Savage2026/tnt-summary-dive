@@ -248,29 +248,33 @@ def main():
                 </div>
             </div>
             
-            <!-- PM Readiness Buttons -->
-            <div class="bg-white rounded-lg shadow p-4 mb-6">
+            <!-- PM Readiness Buttons (Dynamic) -->
+            <div class="bg-white rounded-lg shadow p-4 mb-6" id="wtwPmButtons">
                 <div class="flex flex-wrap gap-3 justify-center items-center">
                     <span class="text-sm font-medium text-gray-600">PM Readiness:</span>
                     <button onclick="setWtwPmFilter('')" id="wtw-pm-all"
                             class="wtw-pm-btn px-4 py-2 rounded-lg text-sm font-semibold border-2 border-gray-300 bg-gray-100 text-gray-700 ring-2 ring-offset-2 ring-walmart-blue">
-                        All ({summary['total']:,})
+                        All (<span id="wtw-pm-all-count">0</span>)
                     </button>
                     <button onclick="setWtwPmFilter('ready')" id="wtw-pm-ready"
                             class="wtw-pm-btn px-4 py-2 rounded-lg text-sm font-semibold border-2 border-green-400 bg-green-50 text-green-700 hover:bg-green-100">
-                        \u2713 Ready to Complete ({ready_to_complete:,})
+                        \u2713 Ready to Complete (<span id="wtw-pm-ready-count">0</span>)
                     </button>
-                    <button onclick="setWtwPmFilter('reopen')" id="wtw-pm-reopen"
+                    <button onclick="setWtwPmFilter('review')" id="wtw-pm-review"
+                            class="wtw-pm-btn px-4 py-2 rounded-lg text-sm font-semibold border-2 border-yellow-400 bg-yellow-50 text-yellow-700 hover:bg-yellow-100">
+                        \U0001F50D Review Needed (<span id="wtw-pm-review-count">0</span>)
+                    </button>
+                    <button onclick="setWtwPmFilter('critical')" id="wtw-pm-critical"
                             class="wtw-pm-btn px-4 py-2 rounded-lg text-sm font-semibold border-2 border-red-400 bg-red-50 text-red-700 hover:bg-red-100">
-                        \u26a0 Should Reopen ({should_reopen:,})
+                        \u26a0 Critical Reopen (<span id="wtw-pm-critical-count">0</span>)
                     </button>
                     <button onclick="setWtwPmFilter('div1')" id="wtw-pm-div1"
                             class="wtw-pm-btn px-4 py-2 rounded-lg text-sm font-semibold border-2 border-orange-400 bg-orange-50 text-orange-700 hover:bg-orange-100">
-                        \U0001F3EA Div1 Stores ({div1_count:,})
+                        \U0001F3EA Div1 Stores (<span id="wtw-pm-div1-count">0</span>)
                     </button>
                 </div>
                 <div class="text-center text-xs text-gray-500 mt-2">
-                    Ready = In Progress + All PM Pass | Reopen = Completed + PM Fail (excl. Div1) | Div1 = Small-format legacy stores
+                    Ready = In Progress + All PM Pass | Review = PM \u226590% but failing 1+ criteria | Critical = PM &lt;90% + failing criteria
                 </div>
             </div>
             
@@ -610,12 +614,18 @@ def main():
             }}
             // PM Readiness filter
             if (wtwPmFilter === 'ready') {{
-                // Ready to complete: In Progress + all PM pass
+                // Ready to complete: Not Completed + all PM pass
                 if (wo.st === 'COMPLETED' || wo.allP !== 'PASS') return false;
             }}
-            if (wtwPmFilter === 'reopen') {{
-                // Should reopen: Completed + PM fail (exclude Div1)
-                if (wo.st !== 'COMPLETED' || wo.allP !== 'FAIL' || wo.div1 === 'Y') return false;
+            if (wtwPmFilter === 'review') {{
+                // Review needed: Completed + PM >= 90% but failing 1+ criteria (exclude Div1)
+                const pmScore = parseFloat(wo.pm) || 0;
+                if (wo.st !== 'COMPLETED' || wo.allP === 'PASS' || pmScore < 90 || wo.div1 === 'Y') return false;
+            }}
+            if (wtwPmFilter === 'critical') {{
+                // Critical reopen: Completed + PM < 90% (exclude Div1)
+                const pmScore = parseFloat(wo.pm) || 0;
+                if (wo.st !== 'COMPLETED' || pmScore >= 90 || wo.div1 === 'Y') return false;
             }}
             if (wtwPmFilter === 'div1') {{
                 // Div1 stores only
@@ -632,6 +642,9 @@ def main():
         
         // Update phase cards based on filtered data
         updatePhaseCards();
+        
+        // Update PM readiness buttons based on filtered data
+        updatePmButtons();
         
         // Update charts
         updateWtwCharts();
@@ -716,6 +729,40 @@ def main():
                 <span>\u25cb ${{stats['OPEN'].toLocaleString()}}</span>
             `;
         }});
+    }}
+    
+    // Update PM Readiness button counts based on filtered data
+    function updatePmButtons() {{
+        let ready = 0, review = 0, critical = 0, div1 = 0;
+        const total = wtwFilteredData.length;
+        
+        wtwFilteredData.forEach(wo => {{
+            const pmScore = parseFloat(wo.pm) || 0;
+            const isDiv1 = wo.div1 === 'Y';
+            
+            if (isDiv1) {{
+                div1++;
+            }}
+            
+            if (wo.st !== 'COMPLETED' && wo.allP === 'PASS') {{
+                ready++;
+            }}
+            
+            if (wo.st === 'COMPLETED' && wo.allP === 'FAIL' && !isDiv1) {{
+                if (pmScore >= 90) {{
+                    review++;  // PM >= 90% but failing criteria
+                }} else {{
+                    critical++;  // PM < 90%
+                }}
+            }}
+        }});
+        
+        // Update button counts
+        document.getElementById('wtw-pm-all-count').textContent = total.toLocaleString();
+        document.getElementById('wtw-pm-ready-count').textContent = ready.toLocaleString();
+        document.getElementById('wtw-pm-review-count').textContent = review.toLocaleString();
+        document.getElementById('wtw-pm-critical-count').textContent = critical.toLocaleString();
+        document.getElementById('wtw-pm-div1-count').textContent = div1.toLocaleString();
     }}
     
     // Sort WTW table
