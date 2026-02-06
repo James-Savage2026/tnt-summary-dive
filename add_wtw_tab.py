@@ -9,7 +9,7 @@ from datetime import datetime
 
 # Paths
 DASHBOARD_PATH = Path(__file__).parent / 'index.html'
-WTW_DATA_PATH = Path.home() / 'bigquery_results' / 'wtw-fy26-full-with-fm-20260205-190331.csv'
+WTW_DATA_PATH = Path.home() / 'bigquery_results' / 'wtw-fy26-all-workorders-20260205-191527.csv'
 
 def load_csv(path):
     """Load CSV file and return list of dicts"""
@@ -220,6 +220,7 @@ def main():
                             <option value="PARTS DELIVERED">Parts Delivered</option>
                             <option value="PARTS ON ORDER">Parts On Order</option>
                             <option value="OPEN">Open (Unassigned)</option>
+                            <option value="COMPLETED">Completed</option>
                         </select>
                     </div>
                     <div>
@@ -234,7 +235,12 @@ def main():
             </div>
             
             <!-- KPIs Row -->
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6" id="wtwKpiRow">
+            <div class="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6" id="wtwKpiRow">
+                <div class="bg-white rounded-lg shadow p-4 border-l-4 border-green-500">
+                    <p class="text-sm text-gray-500 uppercase">Completed</p>
+                    <p class="text-2xl font-bold text-green-600" id="wtwKpiCompleted">0</p>
+                    <p class="text-xs text-gray-400" id="wtwKpiCompletionRate">0% complete</p>
+                </div>
                 <div class="bg-white rounded-lg shadow p-4 border-l-4 border-red-500">
                     <p class="text-sm text-gray-500 uppercase">Incomplete</p>
                     <p class="text-2xl font-bold text-red-600" id="wtwKpiIncomplete">{status_counts.get('INCOMPLETE', 0):,}</p>
@@ -418,8 +424,9 @@ def main():
             if (rm && wo.rm !== rm) return false;
             if (fsm && wo.fsm !== fsm) return false;
             if (mkt && wo.mkt !== mkt) return false;
-            if (status === 'OPEN' && wo.est !== '' && wo.st !== 'OPEN') return false;
-            if (status && status !== 'OPEN' && wo.est !== status) return false;
+            if (status === 'COMPLETED' && wo.st !== 'COMPLETED') return false;
+            if (status === 'OPEN' && wo.st !== 'OPEN' && wo.est !== '') return false;
+            if (status && status !== 'OPEN' && status !== 'COMPLETED' && wo.est !== status) return false;
             if (search) {{
                 const searchStr = (wo.s + ' ' + wo.city + ' ' + wo.t + ' ' + wo.fm + ' ' + wo.loc).toLowerCase();
                 if (!searchStr.includes(search)) return false;
@@ -442,12 +449,20 @@ def main():
     
     // Update KPIs
     function updateWtwKpis() {{
-        const counts = {{'INCOMPLETE': 0, 'DISPATCH CONFIRMED': 0, 'PARTS DELIVERED': 0, 'PARTS ON ORDER': 0, 'OPEN': 0}};
+        const counts = {{'COMPLETED': 0, 'INCOMPLETE': 0, 'DISPATCH CONFIRMED': 0, 'PARTS DELIVERED': 0, 'PARTS ON ORDER': 0, 'OPEN': 0}};
         wtwFilteredData.forEach(wo => {{
-            const est = wo.est || 'OPEN';
-            if (counts.hasOwnProperty(est)) counts[est]++;
-            else if (est.includes('PARTS')) counts['PARTS ON ORDER']++;
+            if (wo.st === 'COMPLETED') {{
+                counts['COMPLETED']++;
+            }} else {{
+                const est = wo.est || 'OPEN';
+                if (counts.hasOwnProperty(est)) counts[est]++;
+                else if (est.includes('PARTS')) counts['PARTS ON ORDER']++;
+            }}
         }});
+        const total = wtwFilteredData.length;
+        const completionRate = total > 0 ? ((counts['COMPLETED'] / total) * 100).toFixed(1) : 0;
+        document.getElementById('wtwKpiCompleted').textContent = counts['COMPLETED'].toLocaleString();
+        document.getElementById('wtwKpiCompletionRate').textContent = completionRate + '% complete';
         document.getElementById('wtwKpiIncomplete').textContent = counts['INCOMPLETE'].toLocaleString();
         document.getElementById('wtwKpiDispatch').textContent = counts['DISPATCH CONFIRMED'].toLocaleString();
         document.getElementById('wtwKpiPartsDelivered').textContent = counts['PARTS DELIVERED'].toLocaleString();
@@ -489,7 +504,9 @@ def main():
             const phaseClass = wo.ph === 'PH1' ? 'bg-blue-100 text-blue-800' : 
                                wo.ph === 'PH2' ? 'bg-green-100 text-green-800' : 
                                'bg-purple-100 text-purple-800';
-            const statusClass = wo.est === 'INCOMPLETE' ? 'text-red-600 font-semibold' : 'text-gray-600';
+            const statusClass = wo.st === 'COMPLETED' ? 'text-green-600 font-semibold' : 
+                               wo.est === 'INCOMPLETE' ? 'text-red-600 font-semibold' : 'text-gray-600';
+            const statusText = wo.st === 'COMPLETED' ? '✓ COMPLETED' : (wo.est || wo.st);
             return `
                 <tr class="hover:bg-gray-50">
                     <td class="px-3 py-2 text-sm font-medium text-walmart-blue">${{wo.s}}</td>
@@ -497,7 +514,7 @@ def main():
                     <td class="px-3 py-2 text-center">
                         <span class="px-2 py-1 rounded-full text-xs font-semibold ${{phaseClass}}">${{wo.ph}}</span>
                     </td>
-                    <td class="px-3 py-2 text-sm ${{statusClass}}">${{wo.est || wo.st}}</td>
+                    <td class="px-3 py-2 text-sm ${{statusClass}}">${{statusText}}</td>
                     <td class="px-3 py-2 text-sm text-gray-600">${{wo.fm || '-'}}</td>
                     <td class="px-3 py-2 text-sm text-gray-600">${{wo.rm || '-'}}</td>
                     <td class="px-3 py-2 text-sm text-center text-gray-500">${{wo.exp}}</td>
@@ -526,10 +543,10 @@ def main():
         wtwStatusChart = new Chart(statusCtx, {{
             type: 'doughnut',
             data: {{
-                labels: ['Incomplete', 'Dispatched', 'Parts Delivered', 'Parts On Order', 'Open'],
+                labels: ['Completed', 'Incomplete', 'Dispatched', 'Parts Delivered', 'Parts On Order', 'Open'],
                 datasets: [{{
-                    data: [0, 0, 0, 0, 0],
-                    backgroundColor: ['#ef4444', '#eab308', '#3b82f6', '#f97316', '#6b7280'],
+                    data: [0, 0, 0, 0, 0, 0],
+                    backgroundColor: ['#22c55e', '#ef4444', '#eab308', '#3b82f6', '#f97316', '#6b7280'],
                     borderWidth: 0
                 }}]
             }},
@@ -592,17 +609,22 @@ def main():
         if (!wtwStatusChart || !wtwPhaseChart) return;
         
         // Count statuses in filtered data
-        const statusCounts = {{'INCOMPLETE': 0, 'DISPATCH CONFIRMED': 0, 'PARTS DELIVERED': 0, 'PARTS ON ORDER': 0, 'OPEN': 0}};
+        const statusCounts = {{'COMPLETED': 0, 'INCOMPLETE': 0, 'DISPATCH CONFIRMED': 0, 'PARTS DELIVERED': 0, 'PARTS ON ORDER': 0, 'OPEN': 0}};
         const phaseCounts = {{'PH1': 0, 'PH2': 0, 'PH3': 0}};
         
         wtwFilteredData.forEach(wo => {{
-            const est = wo.est || 'OPEN';
-            if (statusCounts.hasOwnProperty(est)) statusCounts[est]++;
-            else if (est.includes('PARTS')) statusCounts['PARTS ON ORDER']++;
+            if (wo.st === 'COMPLETED') {{
+                statusCounts['COMPLETED']++;
+            }} else {{
+                const est = wo.est || 'OPEN';
+                if (statusCounts.hasOwnProperty(est)) statusCounts[est]++;
+                else if (est.includes('PARTS')) statusCounts['PARTS ON ORDER']++;
+            }}
             phaseCounts[wo.ph] = (phaseCounts[wo.ph] || 0) + 1;
         }});
         
         wtwStatusChart.data.datasets[0].data = [
+            statusCounts['COMPLETED'],
             statusCounts['INCOMPLETE'],
             statusCounts['DISPATCH CONFIRMED'],
             statusCounts['PARTS DELIVERED'],
