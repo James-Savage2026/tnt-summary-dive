@@ -9,7 +9,7 @@ from datetime import datetime
 
 # Paths
 DASHBOARD_PATH = Path(__file__).parent / 'index.html'
-WTW_DATA_PATH = Path.home() / 'bigquery_results' / 'wtw-fy26-all-workorders-20260205-191527.csv'
+WTW_DATA_PATH = Path.home() / 'bigquery_results' / 'wtw-with-twt-scores-20260205-192907.csv'
 
 def load_csv(path):
     """Load CSV file and return list of dicts"""
@@ -52,6 +52,10 @@ def main():
             'mkt': wo.get('fs_market', ''),
             'exp': wo.get('expiration_date', '')[:10] if wo.get('expiration_date') else '',
             'crt': wo.get('created_date', '')[:10] if wo.get('created_date') else '',
+            'twtR': wo.get('store_twt_ref', ''),
+            'twtR30': wo.get('store_twt_ref_30d', ''),
+            'twtH': wo.get('store_twt_hvac', ''),
+            'twtH30': wo.get('store_twt_hvac_30d', ''),
         })
     
     # Calculate summary stats
@@ -317,6 +321,7 @@ def main():
                                 <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortWtwTable('est')">Status \u21C5</th>
                                 <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">FM Director</th>
                                 <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Regional Mgr</th>
+                                <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortWtwTable('twtR')">TWT Ref \u21C5</th>
                                 <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortWtwTable('exp')">Expires \u21C5</th>
                                 <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tracking #</th>
                             </tr>
@@ -569,6 +574,9 @@ def main():
                     <td class="px-3 py-2 text-sm ${{statusClass}}">${{statusText}}</td>
                     <td class="px-3 py-2 text-sm text-gray-600">${{wo.fm || '-'}}</td>
                     <td class="px-3 py-2 text-sm text-gray-600">${{wo.rm || '-'}}</td>
+                    <td class="px-3 py-2 text-sm text-center">
+                        ${{wo.twtR ? `<span class="px-2 py-1 rounded text-xs font-semibold ${{parseFloat(wo.twtR) >= 90 ? 'bg-green-100 text-green-800' : parseFloat(wo.twtR) >= 80 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}}">${{wo.twtR}}%</span>` : '-'}}
+                    </td>
                     <td class="px-3 py-2 text-sm text-center text-gray-500">${{wo.exp}}</td>
                     <td class="px-3 py-2 text-sm">
                         <a href="${{SC_URL}}${{wo.t}}" target="_blank" 
@@ -581,7 +589,7 @@ def main():
         }}).join('');
         
         if (sorted.length > 300) {{
-            table.innerHTML += `<tr><td colspan="8" class="px-3 py-3 text-center text-gray-400 text-sm bg-gray-50">Showing 300 of ${{sorted.length.toLocaleString()}} results. Use filters to narrow down.</td></tr>`;
+            table.innerHTML += `<tr><td colspan="9" class="px-3 py-3 text-center text-gray-400 text-sm bg-gray-50">Showing 300 of ${{sorted.length.toLocaleString()}} results. Use filters to narrow down.</td></tr>`;
         }}
     }}
     
