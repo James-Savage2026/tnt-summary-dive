@@ -9,7 +9,7 @@ from datetime import datetime
 
 # Paths
 DASHBOARD_PATH = Path(__file__).parent / 'index.html'
-WTW_DATA_PATH = Path.home() / 'bigquery_results' / 'wtw-pm-scores-with-div1-20260205-212001.csv'
+WTW_DATA_PATH = Path.home() / 'bigquery_results' / 'wtw-pm-scores-null-excluded-20260205-215929.csv'
 
 def load_csv(path):
     """Load CSV file and return list of dicts"""
@@ -61,6 +61,7 @@ def main():
             'tntP': wo.get('tnt_pass', ''),
             'dewP': wo.get('dewpoint_pass', ''),
             'allP': wo.get('overall_pass', ''),
+            'comp': wo.get('components_available', '3'),
             'div1': wo.get('is_div1', 'N'),
             'banner': wo.get('banner_desc', ''),
             'city': wo.get('city_name', ''),
@@ -826,21 +827,27 @@ def main():
                         ` : '-'}}
                     </td>
                     <td class="px-3 py-2 text-sm text-center">
-                        ${{wo.rack ? `
+                        ${{wo.rackP === 'NO DATA' ? `
+                            <span class="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-500">No Data</span>
+                        ` : wo.rack ? `
                             <span class="px-2 py-0.5 rounded text-xs ${{wo.rackP === 'PASS' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}}">
                                 ${{parseFloat(wo.rack).toFixed(1)}}% ${{wo.rackP === 'PASS' ? '✓' : '✗'}}
                             </span>
                         ` : '-'}}
                     </td>
                     <td class="px-3 py-2 text-sm text-center">
-                        ${{wo.tnt ? `
+                        ${{wo.tntP === 'NO DATA' ? `
+                            <span class="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-500">No Data</span>
+                        ` : wo.tnt ? `
                             <span class="px-2 py-0.5 rounded text-xs ${{wo.tntP === 'PASS' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}}">
                                 ${{parseFloat(wo.tnt).toFixed(1)}}% ${{wo.tntP === 'PASS' ? '✓' : '✗'}}
                             </span>
                         ` : '-'}}
                     </td>
                     <td class="px-3 py-2 text-sm text-center">
-                        ${{wo.dewR ? `
+                        ${{wo.dewP === 'NO DATA' ? `
+                            <span class="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-500">No Data</span>
+                        ` : wo.dewR ? `
                             <span class="px-2 py-0.5 rounded text-xs ${{wo.dewP === 'PASS' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}}">
                                 ${{wo.dewR}}°F ${{wo.dewP === 'PASS' ? '✓' : '✗'}}
                             </span>
