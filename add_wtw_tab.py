@@ -124,9 +124,12 @@ def main():
             '<main class="max-w-7xl mx-auto px-4 py-6">',
             '<div id="tnt-content">\n    <main class="max-w-7xl mx-auto px-4 py-6">'
         )
+    
+    # Ensure tnt-content div is closed before WTW content
+    if '</div>\n    \n    <!-- WTW Tab Content -->' not in html:
         html = html.replace(
-            '</main>\n\n    <!-- Footer -->',
-            '</main>\n    </div>\n\n    <!-- Footer -->'
+            '</main>\n    \n    <!-- WTW Tab Content -->',
+            '</main>\n    </div>\n    \n    <!-- WTW Tab Content -->'
         )
     
     # Create WTW tab content with full filters
