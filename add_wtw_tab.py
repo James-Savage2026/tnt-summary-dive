@@ -9,7 +9,7 @@ from datetime import datetime
 
 # Paths
 DASHBOARD_PATH = Path(__file__).parent / 'index.html'
-WTW_DATA_PATH = Path.home() / 'bigquery_results' / 'wtw-with-twt-scores-20260205-192907.csv'
+WTW_DATA_PATH = Path.home() / 'bigquery_results' / 'wtw-pm-scores-20260205-193533.csv'
 
 def load_csv(path):
     """Load CSV file and return list of dicts"""
@@ -52,10 +52,11 @@ def main():
             'mkt': wo.get('fs_market', ''),
             'exp': wo.get('expiration_date', '')[:10] if wo.get('expiration_date') else '',
             'crt': wo.get('created_date', '')[:10] if wo.get('created_date') else '',
-            'twtR': wo.get('store_twt_ref', ''),
-            'twtR30': wo.get('store_twt_ref_30d', ''),
-            'twtH': wo.get('store_twt_hvac', ''),
-            'twtH30': wo.get('store_twt_hvac_30d', ''),
+            'tnt': wo.get('tnt_score', ''),
+            'rack': wo.get('rack_score', ''),
+            'dew': wo.get('dewpoint_score', ''),
+            'pm': wo.get('pm_score', ''),
+            'pmC': wo.get('pm_score_components', ''),
         })
     
     # Calculate summary stats
@@ -321,9 +322,9 @@ def main():
                                 <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortWtwTable('est')">Status \u21C5</th>
                                 <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">FM Director</th>
                                 <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Regional Mgr</th>
-                                <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortWtwTable('twtR')">TWT Ref \u21C5</th>
+                                <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortWtwTable('pm')">PM Score \u21C5</th>
                                 <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortWtwTable('exp')">Expires \u21C5</th>
-                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tracking #</th>
+                                <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase">Links</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200" id="wtwWoTable">
@@ -575,14 +576,20 @@ def main():
                     <td class="px-3 py-2 text-sm text-gray-600">${{wo.fm || '-'}}</td>
                     <td class="px-3 py-2 text-sm text-gray-600">${{wo.rm || '-'}}</td>
                     <td class="px-3 py-2 text-sm text-center">
-                        ${{wo.twtR ? `<span class="px-2 py-1 rounded text-xs font-semibold ${{parseFloat(wo.twtR) >= 90 ? 'bg-green-100 text-green-800' : parseFloat(wo.twtR) >= 80 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}}">${{wo.twtR}}%</span>` : '-'}}
+                        ${{wo.pm ? `<span class="px-2 py-1 rounded text-xs font-semibold ${{parseFloat(wo.pm) >= 85 ? 'bg-green-100 text-green-800' : parseFloat(wo.pm) >= 70 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}}" title="TnT: ${{wo.tnt || '-'}}% | Rack: ${{wo.rack || '-'}}% | Dew: ${{wo.dew || 'N/A'}}">${{parseFloat(wo.pm).toFixed(1)}}</span>` : '-'}}
                     </td>
                     <td class="px-3 py-2 text-sm text-center text-gray-500">${{wo.exp}}</td>
-                    <td class="px-3 py-2 text-sm">
-                        <a href="${{SC_URL}}${{wo.t}}" target="_blank" 
-                           class="text-walmart-blue hover:underline hover:text-walmart-dark">
-                            ${{wo.t}} \u2197
-                        </a>
+                    <td class="px-3 py-2 text-sm text-center">
+                        <div class="flex gap-2 justify-center">
+                            <a href="${{SC_URL}}${{wo.t}}" target="_blank" 
+                               class="text-walmart-blue hover:underline text-xs" title="Service Channel">
+                                SC \u2197
+                            </a>
+                            <a href="https://smartinsights.walmart.com/ref/${{wo.s}}" target="_blank" 
+                               class="text-green-600 hover:underline text-xs" title="Smart Insights">
+                                SI \u2197
+                            </a>
+                        </div>
                     </td>
                 </tr>
             `;
