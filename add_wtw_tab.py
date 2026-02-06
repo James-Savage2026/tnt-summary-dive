@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Add Win-the-Winter tab to TNT Dashboard"""
+"""Add Win-the-Winter tab to TNT Dashboard - Enhanced Version"""
 
 import json
 import csv
@@ -10,9 +10,6 @@ from datetime import datetime
 # Paths
 DASHBOARD_PATH = Path(__file__).parent / 'index.html'
 WTW_DATA_PATH = Path.home() / 'bigquery_results' / 'wtw-fy26-full-with-fm-20260205-190331.csv'
-WTW_STATUS_PATH = Path.home() / 'bigquery_results' / 'wtw-status-breakdown-20260205-190257.csv'
-WTW_PHASE_PATH = Path.home() / 'bigquery_results' / 'wtw-phase-breakdown-20260205-190251.csv'
-WTW_FM_PATH = Path.home() / 'bigquery_results' / 'wtw-fm-director-summary-20260205-190327.csv'
 
 def load_csv(path):
     """Load CSV file and return list of dicts"""
@@ -21,97 +18,118 @@ def load_csv(path):
         return list(reader)
 
 def main():
-    print("📊 Loading WTW data...")
+    print("\U0001F4CA Loading WTW data...")
     
     # Load data
     wtw_data = load_csv(WTW_DATA_PATH)
-    status_data = load_csv(WTW_STATUS_PATH)
-    phase_data = load_csv(WTW_PHASE_PATH)
-    fm_data = load_csv(WTW_FM_PATH)
-    
     print(f"   Loaded {len(wtw_data)} work orders")
-    print(f"   Loaded {len(status_data)} status categories")
-    print(f"   Loaded {len(phase_data)} phase categories")
-    print(f"   Loaded {len(fm_data)} FM directors")
     
-    # Compress WTW data for embedding
+    # Compress WTW data for embedding - include all filter fields
     compressed_wtw = []
     for wo in wtw_data:
+        phase_raw = wo.get('phase', '')
+        if 'PH3' in phase_raw:
+            phase = 'PH3'
+        elif 'PH2' in phase_raw:
+            phase = 'PH2'
+        else:
+            phase = 'PH1'
+        
         compressed_wtw.append({
             't': wo.get('tracking_nbr', ''),
             'w': wo.get('workorder_nbr', ''),
             's': wo.get('store_nbr', ''),
-            'loc': wo.get('location_name', '')[:30] if wo.get('location_name') else '',
+            'loc': wo.get('location_name', '')[:40] if wo.get('location_name') else '',
             'st': wo.get('status_name', ''),
             'est': wo.get('extended_status_name', ''),
-            'lbl': wo.get('label', '').replace('Win_The_Winter_FY26', 'PH1').replace('_PH2', 'PH2').replace('_PH3', 'PH3'),
-            'prob': wo.get('problem_type_desc', '')[:40] if wo.get('problem_type_desc') else '',
-            'prov': wo.get('provider_name', '')[:20] if wo.get('provider_name') else '',
+            'ph': phase,
             'city': wo.get('city_name', ''),
             'state': wo.get('state_cd', ''),
+            'srd': wo.get('fm_sr_director_name', ''),
             'fm': wo.get('fm_director_name', ''),
             'rm': wo.get('fm_regional_manager_name', ''),
+            'fsm': wo.get('fs_manager_name', ''),
             'mkt': wo.get('fs_market', ''),
             'exp': wo.get('expiration_date', '')[:10] if wo.get('expiration_date') else '',
             'crt': wo.get('created_date', '')[:10] if wo.get('created_date') else '',
         })
     
-    # Create summary stats
+    # Calculate summary stats
+    phase_counts = {'PH1': 0, 'PH2': 0, 'PH3': 0}
+    status_counts = {}
+    for wo in compressed_wtw:
+        phase_counts[wo['ph']] = phase_counts.get(wo['ph'], 0) + 1
+        est = wo['est'] or wo['st']
+        status_counts[est] = status_counts.get(est, 0) + 1
+    
+    # Get unique values for filters
+    sr_directors = sorted(set(wo['srd'] for wo in compressed_wtw if wo['srd']))
+    fm_directors = sorted(set(wo['fm'] for wo in compressed_wtw if wo['fm']))
+    reg_managers = sorted(set(wo['rm'] for wo in compressed_wtw if wo['rm']))
+    fs_managers = sorted(set(wo['fsm'] for wo in compressed_wtw if wo['fsm']))
+    markets = sorted(set(wo['mkt'] for wo in compressed_wtw if wo['mkt']))
+    
     summary = {
         'total': len(wtw_data),
-        'phases': {},
-        'statuses': {},
-        'fm_directors': []
+        'phases': phase_counts,
+        'statuses': status_counts,
+        'filters': {
+            'sr_directors': sr_directors,
+            'fm_directors': fm_directors,
+            'reg_managers': reg_managers,
+            'fs_managers': fs_managers,
+            'markets': markets
+        }
     }
     
-    for p in phase_data:
-        phase_name = p['phase'].replace('Win_The_Winter_FY26', 'Phase 1').replace('_PH2', '').replace('_PH3', '')
-        if 'PH2' in p['phase']:
-            phase_name = 'Phase 2'
-        elif 'PH3' in p['phase']:
-            phase_name = 'Phase 3'
-        if phase_name not in summary['phases']:
-            summary['phases'][phase_name] = 0
-        summary['phases'][phase_name] += int(p['work_order_count'])
+    print(f"   Phases: {phase_counts}")
+    print(f"   Sr Directors: {len(sr_directors)}, FM Directors: {len(fm_directors)}")
+    print(f"   Markets: {len(markets)}")
     
-    for s in status_data:
-        key = s['extended_status_name'] or s['status_name']
-        summary['statuses'][key] = int(s['work_order_count'])
-    
-    for fm in fm_data:
-        summary['fm_directors'].append({
-            'name': fm['fm_director_name'],
-            'total': int(fm['total_work_orders']),
-            'incomplete': int(fm['incomplete']),
-            'dispatch': int(fm['dispatch_confirmed']),
-            'parts': int(fm['parts_pending']),
-            'open': int(fm['open_unassigned']),
-            'pct': float(fm['pct_incomplete'])
-        })
-    
-    print("\n📝 Reading dashboard HTML...")
+    print("\n\U0001F4DD Reading dashboard HTML...")
     html = DASHBOARD_PATH.read_text(encoding='utf-8')
     
-    # Create the tab navigation HTML
-    tab_nav = '''
+    # Remove old WTW content if exists
+    if '<!-- WTW Tab Content -->' in html:
+        print("   Removing old WTW tab...")
+        # Remove old WTW content
+        html = re.sub(r'<!-- WTW Tab Content -->.*?<!-- Footer -->', '<!-- Footer -->', html, flags=re.DOTALL)
+        # Remove old WTW script
+        html = re.sub(r'<script>\s*// WTW Data.*?</script>\s*</body>', '</body>', html, flags=re.DOTALL)
+    
+    # Create the tab navigation HTML (if not exists)
+    if '<!-- Tab Navigation -->' not in html:
+        tab_nav = '''
     <!-- Tab Navigation -->
     <div class="bg-white border-b border-gray-200 shadow-sm">
         <div class="max-w-7xl mx-auto px-4">
             <nav class="flex space-x-8" aria-label="Tabs">
                 <button onclick="switchTab('tnt')" id="tab-tnt"
                         class="tab-btn border-b-2 border-walmart-blue text-walmart-blue py-4 px-1 text-sm font-medium">
-                    📊 TnT Dashboard
+                    \U0001F4CA TnT Dashboard
                 </button>
                 <button onclick="switchTab('wtw')" id="tab-wtw"
                         class="tab-btn border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 py-4 px-1 text-sm font-medium">
-                    ❄️ Win the Winter
+                    \u2744\ufe0f Win the Winter
                 </button>
             </nav>
         </div>
     </div>
     '''
+        html = html.replace('</header>', '</header>\n' + tab_nav)
     
-    # Create WTW tab content
+    # Wrap existing main in tnt-content if not already
+    if 'id="tnt-content"' not in html:
+        html = html.replace(
+            '<main class="max-w-7xl mx-auto px-4 py-6">',
+            '<div id="tnt-content">\n    <main class="max-w-7xl mx-auto px-4 py-6">'
+        )
+        html = html.replace(
+            '</main>\n\n    <!-- Footer -->',
+            '</main>\n    </div>\n\n    <!-- Footer -->'
+        )
+    
+    # Create WTW tab content with full filters
     wtw_content = f'''
     <!-- WTW Tab Content -->
     <div id="wtw-content" class="hidden">
@@ -120,128 +138,158 @@ def main():
             <div class="bg-gradient-to-r from-blue-600 to-cyan-500 rounded-lg shadow-lg p-6 mb-6 text-white">
                 <div class="flex justify-between items-center">
                     <div>
-                        <h1 class="text-2xl font-bold">❄️ Win the Winter FY26</h1>
+                        <h1 class="text-2xl font-bold">\u2744\ufe0f Win the Winter FY26</h1>
                         <p class="text-blue-100">Preventive Maintenance Work Order Tracking</p>
                     </div>
                     <div class="text-right">
-                        <p class="text-3xl font-bold">{summary['total']:,}</p>
+                        <p class="text-3xl font-bold" id="wtwTotalCount">{summary['total']:,}</p>
                         <p class="text-sm text-blue-100">Total Open Work Orders</p>
                     </div>
                 </div>
             </div>
             
-            <!-- Phase KPIs -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div class="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
-                    <p class="text-sm text-gray-500 uppercase">Phase 1</p>
-                    <p class="text-3xl font-bold text-blue-600">{summary['phases'].get('Phase 1', 0):,}</p>
-                    <p class="text-xs text-gray-400">Expires Apr 30, 2026</p>
-                </div>
-                <div class="bg-white rounded-lg shadow p-4 border-l-4 border-green-500">
-                    <p class="text-sm text-gray-500 uppercase">Phase 2</p>
-                    <p class="text-3xl font-bold text-green-600">{summary['phases'].get('Phase 2', 0):,}</p>
-                    <p class="text-xs text-gray-400">Expires Jun 29, 2026</p>
-                </div>
-                <div class="bg-white rounded-lg shadow p-4 border-l-4 border-purple-500">
-                    <p class="text-sm text-gray-500 uppercase">Phase 3</p>
-                    <p class="text-3xl font-bold text-purple-600">{summary['phases'].get('Phase 3', 0):,}</p>
-                    <p class="text-xs text-gray-400">Expires Jun 29, 2026</p>
-                </div>
-            </div>
-            
-            <!-- Status Breakdown -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <!-- Status Chart -->
-                <div class="bg-white rounded-lg shadow p-4">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Status Breakdown</h3>
-                    <div style="height: 300px;">
-                        <canvas id="wtwStatusChart"></canvas>
-                    </div>
-                </div>
-                
-                <!-- Status Stats -->
-                <div class="bg-white rounded-lg shadow p-4">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Status Details</h3>
-                    <div class="space-y-3">
-                        <div class="flex justify-between items-center p-2 bg-red-50 rounded">
-                            <span class="text-sm font-medium text-red-800">Incomplete</span>
-                            <span class="text-lg font-bold text-red-600">{summary['statuses'].get('INCOMPLETE', 0):,}</span>
-                        </div>
-                        <div class="flex justify-between items-center p-2 bg-yellow-50 rounded">
-                            <span class="text-sm font-medium text-yellow-800">Dispatch Confirmed</span>
-                            <span class="text-lg font-bold text-yellow-600">{summary['statuses'].get('DISPATCH CONFIRMED', 0):,}</span>
-                        </div>
-                        <div class="flex justify-between items-center p-2 bg-blue-50 rounded">
-                            <span class="text-sm font-medium text-blue-800">Parts Delivered</span>
-                            <span class="text-lg font-bold text-blue-600">{summary['statuses'].get('PARTS DELIVERED', 0):,}</span>
-                        </div>
-                        <div class="flex justify-between items-center p-2 bg-orange-50 rounded">
-                            <span class="text-sm font-medium text-orange-800">Parts On Order</span>
-                            <span class="text-lg font-bold text-orange-600">{summary['statuses'].get('PARTS ON ORDER', 0):,}</span>
-                        </div>
-                        <div class="flex justify-between items-center p-2 bg-gray-50 rounded">
-                            <span class="text-sm font-medium text-gray-800">Open (Unassigned)</span>
-                            <span class="text-lg font-bold text-gray-600">{summary['statuses'].get('', 0) + summary['statuses'].get('OPEN', 0):,}</span>
-                        </div>
-                    </div>
+            <!-- Phase Toggle Buttons -->
+            <div class="bg-white rounded-lg shadow p-4 mb-6">
+                <div class="flex flex-wrap gap-3 justify-center">
+                    <button onclick="setWtwPhase('')" id="wtw-phase-all"
+                            class="wtw-phase-btn px-6 py-3 rounded-lg font-semibold text-sm border-2 border-gray-300 bg-gray-100 text-gray-700">
+                        All Phases ({summary['total']:,})
+                    </button>
+                    <button onclick="setWtwPhase('PH1')" id="wtw-phase-PH1"
+                            class="wtw-phase-btn px-6 py-3 rounded-lg font-semibold text-sm border-2 border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100">
+                        \U0001F7E6 Phase 1 ({phase_counts['PH1']:,})
+                    </button>
+                    <button onclick="setWtwPhase('PH2')" id="wtw-phase-PH2"
+                            class="wtw-phase-btn px-6 py-3 rounded-lg font-semibold text-sm border-2 border-green-300 bg-green-50 text-green-700 hover:bg-green-100">
+                        \U0001F7E2 Phase 2 ({phase_counts['PH2']:,})
+                    </button>
+                    <button onclick="setWtwPhase('PH3')" id="wtw-phase-PH3"
+                            class="wtw-phase-btn px-6 py-3 rounded-lg font-semibold text-sm border-2 border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100">
+                        \U0001F7E3 Phase 3 ({phase_counts['PH3']:,})
+                    </button>
                 </div>
             </div>
             
-            <!-- FM Director Table -->
-            <div class="bg-white rounded-lg shadow mb-6">
-                <div class="p-4 border-b border-gray-200">
-                    <h3 class="text-lg font-semibold text-gray-800">FM Director Performance</h3>
+            <!-- Filters (matching TNT tab) -->
+            <div class="bg-white rounded-lg shadow p-4 mb-6">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-sm font-medium text-gray-700">Filters</h3>
+                    <button onclick="clearWtwFilters()" class="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm rounded-md transition">
+                        \u2715 Clear All Filters
+                    </button>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">FM Director</th>
-                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Total WOs</th>
-                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Incomplete</th>
-                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Dispatched</th>
-                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Parts Pending</th>
-                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">% Incomplete</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200" id="wtwFmTable">
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            
-            <!-- WTW Work Order Table -->
-            <div class="bg-white rounded-lg shadow">
-                <div class="p-4 border-b border-gray-200 flex justify-between items-center">
-                    <h3 class="text-lg font-semibold text-gray-800">Work Orders</h3>
-                    <div class="flex gap-2">
-                        <select id="wtwPhaseFilter" onchange="filterWtwTable()" class="border rounded px-2 py-1 text-sm">
-                            <option value="">All Phases</option>
-                            <option value="PH1">Phase 1</option>
-                            <option value="PH2">Phase 2</option>
-                            <option value="PH3">Phase 3</option>
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Sr. Director</label>
+                        <select id="wtwFilterSrDirector" onchange="filterWtwData()" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-walmart-blue focus:border-walmart-blue text-sm">
+                            <option value="">All Sr. Directors</option>
                         </select>
-                        <select id="wtwStatusFilter" onchange="filterWtwTable()" class="border rounded px-2 py-1 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">FM Director</label>
+                        <select id="wtwFilterDirector" onchange="filterWtwData()" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-walmart-blue focus:border-walmart-blue text-sm">
+                            <option value="">All Directors</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Regional Manager</label>
+                        <select id="wtwFilterManager" onchange="filterWtwData()" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-walmart-blue focus:border-walmart-blue text-sm">
+                            <option value="">All Managers</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">FS Manager</label>
+                        <select id="wtwFilterFSManager" onchange="filterWtwData()" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-walmart-blue focus:border-walmart-blue text-sm">
+                            <option value="">All FS Managers</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Market</label>
+                        <select id="wtwFilterMarket" onchange="filterWtwData()" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-walmart-blue focus:border-walmart-blue text-sm">
+                            <option value="">All Markets</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                        <select id="wtwFilterStatus" onchange="filterWtwData()" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-walmart-blue focus:border-walmart-blue text-sm">
                             <option value="">All Statuses</option>
                             <option value="INCOMPLETE">Incomplete</option>
                             <option value="DISPATCH CONFIRMED">Dispatch Confirmed</option>
-                            <option value="PARTS">Parts Pending</option>
+                            <option value="PARTS DELIVERED">Parts Delivered</option>
+                            <option value="PARTS ON ORDER">Parts On Order</option>
+                            <option value="OPEN">Open (Unassigned)</option>
                         </select>
-                        <input type="text" id="wtwSearch" onkeyup="filterWtwTable()" placeholder="Search store..." 
-                               class="border rounded px-2 py-1 text-sm w-40">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+                        <input type="text" id="wtwSearch" onkeyup="filterWtwData()" placeholder="Store #, city, or tracking #..." 
+                               class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-walmart-blue focus:border-walmart-blue text-sm">
+                    </div>
+                    <div class="flex items-end">
+                        <p class="text-sm text-gray-500">Showing <span id="wtwFilteredCount" class="font-bold text-walmart-blue">0</span> work orders</p>
                     </div>
                 </div>
-                <div class="overflow-x-auto" style="max-height: 500px;">
+            </div>
+            
+            <!-- KPIs Row -->
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6" id="wtwKpiRow">
+                <div class="bg-white rounded-lg shadow p-4 border-l-4 border-red-500">
+                    <p class="text-sm text-gray-500 uppercase">Incomplete</p>
+                    <p class="text-2xl font-bold text-red-600" id="wtwKpiIncomplete">{status_counts.get('INCOMPLETE', 0):,}</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-4 border-l-4 border-yellow-500">
+                    <p class="text-sm text-gray-500 uppercase">Dispatched</p>
+                    <p class="text-2xl font-bold text-yellow-600" id="wtwKpiDispatch">{status_counts.get('DISPATCH CONFIRMED', 0):,}</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
+                    <p class="text-sm text-gray-500 uppercase">Parts Delivered</p>
+                    <p class="text-2xl font-bold text-blue-600" id="wtwKpiPartsDelivered">{status_counts.get('PARTS DELIVERED', 0):,}</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-4 border-l-4 border-orange-500">
+                    <p class="text-sm text-gray-500 uppercase">Parts On Order</p>
+                    <p class="text-2xl font-bold text-orange-600" id="wtwKpiPartsOrder">{status_counts.get('PARTS ON ORDER', 0):,}</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-4 border-l-4 border-gray-500">
+                    <p class="text-sm text-gray-500 uppercase">Open</p>
+                    <p class="text-2xl font-bold text-gray-600" id="wtwKpiOpen">{status_counts.get('', 0):,}</p>
+                </div>
+            </div>
+            
+            <!-- Charts Row -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Status Distribution</h3>
+                    <div style="height: 280px;">
+                        <canvas id="wtwStatusChart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Phase Distribution</h3>
+                    <div style="height: 280px;">
+                        <canvas id="wtwPhaseChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Work Order Table -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="p-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-800">Work Orders</h3>
+                </div>
+                <div class="overflow-x-auto" style="max-height: 600px;">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50 sticky top-0">
                             <tr>
-                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Store</th>
-                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
-                                <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Phase</th>
-                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">FM Director</th>
-                                <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Expires</th>
-                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tracking #</th>
+                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortWtwTable('s')">Store \u21C5</th>
+                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
+                                <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortWtwTable('ph')">Phase \u21C5</th>
+                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortWtwTable('est')">Status \u21C5</th>
+                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">FM Director</th>
+                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Regional Mgr</th>
+                                <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortWtwTable('exp')">Expires \u21C5</th>
+                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tracking #</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200" id="wtwWoTable">
@@ -260,9 +308,17 @@ def main():
     const WTW_DATA = {json.dumps(compressed_wtw, separators=(',', ':'))};
     const WTW_SUMMARY = {json.dumps(summary, separators=(',', ':'))};
     
+    // WTW State
+    let wtwCurrentPhase = '';
+    let wtwSortField = 's';
+    let wtwSortAsc = true;
+    let wtwFilteredData = [];
+    
+    // Service Channel URL
+    const SC_URL = 'https://servicechannel.walmart.com/sc/wo/workorders/';
+    
     // Tab switching
     function switchTab(tab) {{
-        // Update tab buttons
         document.querySelectorAll('.tab-btn').forEach(btn => {{
             btn.classList.remove('border-walmart-blue', 'text-walmart-blue');
             btn.classList.add('border-transparent', 'text-gray-500');
@@ -270,38 +326,209 @@ def main():
         document.getElementById('tab-' + tab).classList.remove('border-transparent', 'text-gray-500');
         document.getElementById('tab-' + tab).classList.add('border-walmart-blue', 'text-walmart-blue');
         
-        // Toggle content
         if (tab === 'tnt') {{
             document.getElementById('tnt-content').classList.remove('hidden');
             document.getElementById('wtw-content').classList.add('hidden');
         }} else {{
             document.getElementById('tnt-content').classList.add('hidden');
             document.getElementById('wtw-content').classList.remove('hidden');
-            initWtwCharts();
-            renderWtwTables();
+            initWtwTab();
         }}
     }}
     
-    // Initialize WTW charts
+    // Initialize WTW tab
+    let wtwInitialized = false;
+    function initWtwTab() {{
+        if (wtwInitialized) return;
+        wtwInitialized = true;
+        
+        // Populate filter dropdowns
+        populateWtwFilters();
+        // Initialize charts
+        initWtwCharts();
+        // Initial data filter
+        filterWtwData();
+    }}
+    
+    // Populate filter dropdowns
+    function populateWtwFilters() {{
+        const filters = WTW_SUMMARY.filters;
+        
+        const srSel = document.getElementById('wtwFilterSrDirector');
+        filters.sr_directors.forEach(v => srSel.add(new Option(v, v)));
+        
+        const fmSel = document.getElementById('wtwFilterDirector');
+        filters.fm_directors.forEach(v => fmSel.add(new Option(v, v)));
+        
+        const rmSel = document.getElementById('wtwFilterManager');
+        filters.reg_managers.forEach(v => rmSel.add(new Option(v, v)));
+        
+        const fsmSel = document.getElementById('wtwFilterFSManager');
+        filters.fs_managers.forEach(v => fsmSel.add(new Option(v, v)));
+        
+        const mktSel = document.getElementById('wtwFilterMarket');
+        filters.markets.forEach(v => mktSel.add(new Option(v, v)));
+    }}
+    
+    // Set phase filter
+    function setWtwPhase(phase) {{
+        wtwCurrentPhase = phase;
+        // Update button styles
+        document.querySelectorAll('.wtw-phase-btn').forEach(btn => {{
+            btn.classList.remove('ring-2', 'ring-offset-2', 'ring-walmart-blue');
+        }});
+        const activeBtn = document.getElementById('wtw-phase-' + (phase || 'all'));
+        if (activeBtn) {{
+            activeBtn.classList.add('ring-2', 'ring-offset-2', 'ring-walmart-blue');
+        }}
+        filterWtwData();
+    }}
+    
+    // Clear all WTW filters
+    function clearWtwFilters() {{
+        wtwCurrentPhase = '';
+        document.getElementById('wtwFilterSrDirector').value = '';
+        document.getElementById('wtwFilterDirector').value = '';
+        document.getElementById('wtwFilterManager').value = '';
+        document.getElementById('wtwFilterFSManager').value = '';
+        document.getElementById('wtwFilterMarket').value = '';
+        document.getElementById('wtwFilterStatus').value = '';
+        document.getElementById('wtwSearch').value = '';
+        document.querySelectorAll('.wtw-phase-btn').forEach(btn => {{
+            btn.classList.remove('ring-2', 'ring-offset-2', 'ring-walmart-blue');
+        }});
+        document.getElementById('wtw-phase-all').classList.add('ring-2', 'ring-offset-2', 'ring-walmart-blue');
+        filterWtwData();
+    }}
+    
+    // Filter WTW data
+    function filterWtwData() {{
+        const srDir = document.getElementById('wtwFilterSrDirector').value;
+        const fmDir = document.getElementById('wtwFilterDirector').value;
+        const rm = document.getElementById('wtwFilterManager').value;
+        const fsm = document.getElementById('wtwFilterFSManager').value;
+        const mkt = document.getElementById('wtwFilterMarket').value;
+        const status = document.getElementById('wtwFilterStatus').value;
+        const search = document.getElementById('wtwSearch').value.toLowerCase();
+        
+        wtwFilteredData = WTW_DATA.filter(wo => {{
+            if (wtwCurrentPhase && wo.ph !== wtwCurrentPhase) return false;
+            if (srDir && wo.srd !== srDir) return false;
+            if (fmDir && wo.fm !== fmDir) return false;
+            if (rm && wo.rm !== rm) return false;
+            if (fsm && wo.fsm !== fsm) return false;
+            if (mkt && wo.mkt !== mkt) return false;
+            if (status === 'OPEN' && wo.est !== '' && wo.st !== 'OPEN') return false;
+            if (status && status !== 'OPEN' && wo.est !== status) return false;
+            if (search) {{
+                const searchStr = (wo.s + ' ' + wo.city + ' ' + wo.t + ' ' + wo.fm + ' ' + wo.loc).toLowerCase();
+                if (!searchStr.includes(search)) return false;
+            }}
+            return true;
+        }});
+        
+        // Update filtered count
+        document.getElementById('wtwFilteredCount').textContent = wtwFilteredData.length.toLocaleString();
+        
+        // Update KPIs based on filtered data
+        updateWtwKpis();
+        
+        // Update charts
+        updateWtwCharts();
+        
+        // Render table
+        renderWtwTable();
+    }}
+    
+    // Update KPIs
+    function updateWtwKpis() {{
+        const counts = {{'INCOMPLETE': 0, 'DISPATCH CONFIRMED': 0, 'PARTS DELIVERED': 0, 'PARTS ON ORDER': 0, 'OPEN': 0}};
+        wtwFilteredData.forEach(wo => {{
+            const est = wo.est || 'OPEN';
+            if (counts.hasOwnProperty(est)) counts[est]++;
+            else if (est.includes('PARTS')) counts['PARTS ON ORDER']++;
+        }});
+        document.getElementById('wtwKpiIncomplete').textContent = counts['INCOMPLETE'].toLocaleString();
+        document.getElementById('wtwKpiDispatch').textContent = counts['DISPATCH CONFIRMED'].toLocaleString();
+        document.getElementById('wtwKpiPartsDelivered').textContent = counts['PARTS DELIVERED'].toLocaleString();
+        document.getElementById('wtwKpiPartsOrder').textContent = counts['PARTS ON ORDER'].toLocaleString();
+        document.getElementById('wtwKpiOpen').textContent = counts['OPEN'].toLocaleString();
+    }}
+    
+    // Sort WTW table
+    function sortWtwTable(field) {{
+        if (wtwSortField === field) {{
+            wtwSortAsc = !wtwSortAsc;
+        }} else {{
+            wtwSortField = field;
+            wtwSortAsc = true;
+        }}
+        renderWtwTable();
+    }}
+    
+    // Render WTW table
+    function renderWtwTable() {{
+        // Sort data
+        const sorted = [...wtwFilteredData].sort((a, b) => {{
+            let aVal = a[wtwSortField] || '';
+            let bVal = b[wtwSortField] || '';
+            if (wtwSortField === 's') {{
+                aVal = parseInt(aVal) || 0;
+                bVal = parseInt(bVal) || 0;
+            }}
+            if (aVal < bVal) return wtwSortAsc ? -1 : 1;
+            if (aVal > bVal) return wtwSortAsc ? 1 : -1;
+            return 0;
+        }});
+        
+        // Limit display
+        const display = sorted.slice(0, 300);
+        
+        const table = document.getElementById('wtwWoTable');
+        table.innerHTML = display.map(wo => {{
+            const phaseClass = wo.ph === 'PH1' ? 'bg-blue-100 text-blue-800' : 
+                               wo.ph === 'PH2' ? 'bg-green-100 text-green-800' : 
+                               'bg-purple-100 text-purple-800';
+            const statusClass = wo.est === 'INCOMPLETE' ? 'text-red-600 font-semibold' : 'text-gray-600';
+            return `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-3 py-2 text-sm font-medium text-walmart-blue">${{wo.s}}</td>
+                    <td class="px-3 py-2 text-sm text-gray-600">${{wo.city}}${{wo.city && wo.state ? ', ' : ''}}${{wo.state}}</td>
+                    <td class="px-3 py-2 text-center">
+                        <span class="px-2 py-1 rounded-full text-xs font-semibold ${{phaseClass}}">${{wo.ph}}</span>
+                    </td>
+                    <td class="px-3 py-2 text-sm ${{statusClass}}">${{wo.est || wo.st}}</td>
+                    <td class="px-3 py-2 text-sm text-gray-600">${{wo.fm || '-'}}</td>
+                    <td class="px-3 py-2 text-sm text-gray-600">${{wo.rm || '-'}}</td>
+                    <td class="px-3 py-2 text-sm text-center text-gray-500">${{wo.exp}}</td>
+                    <td class="px-3 py-2 text-sm">
+                        <a href="${{SC_URL}}${{wo.t}}" target="_blank" 
+                           class="text-walmart-blue hover:underline hover:text-walmart-dark">
+                            ${{wo.t}} \u2197
+                        </a>
+                    </td>
+                </tr>
+            `;
+        }}).join('');
+        
+        if (sorted.length > 300) {{
+            table.innerHTML += `<tr><td colspan="8" class="px-3 py-3 text-center text-gray-400 text-sm bg-gray-50">Showing 300 of ${{sorted.length.toLocaleString()}} results. Use filters to narrow down.</td></tr>`;
+        }}
+    }}
+    
+    // Charts
     let wtwStatusChart = null;
+    let wtwPhaseChart = null;
+    
     function initWtwCharts() {{
-        if (wtwStatusChart) return; // Already initialized
-        
-        const ctx = document.getElementById('wtwStatusChart').getContext('2d');
-        const statuses = WTW_SUMMARY.statuses;
-        
-        wtwStatusChart = new Chart(ctx, {{
+        // Status chart
+        const statusCtx = document.getElementById('wtwStatusChart').getContext('2d');
+        wtwStatusChart = new Chart(statusCtx, {{
             type: 'doughnut',
             data: {{
-                labels: ['Incomplete', 'Dispatch Confirmed', 'Parts Delivered', 'Parts On Order', 'Open'],
+                labels: ['Incomplete', 'Dispatched', 'Parts Delivered', 'Parts On Order', 'Open'],
                 datasets: [{{
-                    data: [
-                        statuses['INCOMPLETE'] || 0,
-                        statuses['DISPATCH CONFIRMED'] || 0,
-                        statuses['PARTS DELIVERED'] || 0,
-                        statuses['PARTS ON ORDER'] || 0,
-                        (statuses[''] || 0) + (statuses['OPEN'] || 0)
-                    ],
+                    data: [0, 0, 0, 0, 0],
                     backgroundColor: ['#ef4444', '#eab308', '#3b82f6', '#f97316', '#6b7280'],
                     borderWidth: 0
                 }}]
@@ -310,12 +537,13 @@ def main():
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {{
-                    legend: {{ position: 'right' }},
+                    legend: {{ position: 'right', labels: {{ boxWidth: 12, padding: 15 }} }},
                     datalabels: {{
                         color: '#fff',
-                        font: {{ weight: 'bold' }},
+                        font: {{ weight: 'bold', size: 11 }},
                         formatter: (value, ctx) => {{
                             const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                            if (total === 0) return '';
                             const pct = ((value / total) * 100).toFixed(0);
                             return pct > 5 ? pct + '%' : '';
                         }}
@@ -324,117 +552,97 @@ def main():
             }},
             plugins: [ChartDataLabels]
         }});
-    }}
-    
-    // Render WTW tables
-    function renderWtwTables() {{
-        // FM Director table
-        const fmTable = document.getElementById('wtwFmTable');
-        fmTable.innerHTML = WTW_SUMMARY.fm_directors.map(fm => `
-            <tr class="hover:bg-gray-50">
-                <td class="px-4 py-2 text-sm font-medium text-gray-900">${{fm.name || 'Unknown'}}</td>
-                <td class="px-4 py-2 text-sm text-center text-gray-600">${{fm.total}}</td>
-                <td class="px-4 py-2 text-sm text-center text-red-600 font-semibold">${{fm.incomplete}}</td>
-                <td class="px-4 py-2 text-sm text-center text-yellow-600">${{fm.dispatch}}</td>
-                <td class="px-4 py-2 text-sm text-center text-orange-600">${{fm.parts}}</td>
-                <td class="px-4 py-2 text-sm text-center">
-                    <span class="px-2 py-1 rounded-full text-xs font-semibold ${{fm.pct > 50 ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}}">
-                        ${{fm.pct.toFixed(1)}}%
-                    </span>
-                </td>
-            </tr>
-        `).join('');
         
-        filterWtwTable();
-    }}
-    
-    // Filter WTW work order table
-    function filterWtwTable() {{
-        const phase = document.getElementById('wtwPhaseFilter').value;
-        const status = document.getElementById('wtwStatusFilter').value;
-        const search = document.getElementById('wtwSearch').value.toLowerCase();
-        
-        let filtered = WTW_DATA.filter(wo => {{
-            if (phase && wo.lbl !== phase) return false;
-            if (status === 'PARTS' && !wo.est.includes('PARTS')) return false;
-            if (status && status !== 'PARTS' && wo.est !== status) return false;
-            if (search && !wo.s.includes(search) && !(wo.loc || '').toLowerCase().includes(search) && !(wo.fm || '').toLowerCase().includes(search)) return false;
-            return true;
+        // Phase chart
+        const phaseCtx = document.getElementById('wtwPhaseChart').getContext('2d');
+        wtwPhaseChart = new Chart(phaseCtx, {{
+            type: 'bar',
+            data: {{
+                labels: ['Phase 1', 'Phase 2', 'Phase 3'],
+                datasets: [{{
+                    label: 'Work Orders',
+                    data: [0, 0, 0],
+                    backgroundColor: ['#3b82f6', '#22c55e', '#a855f7'],
+                    borderRadius: 6
+                }}]
+            }},
+            options: {{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {{
+                    legend: {{ display: false }},
+                    datalabels: {{
+                        color: '#fff',
+                        anchor: 'center',
+                        font: {{ weight: 'bold', size: 14 }},
+                        formatter: (value) => value > 0 ? value.toLocaleString() : ''
+                    }}
+                }},
+                scales: {{
+                    y: {{ beginAtZero: true }}
+                }}
+            }},
+            plugins: [ChartDataLabels]
         }});
         
-        // Limit to 200 rows for performance
-        const display = filtered.slice(0, 200);
+        updateWtwCharts();
+    }}
+    
+    function updateWtwCharts() {{
+        if (!wtwStatusChart || !wtwPhaseChart) return;
         
-        const table = document.getElementById('wtwWoTable');
-        table.innerHTML = display.map(wo => `
-            <tr class="hover:bg-gray-50">
-                <td class="px-3 py-2 text-sm font-medium text-walmart-blue">${{wo.s}}</td>
-                <td class="px-3 py-2 text-sm text-gray-600">${{wo.city || ''}}${{wo.city && wo.state ? ', ' : ''}}${{wo.state || ''}}</td>
-                <td class="px-3 py-2 text-center">
-                    <span class="px-2 py-1 rounded-full text-xs font-semibold 
-                        ${{wo.lbl === 'PH1' ? 'bg-blue-100 text-blue-800' : 
-                          wo.lbl === 'PH2' ? 'bg-green-100 text-green-800' : 
-                          'bg-purple-100 text-purple-800'}}">
-                        ${{wo.lbl}}
-                    </span>
-                </td>
-                <td class="px-3 py-2 text-sm">
-                    <span class="${{wo.est === 'INCOMPLETE' ? 'text-red-600 font-semibold' : 'text-gray-600'}}">
-                        ${{wo.est || wo.st}}
-                    </span>
-                </td>
-                <td class="px-3 py-2 text-sm text-gray-600">${{wo.fm || '-'}}</td>
-                <td class="px-3 py-2 text-sm text-center text-gray-500">${{wo.exp}}</td>
-                <td class="px-3 py-2 text-sm text-gray-400">${{wo.t}}</td>
-            </tr>
-        `).join('');
+        // Count statuses in filtered data
+        const statusCounts = {{'INCOMPLETE': 0, 'DISPATCH CONFIRMED': 0, 'PARTS DELIVERED': 0, 'PARTS ON ORDER': 0, 'OPEN': 0}};
+        const phaseCounts = {{'PH1': 0, 'PH2': 0, 'PH3': 0}};
         
-        if (filtered.length > 200) {{
-            table.innerHTML += `<tr><td colspan="7" class="px-3 py-2 text-center text-gray-400 text-sm">Showing 200 of ${{filtered.length}} results. Use filters to narrow.</td></tr>`;
-        }}
+        wtwFilteredData.forEach(wo => {{
+            const est = wo.est || 'OPEN';
+            if (statusCounts.hasOwnProperty(est)) statusCounts[est]++;
+            else if (est.includes('PARTS')) statusCounts['PARTS ON ORDER']++;
+            phaseCounts[wo.ph] = (phaseCounts[wo.ph] || 0) + 1;
+        }});
+        
+        wtwStatusChart.data.datasets[0].data = [
+            statusCounts['INCOMPLETE'],
+            statusCounts['DISPATCH CONFIRMED'],
+            statusCounts['PARTS DELIVERED'],
+            statusCounts['PARTS ON ORDER'],
+            statusCounts['OPEN']
+        ];
+        wtwStatusChart.update();
+        
+        wtwPhaseChart.data.datasets[0].data = [
+            phaseCounts['PH1'],
+            phaseCounts['PH2'],
+            phaseCounts['PH3']
+        ];
+        wtwPhaseChart.update();
     }}
     </script>
     '''
     
-    # Now modify the HTML
-    print("\n🔧 Modifying dashboard HTML...")
-    
-    # 1. Add tab navigation after header
-    html = html.replace(
-        '</header>',
-        '</header>\n' + tab_nav
-    )
-    
-    # 2. Wrap existing main content in tnt-content div
-    html = html.replace(
-        '<main class="max-w-7xl mx-auto px-4 py-6">',
-        '<div id="tnt-content">\n    <main class="max-w-7xl mx-auto px-4 py-6">'
-    )
-    html = html.replace(
-        '</main>\n\n    <!-- Footer -->',
-        '</main>\n    </div>\n\n' + wtw_content + '\n\n    <!-- Footer -->'
-    )
-    
-    # 3. Add WTW JavaScript before closing body tag
-    html = html.replace(
-        '</body>',
-        wtw_js + '\n</body>'
-    )
-    
-    # 4. Update the data timestamp
-    now = datetime.now().strftime('%Y-%m-%d %H:%M')
+    # Insert WTW content before Footer
     html = re.sub(
-        r'Data as of [0-9-]+ [0-9:]+',
-        f'Data as of {now}',
-        html
+        r'(</div>\s*<!-- Footer -->)',
+        wtw_content + '\n\n    <!-- Footer -->',
+        html,
+        count=1
     )
+    
+    # Add WTW JavaScript before closing body
+    html = html.replace('</body>', wtw_js + '\n</body>')
+    
+    # Update timestamp
+    now = datetime.now().strftime('%Y-%m-%d %H:%M')
+    html = re.sub(r'Data as of [0-9-]+ [0-9:]+', f'Data as of {now}', html)
     
     # Save
     DASHBOARD_PATH.write_text(html, encoding='utf-8')
-    print(f"\n✅ Dashboard updated with WTW tab!")
-    print(f"   Added {len(compressed_wtw):,} WTW work orders")
-    print(f"   Total phases: {list(summary['phases'].keys())}")
-    print(f"   FM Directors: {len(summary['fm_directors'])}")
+    print(f"\n\u2705 Dashboard updated with enhanced WTW tab!")
+    print(f"   - {len(compressed_wtw):,} work orders with full filter data")
+    print(f"   - Clickable tracking numbers linking to Service Channel")
+    print(f"   - Phase filter buttons")
+    print(f"   - Same filters as TNT tab (Sr. Dir, FM Dir, RM, FSM, Market)")
 
 if __name__ == '__main__':
     main()
