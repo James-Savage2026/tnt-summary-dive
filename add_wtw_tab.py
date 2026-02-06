@@ -585,9 +585,13 @@ def main():
                                class="text-walmart-blue hover:underline text-xs" title="Service Channel">
                                 SC \u2197
                             </a>
-                            <a href="https://smartinsights.walmart.com/ref/${{wo.s}}" target="_blank" 
-                               class="text-green-600 hover:underline text-xs" title="Smart Insights">
-                                SI \u2197
+                            <a href="https://crystal.walmart.com/us/stores/search/${{wo.s}}" target="_blank" 
+                               class="text-green-600 hover:underline text-xs" title="Crystal Store">
+                                Crystal \u2197
+                            </a>
+                            <a href="https://crystal.walmart.com/us/reports/custom-reports/46?report-name=win-the-winter---store-details&report-filters=Store%2520Number%255B0%255D%3D${{wo.s}}" target="_blank" 
+                               class="text-purple-600 hover:underline text-xs" title="WTW Report">
+                                WTW \u2197
                             </a>
                         </div>
                     </td>
