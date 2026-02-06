@@ -96,10 +96,11 @@ def main():
         if is_div1:
             div1_count += 1
         
-        # Count ready to complete and should reopen
-        if wo['allP'] == 'PASS' and st != 'COMPLETED':
+        # Count ready to complete and should reopen (based on PM score < 87%)
+        pm_score = float(wo.get('pm', 0) or 0)
+        if pm_score >= 87 and st != 'COMPLETED':
             ready_to_complete += 1
-        elif wo['allP'] == 'FAIL' and st == 'COMPLETED':
+        elif pm_score < 87 and st == 'COMPLETED':
             if is_div1:
                 should_reopen_div1 += 1
             else:
@@ -189,7 +190,7 @@ def main():
     <div id="wtw-content" class="hidden">
         <main class="max-w-7xl mx-auto px-4 py-6">
             <!-- WTW Header -->
-            <div class="bg-gradient-to-r from-blue-600 to-cyan-500 rounded-lg shadow-lg p-6 mb-6 text-white">
+            <div class="bg-gradient-to-r from-blue-600 to-cyan-500 rounded-lg shadow-lg p-6 mb-4 text-white">
                 <div class="flex justify-between items-center">
                     <div>
                         <h1 class="text-2xl font-bold">\u2744\ufe0f Win the Winter FY26</h1>
@@ -199,6 +200,14 @@ def main():
                         <p class="text-3xl font-bold" id="wtwTotalCount">{summary['total']:,}</p>
                         <p class="text-sm text-blue-100">Total Open Work Orders</p>
                     </div>
+                </div>
+            </div>
+            
+            <!-- Disclaimer -->
+            <div class="bg-amber-50 border-l-4 border-amber-400 p-4 mb-6 rounded-r-lg">
+                <div class="flex items-center">
+                    <span class="text-amber-600 text-xl mr-3">\u26a0\ufe0f</span>
+                    <p class="text-amber-800"><strong>Note:</strong> PM scores may vary up to <strong>1-3%</strong> from Crystal due to differences in data timing and calculation algorithms. Stores are flagged for review when PM score falls below <strong>87%</strong>.</p>
                 </div>
             </div>
             
@@ -624,14 +633,14 @@ def main():
                 if (wo.st === 'COMPLETED' || wo.allP !== 'PASS') return false;
             }}
             if (wtwPmFilter === 'review') {{
-                // Review needed: Completed + PM >= 90% but failing 1+ criteria (exclude Div1)
+                // Review needed: Completed + PM >= 87% but failing 1+ criteria (exclude Div1)
                 const pmScore = parseFloat(wo.pm) || 0;
-                if (wo.st !== 'COMPLETED' || wo.allP === 'PASS' || pmScore < 90 || wo.div1 === 'Y') return false;
+                if (wo.st !== 'COMPLETED' || wo.allP === 'PASS' || pmScore < 87 || wo.div1 === 'Y') return false;
             }}
             if (wtwPmFilter === 'critical') {{
-                // Critical reopen: Completed + PM < 90% (exclude Div1)
+                // Critical reopen: Completed + PM < 87% (exclude Div1)
                 const pmScore = parseFloat(wo.pm) || 0;
-                if (wo.st !== 'COMPLETED' || pmScore >= 90 || wo.div1 === 'Y') return false;
+                if (wo.st !== 'COMPLETED' || pmScore >= 87 || wo.div1 === 'Y') return false;
             }}
             if (wtwPmFilter === 'div1') {{
                 // Div1 stores only
@@ -755,10 +764,10 @@ def main():
             }}
             
             if (wo.st === 'COMPLETED' && wo.allP === 'FAIL' && !isDiv1) {{
-                if (pmScore >= 90) {{
-                    review++;  // PM >= 90% but failing criteria
+                if (pmScore >= 87) {{
+                    review++;  // PM >= 87% but failing criteria
                 }} else {{
-                    critical++;  // PM < 90%
+                    critical++;  // PM < 87%
                 }}
             }}
         }});
