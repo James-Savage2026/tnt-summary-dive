@@ -9,7 +9,7 @@ from datetime import datetime
 
 # Paths
 DASHBOARD_PATH = Path(__file__).parent / 'index.html'
-WTW_DATA_PATH = Path.home() / 'bigquery_results' / 'wtw-pm-scores-20260205-193533.csv'
+WTW_DATA_PATH = Path.home() / 'bigquery_results' / 'wtw-pm-scores-corrected-20260205-195545.csv'
 
 def load_csv(path):
     """Load CSV file and return list of dicts"""
@@ -54,9 +54,11 @@ def main():
             'crt': wo.get('created_date', '')[:10] if wo.get('created_date') else '',
             'tnt': wo.get('tnt_score', ''),
             'rack': wo.get('rack_score', ''),
+            'dewR': wo.get('dewpoint_raw', ''),
             'dew': wo.get('dewpoint_score', ''),
             'pm': wo.get('pm_score', ''),
-            'pmC': wo.get('pm_score_components', ''),
+            'city': wo.get('city_name', ''),
+            'state': wo.get('state_cd', ''),
         })
     
     # Calculate summary stats
