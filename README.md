@@ -35,14 +35,25 @@ git add -A && git commit -m "Refresh data $(date +%Y-%m-%d)" && git push
 - **5,213 work orders** (FY26 WTW program)
 - Phase breakdown: PH1 (1,755), PH2 (1,729), PH3 (1,729)
 - **Dynamic phase cards** with status progress bars (update with filters)
-- PM Readiness filters:
-  - ✓ **Ready to Complete** (1,041): In Progress + All PM Pass
-  - ⚠ **Should Reopen** (602): Completed + PM Fail (excl. Div1)
-  - 🏪 **Div1 Stores** (351): Small-format legacy stores
+- **Dynamic PM readiness buttons** (all counts update with filters)
+- Service Channel links for each work order
 
 ---
 
-## 🎯 PM Score Criteria
+## 🎯 PM Readiness Categories (All Dynamic!)
+
+| Button | Criteria | Meaning |
+|--------|----------|--------|
+| ✓ **Ready to Complete** | Not Completed + All PM Pass | Can be closed now! |
+| 🔍 **Review Needed** | Completed + PM ≥90% but failing 1+ criteria | Almost there - minor fix needed |
+| ⚠ **Critical Reopen** | Completed + PM <90% | Serious issues - needs work |
+| 🏪 **Div1 Stores** | Small-format legacy stores | Manual review required |
+
+**All counts update dynamically when you apply filters!**
+
+---
+
+## 📋 PM Score Criteria
 
 | Metric | Pass Threshold | Notes |
 |--------|----------------|-------|
@@ -61,7 +72,7 @@ Div1 stores are small-format legacy "Wal-Mart" banner stores:
 - `banner_desc = 'Wal-Mart'` or `store_type_cd = 'R'`
 - ~24 cases vs ~133 in Supercenters
 - Often missing dewpoint/rack sensors
-- **Excluded from "Should Reopen"** count (shown separately)
+- **Excluded from Review/Critical counts** (shown separately)
 - Marked with "D1" badge and orange highlight in table
 
 ---
@@ -74,6 +85,14 @@ Div1 stores are small-format legacy "Wal-Mart" banner stores:
 | `add_wtw_tab.py` | WTW data loader script |
 | `workorder_data.json` | Cached work order data |
 | `AZURE-DEPLOYMENT-GUIDE.md` | Azure hosting instructions |
+
+---
+
+## 🔗 Service Channel Link Format
+
+```
+https://www.servicechannel.com/sc/wo/Workorders/index?id={tracking_nbr}
+```
 
 ---
 
@@ -97,14 +116,6 @@ Div1 stores are small-format legacy "Wal-Mart" banner stores:
 
 ---
 
-## 🔧 Service Channel Link Format
-
-```
-https://www.servicechannel.com/sc/wo/Workorders/index?id={tracking_nbr}
-```
-
----
-
 ## 📈 Current Stats (as of 2026-02-05)
 
 | Metric | Count |
@@ -113,16 +124,10 @@ https://www.servicechannel.com/sc/wo/Workorders/index?id={tracking_nbr}
 | Completed | 1,156 |
 | In Progress | 3,992 |
 | Open | 58 |
-| Ready to Complete | 1,041 |
-| Should Reopen (non-Div1) | 602 |
+| Ready to Complete | ~1,041 |
+| Review Needed (PM≥90%) | Dynamic |
+| Critical Reopen (PM<90%) | Dynamic |
 | Div1 Stores | 351 |
-
-### "Should Reopen" Breakdown
-| Failure Reason | Count | % |
-|----------------|------:|---:|
-| TnT Failed | 533 | 89% |
-| Dewpoint Failed | 146 | 24% |
-| Rack Failed | 49 | 8% |
 
 ---
 
@@ -144,7 +149,8 @@ Ask: "Update the WTW dashboard and push to GitHub"
 ## 📋 Tomorrow's Checklist
 
 - [ ] Run `python add_wtw_tab.py` to refresh data
-- [ ] Check "Should Reopen" count for new completions
+- [ ] Check "Review Needed" for stores close to passing
+- [ ] Check "Critical Reopen" for stores needing work
 - [ ] Review any new Div1 store issues
 - [ ] Push updates to GitHub Pages
 - [ ] Share link: https://james-savage2026.github.io/tnt-summary-dive/
@@ -168,6 +174,9 @@ git pull --rebase && git push
 # Or force push if needed:
 git push --force
 ```
+
+### PM button counts not updating
+Clear browser cache (Cmd+Shift+R) and reload.
 
 ---
 
