@@ -9,7 +9,7 @@ from datetime import datetime
 
 # Paths
 DASHBOARD_PATH = Path(__file__).parent / 'index.html'
-WTW_DATA_PATH = Path.home() / 'bigquery_results' / 'wtw-pm-scores-weighted-20260206-114107.csv'
+WTW_DATA_PATH = Path.home() / 'bigquery_results' / 'wtw-pm-scores-crystal-exact-20260206-121658.csv'
 
 def load_csv(path):
     """Load CSV file and return list of dicts"""
