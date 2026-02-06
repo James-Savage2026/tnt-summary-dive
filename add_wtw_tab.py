@@ -201,25 +201,17 @@ def main():
                 </div>
             </div>
             
-            <!-- Phase Cards with Status Bars -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <!-- Phase Cards with Status Bars (Dynamic) -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6" id="wtwPhaseCards">
                 <!-- All Phases -->
                 <div onclick="setWtwPhase('')" id="wtw-phase-all"
                      class="wtw-phase-btn cursor-pointer bg-white rounded-lg shadow p-4 border-2 border-gray-300 hover:border-gray-400 transition">
                     <div class="flex justify-between items-center mb-2">
                         <span class="font-bold text-gray-700">All Phases</span>
-                        <span class="text-xl font-bold text-gray-800">{summary['total']:,}</span>
+                        <span class="text-xl font-bold text-gray-800" id="wtw-phase-all-count">0</span>
                     </div>
-                    <div class="h-3 rounded-full overflow-hidden flex bg-gray-200">
-                        <div class="bg-green-500" style="width: {(phase_status['PH1']['COMPLETED'] + phase_status['PH2']['COMPLETED'] + phase_status['PH3']['COMPLETED']) / summary['total'] * 100:.1f}%" title="Completed"></div>
-                        <div class="bg-yellow-500" style="width: {(phase_status['PH1']['IN PROGRESS'] + phase_status['PH2']['IN PROGRESS'] + phase_status['PH3']['IN PROGRESS']) / summary['total'] * 100:.1f}%" title="In Progress"></div>
-                        <div class="bg-gray-400" style="width: {(phase_status['PH1']['OPEN'] + phase_status['PH2']['OPEN'] + phase_status['PH3']['OPEN']) / summary['total'] * 100:.1f}%" title="Open"></div>
-                    </div>
-                    <div class="flex justify-between text-xs text-gray-500 mt-1">
-                        <span>\u2713 {phase_status['PH1']['COMPLETED'] + phase_status['PH2']['COMPLETED'] + phase_status['PH3']['COMPLETED']:,}</span>
-                        <span>\u23f3 {phase_status['PH1']['IN PROGRESS'] + phase_status['PH2']['IN PROGRESS'] + phase_status['PH3']['IN PROGRESS']:,}</span>
-                        <span>\u25cb {phase_status['PH1']['OPEN'] + phase_status['PH2']['OPEN'] + phase_status['PH3']['OPEN']:,}</span>
-                    </div>
+                    <div class="h-3 rounded-full overflow-hidden flex bg-gray-200" id="wtw-phase-all-bar"></div>
+                    <div class="flex justify-between text-xs text-gray-500 mt-1" id="wtw-phase-all-legend"></div>
                 </div>
                 
                 <!-- Phase 1 -->
@@ -227,18 +219,10 @@ def main():
                      class="wtw-phase-btn cursor-pointer bg-blue-50 rounded-lg shadow p-4 border-2 border-blue-300 hover:border-blue-400 transition">
                     <div class="flex justify-between items-center mb-2">
                         <span class="font-bold text-blue-700">\U0001F7E6 Phase 1</span>
-                        <span class="text-xl font-bold text-blue-800">{phase_counts['PH1']:,}</span>
+                        <span class="text-xl font-bold text-blue-800" id="wtw-phase-PH1-count">0</span>
                     </div>
-                    <div class="h-3 rounded-full overflow-hidden flex bg-blue-200">
-                        <div class="bg-green-500" style="width: {phase_status['PH1']['COMPLETED'] / phase_counts['PH1'] * 100:.1f}%" title="Completed"></div>
-                        <div class="bg-yellow-500" style="width: {phase_status['PH1']['IN PROGRESS'] / phase_counts['PH1'] * 100:.1f}%" title="In Progress"></div>
-                        <div class="bg-gray-400" style="width: {phase_status['PH1']['OPEN'] / phase_counts['PH1'] * 100:.1f}%" title="Open"></div>
-                    </div>
-                    <div class="flex justify-between text-xs text-blue-600 mt-1">
-                        <span>\u2713 {phase_status['PH1']['COMPLETED']:,}</span>
-                        <span>\u23f3 {phase_status['PH1']['IN PROGRESS']:,}</span>
-                        <span>\u25cb {phase_status['PH1']['OPEN']:,}</span>
-                    </div>
+                    <div class="h-3 rounded-full overflow-hidden flex bg-blue-200" id="wtw-phase-PH1-bar"></div>
+                    <div class="flex justify-between text-xs text-blue-600 mt-1" id="wtw-phase-PH1-legend"></div>
                 </div>
                 
                 <!-- Phase 2 -->
@@ -246,18 +230,10 @@ def main():
                      class="wtw-phase-btn cursor-pointer bg-green-50 rounded-lg shadow p-4 border-2 border-green-300 hover:border-green-400 transition">
                     <div class="flex justify-between items-center mb-2">
                         <span class="font-bold text-green-700">\U0001F7E2 Phase 2</span>
-                        <span class="text-xl font-bold text-green-800">{phase_counts['PH2']:,}</span>
+                        <span class="text-xl font-bold text-green-800" id="wtw-phase-PH2-count">0</span>
                     </div>
-                    <div class="h-3 rounded-full overflow-hidden flex bg-green-200">
-                        <div class="bg-green-500" style="width: {phase_status['PH2']['COMPLETED'] / phase_counts['PH2'] * 100:.1f}%" title="Completed"></div>
-                        <div class="bg-yellow-500" style="width: {phase_status['PH2']['IN PROGRESS'] / phase_counts['PH2'] * 100:.1f}%" title="In Progress"></div>
-                        <div class="bg-gray-400" style="width: {phase_status['PH2']['OPEN'] / phase_counts['PH2'] * 100:.1f}%" title="Open"></div>
-                    </div>
-                    <div class="flex justify-between text-xs text-green-600 mt-1">
-                        <span>\u2713 {phase_status['PH2']['COMPLETED']:,}</span>
-                        <span>\u23f3 {phase_status['PH2']['IN PROGRESS']:,}</span>
-                        <span>\u25cb {phase_status['PH2']['OPEN']:,}</span>
-                    </div>
+                    <div class="h-3 rounded-full overflow-hidden flex bg-green-200" id="wtw-phase-PH2-bar"></div>
+                    <div class="flex justify-between text-xs text-green-600 mt-1" id="wtw-phase-PH2-legend"></div>
                 </div>
                 
                 <!-- Phase 3 -->
@@ -265,18 +241,10 @@ def main():
                      class="wtw-phase-btn cursor-pointer bg-purple-50 rounded-lg shadow p-4 border-2 border-purple-300 hover:border-purple-400 transition">
                     <div class="flex justify-between items-center mb-2">
                         <span class="font-bold text-purple-700">\U0001F7E3 Phase 3</span>
-                        <span class="text-xl font-bold text-purple-800">{phase_counts['PH3']:,}</span>
+                        <span class="text-xl font-bold text-purple-800" id="wtw-phase-PH3-count">0</span>
                     </div>
-                    <div class="h-3 rounded-full overflow-hidden flex bg-purple-200">
-                        <div class="bg-green-500" style="width: {phase_status['PH3']['COMPLETED'] / phase_counts['PH3'] * 100:.1f}%" title="Completed"></div>
-                        <div class="bg-yellow-500" style="width: {phase_status['PH3']['IN PROGRESS'] / phase_counts['PH3'] * 100:.1f}%" title="In Progress"></div>
-                        <div class="bg-gray-400" style="width: {phase_status['PH3']['OPEN'] / phase_counts['PH3'] * 100:.1f}%" title="Open"></div>
-                    </div>
-                    <div class="flex justify-between text-xs text-purple-600 mt-1">
-                        <span>\u2713 {phase_status['PH3']['COMPLETED']:,}</span>
-                        <span>\u23f3 {phase_status['PH3']['IN PROGRESS']:,}</span>
-                        <span>\u25cb {phase_status['PH3']['OPEN']:,}</span>
-                    </div>
+                    <div class="h-3 rounded-full overflow-hidden flex bg-purple-200" id="wtw-phase-PH3-bar"></div>
+                    <div class="flex justify-between text-xs text-purple-600 mt-1" id="wtw-phase-PH3-legend"></div>
                 </div>
             </div>
             
@@ -662,6 +630,9 @@ def main():
         // Update KPIs based on filtered data
         updateWtwKpis();
         
+        // Update phase cards based on filtered data
+        updatePhaseCards();
+        
         // Update charts
         updateWtwCharts();
         
@@ -690,6 +661,61 @@ def main():
         document.getElementById('wtwKpiPartsDelivered').textContent = counts['PARTS DELIVERED'].toLocaleString();
         document.getElementById('wtwKpiPartsOrder').textContent = counts['PARTS ON ORDER'].toLocaleString();
         document.getElementById('wtwKpiOpen').textContent = counts['OPEN'].toLocaleString();
+    }}
+    
+    // Update Phase Cards based on filtered data
+    function updatePhaseCards() {{
+        // Calculate phase stats from filtered data
+        const phaseStats = {{
+            'all': {{'total': 0, 'COMPLETED': 0, 'IN PROGRESS': 0, 'OPEN': 0}},
+            'PH1': {{'total': 0, 'COMPLETED': 0, 'IN PROGRESS': 0, 'OPEN': 0}},
+            'PH2': {{'total': 0, 'COMPLETED': 0, 'IN PROGRESS': 0, 'OPEN': 0}},
+            'PH3': {{'total': 0, 'COMPLETED': 0, 'IN PROGRESS': 0, 'OPEN': 0}}
+        }};
+        
+        wtwFilteredData.forEach(wo => {{
+            const ph = wo.ph;
+            const st = wo.st;
+            phaseStats['all'].total++;
+            phaseStats[ph].total++;
+            if (st === 'COMPLETED') {{
+                phaseStats['all']['COMPLETED']++;
+                phaseStats[ph]['COMPLETED']++;
+            }} else if (st === 'IN PROGRESS') {{
+                phaseStats['all']['IN PROGRESS']++;
+                phaseStats[ph]['IN PROGRESS']++;
+            }} else {{
+                phaseStats['all']['OPEN']++;
+                phaseStats[ph]['OPEN']++;
+            }}
+        }});
+        
+        // Update each phase card
+        ['all', 'PH1', 'PH2', 'PH3'].forEach(phase => {{
+            const stats = phaseStats[phase];
+            const total = stats.total || 1;  // Avoid division by zero
+            const prefix = phase === 'all' ? 'wtw-phase-all' : `wtw-phase-${{phase}}`;
+            
+            // Update count
+            document.getElementById(`${{prefix}}-count`).textContent = stats.total.toLocaleString();
+            
+            // Update progress bar
+            const completedPct = (stats['COMPLETED'] / total * 100).toFixed(1);
+            const inProgressPct = (stats['IN PROGRESS'] / total * 100).toFixed(1);
+            const openPct = (stats['OPEN'] / total * 100).toFixed(1);
+            document.getElementById(`${{prefix}}-bar`).innerHTML = `
+                <div class="bg-green-500" style="width: ${{completedPct}}%" title="Completed"></div>
+                <div class="bg-yellow-500" style="width: ${{inProgressPct}}%" title="In Progress"></div>
+                <div class="bg-gray-400" style="width: ${{openPct}}%" title="Open"></div>
+            `;
+            
+            // Update legend
+            document.getElementById(`${{prefix}}-legend`).innerHTML = `
+                <span>\u2713 ${{stats['COMPLETED'].toLocaleString()}}</span>
+                <span>\u23f3 ${{stats['IN PROGRESS'].toLocaleString()}}</span>
+                <span>\u25cb ${{stats['OPEN'].toLocaleString()}}</span>
+            `;
+        }});
     }}
     
     // Sort WTW table
