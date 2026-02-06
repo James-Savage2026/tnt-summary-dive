@@ -464,7 +464,7 @@ def main():
     let wtwFilteredData = [];
     
     // Service Channel URL
-    const SC_URL = 'https://servicechannel.walmart.com/sc/wo/workorders/';
+    const SC_URL = 'https://www.servicechannel.com/sc/wo/Workorders/index?id=';
     
     // Tab switching
     function switchTab(tab) {{
