@@ -65,13 +65,32 @@ def main():
             'state': wo.get('state_cd', ''),
         })
     
-    # Calculate summary stats
+    # Calculate summary stats with phase breakdown
     phase_counts = {'PH1': 0, 'PH2': 0, 'PH3': 0}
+    phase_status = {
+        'PH1': {'COMPLETED': 0, 'IN PROGRESS': 0, 'OPEN': 0},
+        'PH2': {'COMPLETED': 0, 'IN PROGRESS': 0, 'OPEN': 0},
+        'PH3': {'COMPLETED': 0, 'IN PROGRESS': 0, 'OPEN': 0}
+    }
     status_counts = {}
+    ready_to_complete = 0  # In Progress + all PM criteria pass
+    should_reopen = 0  # Completed but PM criteria fail
+    
     for wo in compressed_wtw:
         phase_counts[wo['ph']] = phase_counts.get(wo['ph'], 0) + 1
         est = wo['est'] or wo['st']
         status_counts[est] = status_counts.get(est, 0) + 1
+        
+        # Track status by phase
+        st = wo['st']
+        if st in phase_status[wo['ph']]:
+            phase_status[wo['ph']][st] += 1
+        
+        # Count ready to complete and should reopen
+        if wo['allP'] == 'PASS' and st != 'COMPLETED':
+            ready_to_complete += 1
+        elif wo['allP'] == 'FAIL' and st == 'COMPLETED':
+            should_reopen += 1
     
     # Get unique values for filters
     sr_directors = sorted(set(wo['srd'] for wo in compressed_wtw if wo['srd']))
@@ -83,7 +102,10 @@ def main():
     summary = {
         'total': len(wtw_data),
         'phases': phase_counts,
+        'phase_status': phase_status,
         'statuses': status_counts,
+        'ready_to_complete': ready_to_complete,
+        'should_reopen': should_reopen,
         'filters': {
             'sr_directors': sr_directors,
             'fm_directors': fm_directors,
@@ -94,6 +116,8 @@ def main():
     }
     
     print(f"   Phases: {phase_counts}")
+    print(f"   Phase Status: {phase_status}")
+    print(f"   Ready to Complete: {ready_to_complete}, Should Reopen: {should_reopen}")
     print(f"   Sr Directors: {len(sr_directors)}, FM Directors: {len(fm_directors)}")
     print(f"   Markets: {len(markets)}")
     
@@ -162,25 +186,104 @@ def main():
                 </div>
             </div>
             
-            <!-- Phase Toggle Buttons -->
+            <!-- Phase Cards with Status Bars -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <!-- All Phases -->
+                <div onclick="setWtwPhase('')" id="wtw-phase-all"
+                     class="wtw-phase-btn cursor-pointer bg-white rounded-lg shadow p-4 border-2 border-gray-300 hover:border-gray-400 transition">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-bold text-gray-700">All Phases</span>
+                        <span class="text-xl font-bold text-gray-800">{summary['total']:,}</span>
+                    </div>
+                    <div class="h-3 rounded-full overflow-hidden flex bg-gray-200">
+                        <div class="bg-green-500" style="width: {(phase_status['PH1']['COMPLETED'] + phase_status['PH2']['COMPLETED'] + phase_status['PH3']['COMPLETED']) / summary['total'] * 100:.1f}%" title="Completed"></div>
+                        <div class="bg-yellow-500" style="width: {(phase_status['PH1']['IN PROGRESS'] + phase_status['PH2']['IN PROGRESS'] + phase_status['PH3']['IN PROGRESS']) / summary['total'] * 100:.1f}%" title="In Progress"></div>
+                        <div class="bg-gray-400" style="width: {(phase_status['PH1']['OPEN'] + phase_status['PH2']['OPEN'] + phase_status['PH3']['OPEN']) / summary['total'] * 100:.1f}%" title="Open"></div>
+                    </div>
+                    <div class="flex justify-between text-xs text-gray-500 mt-1">
+                        <span>\u2713 {phase_status['PH1']['COMPLETED'] + phase_status['PH2']['COMPLETED'] + phase_status['PH3']['COMPLETED']:,}</span>
+                        <span>\u23f3 {phase_status['PH1']['IN PROGRESS'] + phase_status['PH2']['IN PROGRESS'] + phase_status['PH3']['IN PROGRESS']:,}</span>
+                        <span>\u25cb {phase_status['PH1']['OPEN'] + phase_status['PH2']['OPEN'] + phase_status['PH3']['OPEN']:,}</span>
+                    </div>
+                </div>
+                
+                <!-- Phase 1 -->
+                <div onclick="setWtwPhase('PH1')" id="wtw-phase-PH1"
+                     class="wtw-phase-btn cursor-pointer bg-blue-50 rounded-lg shadow p-4 border-2 border-blue-300 hover:border-blue-400 transition">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-bold text-blue-700">\U0001F7E6 Phase 1</span>
+                        <span class="text-xl font-bold text-blue-800">{phase_counts['PH1']:,}</span>
+                    </div>
+                    <div class="h-3 rounded-full overflow-hidden flex bg-blue-200">
+                        <div class="bg-green-500" style="width: {phase_status['PH1']['COMPLETED'] / phase_counts['PH1'] * 100:.1f}%" title="Completed"></div>
+                        <div class="bg-yellow-500" style="width: {phase_status['PH1']['IN PROGRESS'] / phase_counts['PH1'] * 100:.1f}%" title="In Progress"></div>
+                        <div class="bg-gray-400" style="width: {phase_status['PH1']['OPEN'] / phase_counts['PH1'] * 100:.1f}%" title="Open"></div>
+                    </div>
+                    <div class="flex justify-between text-xs text-blue-600 mt-1">
+                        <span>\u2713 {phase_status['PH1']['COMPLETED']:,}</span>
+                        <span>\u23f3 {phase_status['PH1']['IN PROGRESS']:,}</span>
+                        <span>\u25cb {phase_status['PH1']['OPEN']:,}</span>
+                    </div>
+                </div>
+                
+                <!-- Phase 2 -->
+                <div onclick="setWtwPhase('PH2')" id="wtw-phase-PH2"
+                     class="wtw-phase-btn cursor-pointer bg-green-50 rounded-lg shadow p-4 border-2 border-green-300 hover:border-green-400 transition">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-bold text-green-700">\U0001F7E2 Phase 2</span>
+                        <span class="text-xl font-bold text-green-800">{phase_counts['PH2']:,}</span>
+                    </div>
+                    <div class="h-3 rounded-full overflow-hidden flex bg-green-200">
+                        <div class="bg-green-500" style="width: {phase_status['PH2']['COMPLETED'] / phase_counts['PH2'] * 100:.1f}%" title="Completed"></div>
+                        <div class="bg-yellow-500" style="width: {phase_status['PH2']['IN PROGRESS'] / phase_counts['PH2'] * 100:.1f}%" title="In Progress"></div>
+                        <div class="bg-gray-400" style="width: {phase_status['PH2']['OPEN'] / phase_counts['PH2'] * 100:.1f}%" title="Open"></div>
+                    </div>
+                    <div class="flex justify-between text-xs text-green-600 mt-1">
+                        <span>\u2713 {phase_status['PH2']['COMPLETED']:,}</span>
+                        <span>\u23f3 {phase_status['PH2']['IN PROGRESS']:,}</span>
+                        <span>\u25cb {phase_status['PH2']['OPEN']:,}</span>
+                    </div>
+                </div>
+                
+                <!-- Phase 3 -->
+                <div onclick="setWtwPhase('PH3')" id="wtw-phase-PH3"
+                     class="wtw-phase-btn cursor-pointer bg-purple-50 rounded-lg shadow p-4 border-2 border-purple-300 hover:border-purple-400 transition">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-bold text-purple-700">\U0001F7E3 Phase 3</span>
+                        <span class="text-xl font-bold text-purple-800">{phase_counts['PH3']:,}</span>
+                    </div>
+                    <div class="h-3 rounded-full overflow-hidden flex bg-purple-200">
+                        <div class="bg-green-500" style="width: {phase_status['PH3']['COMPLETED'] / phase_counts['PH3'] * 100:.1f}%" title="Completed"></div>
+                        <div class="bg-yellow-500" style="width: {phase_status['PH3']['IN PROGRESS'] / phase_counts['PH3'] * 100:.1f}%" title="In Progress"></div>
+                        <div class="bg-gray-400" style="width: {phase_status['PH3']['OPEN'] / phase_counts['PH3'] * 100:.1f}%" title="Open"></div>
+                    </div>
+                    <div class="flex justify-between text-xs text-purple-600 mt-1">
+                        <span>\u2713 {phase_status['PH3']['COMPLETED']:,}</span>
+                        <span>\u23f3 {phase_status['PH3']['IN PROGRESS']:,}</span>
+                        <span>\u25cb {phase_status['PH3']['OPEN']:,}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- PM Readiness Buttons -->
             <div class="bg-white rounded-lg shadow p-4 mb-6">
-                <div class="flex flex-wrap gap-3 justify-center">
-                    <button onclick="setWtwPhase('')" id="wtw-phase-all"
-                            class="wtw-phase-btn px-6 py-3 rounded-lg font-semibold text-sm border-2 border-gray-300 bg-gray-100 text-gray-700">
-                        All Phases ({summary['total']:,})
+                <div class="flex flex-wrap gap-3 justify-center items-center">
+                    <span class="text-sm font-medium text-gray-600">PM Readiness:</span>
+                    <button onclick="setWtwPmFilter('')" id="wtw-pm-all"
+                            class="wtw-pm-btn px-4 py-2 rounded-lg text-sm font-semibold border-2 border-gray-300 bg-gray-100 text-gray-700 ring-2 ring-offset-2 ring-walmart-blue">
+                        All ({summary['total']:,})
                     </button>
-                    <button onclick="setWtwPhase('PH1')" id="wtw-phase-PH1"
-                            class="wtw-phase-btn px-6 py-3 rounded-lg font-semibold text-sm border-2 border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100">
-                        \U0001F7E6 Phase 1 ({phase_counts['PH1']:,})
+                    <button onclick="setWtwPmFilter('ready')" id="wtw-pm-ready"
+                            class="wtw-pm-btn px-4 py-2 rounded-lg text-sm font-semibold border-2 border-green-400 bg-green-50 text-green-700 hover:bg-green-100">
+                        \u2713 Ready to Complete ({ready_to_complete:,})
                     </button>
-                    <button onclick="setWtwPhase('PH2')" id="wtw-phase-PH2"
-                            class="wtw-phase-btn px-6 py-3 rounded-lg font-semibold text-sm border-2 border-green-300 bg-green-50 text-green-700 hover:bg-green-100">
-                        \U0001F7E2 Phase 2 ({phase_counts['PH2']:,})
+                    <button onclick="setWtwPmFilter('reopen')" id="wtw-pm-reopen"
+                            class="wtw-pm-btn px-4 py-2 rounded-lg text-sm font-semibold border-2 border-red-400 bg-red-50 text-red-700 hover:bg-red-100">
+                        \u26a0 Should Reopen ({should_reopen:,})
                     </button>
-                    <button onclick="setWtwPhase('PH3')" id="wtw-phase-PH3"
-                            class="wtw-phase-btn px-6 py-3 rounded-lg font-semibold text-sm border-2 border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100">
-                        \U0001F7E3 Phase 3 ({phase_counts['PH3']:,})
-                    </button>
+                </div>
+                <div class="text-center text-xs text-gray-500 mt-2">
+                    Ready = In Progress + All PM Pass | Reopen = Completed + PM Fail
                 </div>
             </div>
             
@@ -355,6 +458,7 @@ def main():
     // WTW State
     let wtwCurrentPhase = '';
     let wtwCurrentStatus = '';
+    let wtwPmFilter = '';  // 'ready', 'reopen', or ''
     let wtwSortField = 's';
     let wtwSortAsc = true;
     let wtwFilteredData = [];
@@ -445,10 +549,25 @@ def main():
         filterWtwData();
     }}
     
+    // Set PM readiness filter
+    function setWtwPmFilter(filter) {{
+        wtwPmFilter = filter;
+        // Update button styles
+        document.querySelectorAll('.wtw-pm-btn').forEach(btn => {{
+            btn.classList.remove('ring-2', 'ring-offset-2', 'ring-walmart-blue');
+        }});
+        const activeBtn = document.getElementById('wtw-pm-' + (filter || 'all'));
+        if (activeBtn) {{
+            activeBtn.classList.add('ring-2', 'ring-offset-2', 'ring-walmart-blue');
+        }}
+        filterWtwData();
+    }}
+    
     // Clear all WTW filters
     function clearWtwFilters() {{
         wtwCurrentPhase = '';
         wtwCurrentStatus = '';
+        wtwPmFilter = '';
         document.getElementById('wtwFilterSrDirector').value = '';
         document.getElementById('wtwFilterDirector').value = '';
         document.getElementById('wtwFilterManager').value = '';
@@ -462,8 +581,12 @@ def main():
         document.querySelectorAll('.wtw-status-btn').forEach(btn => {{
             btn.classList.remove('ring-2', 'ring-offset-2', 'ring-walmart-blue');
         }});
+        document.querySelectorAll('.wtw-pm-btn').forEach(btn => {{
+            btn.classList.remove('ring-2', 'ring-offset-2', 'ring-walmart-blue');
+        }});
         document.getElementById('wtw-phase-all').classList.add('ring-2', 'ring-offset-2', 'ring-walmart-blue');
         document.getElementById('wtw-status-all').classList.add('ring-2', 'ring-offset-2', 'ring-walmart-blue');
+        document.getElementById('wtw-pm-all').classList.add('ring-2', 'ring-offset-2', 'ring-walmart-blue');
         filterWtwData();
     }}
     
@@ -497,6 +620,15 @@ def main():
             if (search) {{
                 const searchStr = (wo.s + ' ' + wo.city + ' ' + wo.t + ' ' + wo.fm + ' ' + wo.loc).toLowerCase();
                 if (!searchStr.includes(search)) return false;
+            }}
+            // PM Readiness filter
+            if (wtwPmFilter === 'ready') {{
+                // Ready to complete: In Progress + all PM pass
+                if (wo.st === 'COMPLETED' || wo.allP !== 'PASS') return false;
+            }}
+            if (wtwPmFilter === 'reopen') {{
+                // Should reopen: Completed + PM fail
+                if (wo.st !== 'COMPLETED' || wo.allP !== 'FAIL') return false;
             }}
             return true;
         }});
