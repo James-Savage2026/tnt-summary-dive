@@ -9,7 +9,7 @@ from datetime import datetime
 
 # Paths
 DASHBOARD_PATH = Path(__file__).parent / 'index.html'
-WTW_DATA_PATH = Path.home() / 'bigquery_results' / 'wtw-pm-scores-final-20260205-200434.csv'
+WTW_DATA_PATH = Path.home() / 'bigquery_results' / 'wtw-pm-scores-with-div1-20260205-212001.csv'
 
 def load_csv(path):
     """Load CSV file and return list of dicts"""
@@ -61,6 +61,8 @@ def main():
             'tntP': wo.get('tnt_pass', ''),
             'dewP': wo.get('dewpoint_pass', ''),
             'allP': wo.get('overall_pass', ''),
+            'div1': wo.get('is_div1', 'N'),
+            'banner': wo.get('banner_desc', ''),
             'city': wo.get('city_name', ''),
             'state': wo.get('state_cd', ''),
         })
@@ -74,7 +76,9 @@ def main():
     }
     status_counts = {}
     ready_to_complete = 0  # In Progress + all PM criteria pass
-    should_reopen = 0  # Completed but PM criteria fail
+    should_reopen = 0  # Completed but PM criteria fail (non-Div1)
+    should_reopen_div1 = 0  # Completed Div1 stores (manual review)
+    div1_count = 0
     
     for wo in compressed_wtw:
         phase_counts[wo['ph']] = phase_counts.get(wo['ph'], 0) + 1
@@ -86,11 +90,19 @@ def main():
         if st in phase_status[wo['ph']]:
             phase_status[wo['ph']][st] += 1
         
+        # Count Div1 stores
+        is_div1 = wo.get('div1', 'N') == 'Y'
+        if is_div1:
+            div1_count += 1
+        
         # Count ready to complete and should reopen
         if wo['allP'] == 'PASS' and st != 'COMPLETED':
             ready_to_complete += 1
         elif wo['allP'] == 'FAIL' and st == 'COMPLETED':
-            should_reopen += 1
+            if is_div1:
+                should_reopen_div1 += 1
+            else:
+                should_reopen += 1
     
     # Get unique values for filters
     sr_directors = sorted(set(wo['srd'] for wo in compressed_wtw if wo['srd']))
@@ -106,6 +118,8 @@ def main():
         'statuses': status_counts,
         'ready_to_complete': ready_to_complete,
         'should_reopen': should_reopen,
+        'should_reopen_div1': should_reopen_div1,
+        'div1_count': div1_count,
         'filters': {
             'sr_directors': sr_directors,
             'fm_directors': fm_directors,
@@ -117,7 +131,8 @@ def main():
     
     print(f"   Phases: {phase_counts}")
     print(f"   Phase Status: {phase_status}")
-    print(f"   Ready to Complete: {ready_to_complete}, Should Reopen: {should_reopen}")
+    print(f"   Ready to Complete: {ready_to_complete}, Should Reopen: {should_reopen} (+ {should_reopen_div1} Div1)")
+    print(f"   Div1 Stores: {div1_count}")
     print(f"   Sr Directors: {len(sr_directors)}, FM Directors: {len(fm_directors)}")
     print(f"   Markets: {len(markets)}")
     
@@ -281,9 +296,13 @@ def main():
                             class="wtw-pm-btn px-4 py-2 rounded-lg text-sm font-semibold border-2 border-red-400 bg-red-50 text-red-700 hover:bg-red-100">
                         \u26a0 Should Reopen ({should_reopen:,})
                     </button>
+                    <button onclick="setWtwPmFilter('div1')" id="wtw-pm-div1"
+                            class="wtw-pm-btn px-4 py-2 rounded-lg text-sm font-semibold border-2 border-orange-400 bg-orange-50 text-orange-700 hover:bg-orange-100">
+                        \U0001F3EA Div1 Stores ({div1_count:,})
+                    </button>
                 </div>
                 <div class="text-center text-xs text-gray-500 mt-2">
-                    Ready = In Progress + All PM Pass | Reopen = Completed + PM Fail
+                    Ready = In Progress + All PM Pass | Reopen = Completed + PM Fail (excl. Div1) | Div1 = Small-format legacy stores
                 </div>
             </div>
             
@@ -627,8 +646,12 @@ def main():
                 if (wo.st === 'COMPLETED' || wo.allP !== 'PASS') return false;
             }}
             if (wtwPmFilter === 'reopen') {{
-                // Should reopen: Completed + PM fail
-                if (wo.st !== 'COMPLETED' || wo.allP !== 'FAIL') return false;
+                // Should reopen: Completed + PM fail (exclude Div1)
+                if (wo.st !== 'COMPLETED' || wo.allP !== 'FAIL' || wo.div1 === 'Y') return false;
+            }}
+            if (wtwPmFilter === 'div1') {{
+                // Div1 stores only
+                if (wo.div1 !== 'Y') return false;
             }}
             return true;
         }});
@@ -706,9 +729,10 @@ def main():
             const statusClass = wo.st === 'COMPLETED' ? 'text-green-600 font-semibold' : 
                                wo.est === 'INCOMPLETE' ? 'text-red-600 font-semibold' : 'text-gray-600';
             const statusText = wo.st === 'COMPLETED' ? '✓ COMPLETED' : (wo.est || wo.st);
+            const div1Badge = wo.div1 === 'Y' ? '<span class="ml-1 px-1 py-0.5 rounded text-xs bg-orange-100 text-orange-700" title="Div1 - Small format store">D1</span>' : '';
             return `
-                <tr class="hover:bg-gray-50">
-                    <td class="px-3 py-2 text-sm font-medium text-walmart-blue">${{wo.s}}</td>
+                <tr class="hover:bg-gray-50 ${{wo.div1 === 'Y' ? 'bg-orange-50' : ''}}">
+                    <td class="px-3 py-2 text-sm font-medium text-walmart-blue">${{wo.s}}${{div1Badge}}</td>
                     <td class="px-3 py-2 text-sm text-gray-600">${{wo.city}}${{wo.city && wo.state ? ', ' : ''}}${{wo.state}}</td>
                     <td class="px-3 py-2 text-center">
                         <span class="px-2 py-1 rounded-full text-xs font-semibold ${{phaseClass}}">${{wo.ph}}</span>
