@@ -9,7 +9,7 @@ from datetime import datetime
 
 # Paths
 DASHBOARD_PATH = Path(__file__).parent / 'index.html'
-WTW_DATA_PATH = Path.home() / 'bigquery_results' / 'wtw-pm-scores-corrected-20260205-195545.csv'
+WTW_DATA_PATH = Path.home() / 'bigquery_results' / 'wtw-pm-scores-final-20260205-200434.csv'
 
 def load_csv(path):
     """Load CSV file and return list of dicts"""
@@ -57,6 +57,10 @@ def main():
             'dewR': wo.get('dewpoint_raw', ''),
             'dew': wo.get('dewpoint_score', ''),
             'pm': wo.get('pm_score', ''),
+            'rackP': wo.get('rack_pass', ''),
+            'tntP': wo.get('tnt_pass', ''),
+            'dewP': wo.get('dewpoint_pass', ''),
+            'allP': wo.get('overall_pass', ''),
             'city': wo.get('city_name', ''),
             'state': wo.get('state_cd', ''),
         })
@@ -578,7 +582,17 @@ def main():
                     <td class="px-3 py-2 text-sm text-gray-600">${{wo.fm || '-'}}</td>
                     <td class="px-3 py-2 text-sm text-gray-600">${{wo.rm || '-'}}</td>
                     <td class="px-3 py-2 text-sm text-center">
-                        ${{wo.pm ? `<span class="px-2 py-1 rounded text-xs font-semibold ${{parseFloat(wo.pm) >= 85 ? 'bg-green-100 text-green-800' : parseFloat(wo.pm) >= 70 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}}" title="TnT: ${{wo.tnt || '-'}}% | Rack: ${{wo.rack || '-'}}% | Dew: ${{wo.dew || 'N/A'}}">${{parseFloat(wo.pm).toFixed(1)}}</span>` : '-'}}
+                        ${{wo.pm ? `
+                            <div class="flex items-center justify-center gap-1">
+                                <span class="px-2 py-1 rounded text-xs font-semibold ${{wo.allP === 'PASS' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}}" 
+                                      title="TnT: ${{wo.tnt || '-'}}% (${{wo.tntP}}) | Rack: ${{wo.rack || '-'}}% (${{wo.rackP}}) | Dewpoint: ${{wo.dewR || 'N/A'}}°F (${{wo.dewP}})">
+                                    ${{parseFloat(wo.pm).toFixed(1)}}%
+                                </span>
+                                <span class="text-xs ${{wo.allP === 'PASS' ? 'text-green-600' : 'text-red-600'}}">
+                                    ${{wo.allP === 'PASS' ? '✓' : '✗'}}
+                                </span>
+                            </div>
+                        ` : '-'}}
                     </td>
                     <td class="px-3 py-2 text-sm text-center text-gray-500">${{wo.exp}}</td>
                     <td class="px-3 py-2 text-sm text-center">
