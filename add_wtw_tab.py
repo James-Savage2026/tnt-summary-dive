@@ -329,6 +329,9 @@ def main():
                                 <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">FM Director</th>
                                 <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Regional Mgr</th>
                                 <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortWtwTable('pm')">PM Score \u21C5</th>
+                                <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortWtwTable('rack')">Rack \u21C5</th>
+                                <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortWtwTable('tnt')">TnT \u21C5</th>
+                                <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase">Dewpoint</th>
                                 <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortWtwTable('exp')">Expires \u21C5</th>
                                 <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase">Links</th>
                             </tr>
@@ -584,14 +587,34 @@ def main():
                     <td class="px-3 py-2 text-sm text-center">
                         ${{wo.pm ? `
                             <div class="flex items-center justify-center gap-1">
-                                <span class="px-2 py-1 rounded text-xs font-semibold ${{wo.allP === 'PASS' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}}" 
-                                      title="TnT: ${{wo.tnt || '-'}}% (${{wo.tntP}}) | Rack: ${{wo.rack || '-'}}% (${{wo.rackP}}) | Dewpoint: ${{wo.dewR || 'N/A'}}°F (${{wo.dewP}})">
+                                <span class="px-2 py-1 rounded text-xs font-bold ${{wo.allP === 'PASS' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}}">
                                     ${{parseFloat(wo.pm).toFixed(1)}}%
                                 </span>
-                                <span class="text-xs ${{wo.allP === 'PASS' ? 'text-green-600' : 'text-red-600'}}">
+                                <span class="text-sm ${{wo.allP === 'PASS' ? 'text-green-600' : 'text-red-600'}}">
                                     ${{wo.allP === 'PASS' ? '✓' : '✗'}}
                                 </span>
                             </div>
+                        ` : '-'}}
+                    </td>
+                    <td class="px-3 py-2 text-sm text-center">
+                        ${{wo.rack ? `
+                            <span class="px-2 py-0.5 rounded text-xs ${{wo.rackP === 'PASS' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}}">
+                                ${{parseFloat(wo.rack).toFixed(1)}}% ${{wo.rackP === 'PASS' ? '✓' : '✗'}}
+                            </span>
+                        ` : '-'}}
+                    </td>
+                    <td class="px-3 py-2 text-sm text-center">
+                        ${{wo.tnt ? `
+                            <span class="px-2 py-0.5 rounded text-xs ${{wo.tntP === 'PASS' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}}">
+                                ${{parseFloat(wo.tnt).toFixed(1)}}% ${{wo.tntP === 'PASS' ? '✓' : '✗'}}
+                            </span>
+                        ` : '-'}}
+                    </td>
+                    <td class="px-3 py-2 text-sm text-center">
+                        ${{wo.dewR ? `
+                            <span class="px-2 py-0.5 rounded text-xs ${{wo.dewP === 'PASS' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}}">
+                                ${{wo.dewR}}°F ${{wo.dewP === 'PASS' ? '✓' : '✗'}}
+                            </span>
                         ` : '-'}}
                     </td>
                     <td class="px-3 py-2 text-sm text-center text-gray-500">${{wo.exp}}</td>
@@ -616,7 +639,7 @@ def main():
         }}).join('');
         
         if (sorted.length > 300) {{
-            table.innerHTML += `<tr><td colspan="9" class="px-3 py-3 text-center text-gray-400 text-sm bg-gray-50">Showing 300 of ${{sorted.length.toLocaleString()}} results. Use filters to narrow down.</td></tr>`;
+            table.innerHTML += `<tr><td colspan="12" class="px-3 py-3 text-center text-gray-400 text-sm bg-gray-50">Showing 300 of ${{sorted.length.toLocaleString()}} results. Use filters to narrow down.</td></tr>`;
         }}
     }}
     
