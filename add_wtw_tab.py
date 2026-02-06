@@ -9,7 +9,7 @@ from datetime import datetime
 
 # Paths
 DASHBOARD_PATH = Path(__file__).parent / 'index.html'
-WTW_DATA_PATH = Path.home() / 'bigquery_results' / 'wtw-pm-scores-final-20260206-111831.csv'
+WTW_DATA_PATH = Path.home() / 'bigquery_results' / 'wtw-pm-scores-weighted-20260206-114107.csv'
 
 def load_csv(path):
     """Load CSV file and return list of dicts"""
@@ -39,7 +39,7 @@ def main():
             't': wo.get('tracking_nbr', ''),
             'w': wo.get('workorder_nbr', ''),
             's': wo.get('store_nbr', ''),
-            'loc': wo.get('location_name', '')[:40] if wo.get('location_name') else '',
+            'loc': wo.get('store_name', '')[:40] if wo.get('store_name') else '',
             'st': wo.get('status_name', ''),
             'est': wo.get('extended_status_name', ''),
             'ph': phase,
@@ -54,12 +54,11 @@ def main():
             'crt': wo.get('created_date', '')[:10] if wo.get('created_date') else '',
             'tnt': wo.get('tnt_score', ''),
             'rack': wo.get('rack_score', ''),
-            'dewR': wo.get('dewpoint', ''),
-            'ahu': wo.get('ahu_tnt_score', ''),
+            'dew': wo.get('dewpoint_raw', ''),
+            'dewS': wo.get('dewpoint_score', ''),
             'pm': wo.get('pm_score', ''),
             'rackP': wo.get('rack_pass', ''),
             'tntP': wo.get('tnt_pass', ''),
-            'ahuP': wo.get('ahu_pass', ''),
             'dewP': wo.get('dewpoint_pass', ''),
             'allP': wo.get('overall_pass', ''),
             'comp': wo.get('components_available', '3'),
@@ -423,7 +422,7 @@ def main():
                                 <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortWtwTable('pm')">PM Score \u21C5</th>
                                 <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortWtwTable('rack')">Rack \u21C5</th>
                                 <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortWtwTable('tnt')">TnT \u21C5</th>
-                                <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase">AHU TnT</th>
+                                <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase">Dewpoint</th>
                                 <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortWtwTable('exp')">Expires \u21C5</th>
                                 <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase">Links</th>
                             </tr>
@@ -477,15 +476,24 @@ def main():
     // Initialize WTW tab
     let wtwInitialized = false;
     function initWtwTab() {{
+        console.log('initWtwTab called');
         if (wtwInitialized) return;
         wtwInitialized = true;
         
-        // Populate filter dropdowns
-        populateWtwFilters();
-        // Initialize charts
-        initWtwCharts();
-        // Initial data filter
-        filterWtwData();
+        try {{
+            // Populate filter dropdowns
+            console.log('Populating filters...');
+            populateWtwFilters();
+            // Initialize charts
+            console.log('Initializing charts...');
+            initWtwCharts();
+            // Initial data filter
+            console.log('Filtering data...');
+            filterWtwData();
+            console.log('initWtwTab complete!');
+        }} catch (e) {{
+            console.error('Error in initWtwTab:', e);
+        }}
     }}
     
     // Populate filter dropdowns
@@ -760,7 +768,6 @@ def main():
         document.getElementById('wtw-pm-ready-count').textContent = ready.toLocaleString();
         document.getElementById('wtw-pm-review-count').textContent = review.toLocaleString();
         document.getElementById('wtw-pm-critical-count').textContent = critical.toLocaleString();
-        document.getElementById('wtw-pm-div1-count').textContent = div1.toLocaleString();
     }}
     
     // Sort WTW table
@@ -776,6 +783,7 @@ def main():
     
     // Render WTW table
     function renderWtwTable() {{
+        console.log('renderWtwTable called, data count:', wtwFilteredData.length);
         // Sort data
         const sorted = [...wtwFilteredData].sort((a, b) => {{
             let aVal = a[wtwSortField] || '';
@@ -842,11 +850,11 @@ def main():
                         ` : '-'}}
                     </td>
                     <td class="px-3 py-2 text-sm text-center">
-                        ${{wo.ahuP === 'NO DATA' ? `
+                        ${{wo.dewP === 'NO DATA' ? `
                             <span class="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-500">No Data</span>
-                        ` : wo.ahu ? `
-                            <span class="px-2 py-0.5 rounded text-xs ${{wo.ahuP === 'PASS' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}}">
-                                ${{parseFloat(wo.ahu).toFixed(1)}}% ${{wo.ahuP === 'PASS' ? '✓' : '✗'}}
+                        ` : wo.dew ? `
+                            <span class="px-2 py-0.5 rounded text-xs ${{wo.dewP === 'PASS' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}}">
+                                ${{parseFloat(wo.dew).toFixed(0)}}°F ${{wo.dewP === 'PASS' ? '✓' : '✗'}}
                             </span>
                         ` : '-'}}
                     </td>
