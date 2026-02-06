@@ -285,7 +285,27 @@ def main():
             <!-- Work Order Table -->
             <div class="bg-white rounded-lg shadow">
                 <div class="p-4 border-b border-gray-200">
-                    <h3 class="text-lg font-semibold text-gray-800">Work Orders</h3>
+                    <div class="flex flex-wrap justify-between items-center gap-4">
+                        <h3 class="text-lg font-semibold text-gray-800">Work Orders</h3>
+                        <div class="flex gap-2">
+                            <button onclick="setWtwStatus('')" id="wtw-status-all"
+                                    class="wtw-status-btn px-4 py-2 rounded-lg text-sm font-semibold border-2 border-gray-300 bg-gray-100 text-gray-700 ring-2 ring-offset-2 ring-walmart-blue">
+                                All
+                            </button>
+                            <button onclick="setWtwStatus('COMPLETED')" id="wtw-status-COMPLETED"
+                                    class="wtw-status-btn px-4 py-2 rounded-lg text-sm font-semibold border-2 border-green-400 bg-green-50 text-green-700 hover:bg-green-100">
+                                ✓ Completed
+                            </button>
+                            <button onclick="setWtwStatus('IN_PROGRESS')" id="wtw-status-IN_PROGRESS"
+                                    class="wtw-status-btn px-4 py-2 rounded-lg text-sm font-semibold border-2 border-yellow-400 bg-yellow-50 text-yellow-700 hover:bg-yellow-100">
+                                ⏳ In Progress
+                            </button>
+                            <button onclick="setWtwStatus('OPEN')" id="wtw-status-OPEN"
+                                    class="wtw-status-btn px-4 py-2 rounded-lg text-sm font-semibold border-2 border-gray-400 bg-gray-50 text-gray-700 hover:bg-gray-100">
+                                ○ Open
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 <div class="overflow-x-auto" style="max-height: 600px;">
                     <table class="min-w-full divide-y divide-gray-200">
@@ -319,6 +339,7 @@ def main():
     
     // WTW State
     let wtwCurrentPhase = '';
+    let wtwCurrentStatus = '';
     let wtwSortField = 's';
     let wtwSortAsc = true;
     let wtwFilteredData = [];
@@ -393,9 +414,26 @@ def main():
         filterWtwData();
     }}
     
+    // Set status filter (button toggle)
+    function setWtwStatus(status) {{
+        wtwCurrentStatus = status;
+        // Update button styles
+        document.querySelectorAll('.wtw-status-btn').forEach(btn => {{
+            btn.classList.remove('ring-2', 'ring-offset-2', 'ring-walmart-blue');
+        }});
+        const activeBtn = document.getElementById('wtw-status-' + (status || 'all'));
+        if (activeBtn) {{
+            activeBtn.classList.add('ring-2', 'ring-offset-2', 'ring-walmart-blue');
+        }}
+        // Clear the dropdown filter to avoid confusion
+        document.getElementById('wtwFilterStatus').value = '';
+        filterWtwData();
+    }}
+    
     // Clear all WTW filters
     function clearWtwFilters() {{
         wtwCurrentPhase = '';
+        wtwCurrentStatus = '';
         document.getElementById('wtwFilterSrDirector').value = '';
         document.getElementById('wtwFilterDirector').value = '';
         document.getElementById('wtwFilterManager').value = '';
@@ -406,7 +444,11 @@ def main():
         document.querySelectorAll('.wtw-phase-btn').forEach(btn => {{
             btn.classList.remove('ring-2', 'ring-offset-2', 'ring-walmart-blue');
         }});
+        document.querySelectorAll('.wtw-status-btn').forEach(btn => {{
+            btn.classList.remove('ring-2', 'ring-offset-2', 'ring-walmart-blue');
+        }});
         document.getElementById('wtw-phase-all').classList.add('ring-2', 'ring-offset-2', 'ring-walmart-blue');
+        document.getElementById('wtw-status-all').classList.add('ring-2', 'ring-offset-2', 'ring-walmart-blue');
         filterWtwData();
     }}
     
@@ -427,9 +469,16 @@ def main():
             if (rm && wo.rm !== rm) return false;
             if (fsm && wo.fsm !== fsm) return false;
             if (mkt && wo.mkt !== mkt) return false;
-            if (status === 'COMPLETED' && wo.st !== 'COMPLETED') return false;
-            if (status === 'OPEN' && wo.st !== 'OPEN' && wo.est !== '') return false;
-            if (status && status !== 'OPEN' && status !== 'COMPLETED' && wo.est !== status) return false;
+            // Status button filter (takes priority)
+            if (wtwCurrentStatus === 'COMPLETED' && wo.st !== 'COMPLETED') return false;
+            if (wtwCurrentStatus === 'IN_PROGRESS' && wo.st !== 'IN PROGRESS') return false;
+            if (wtwCurrentStatus === 'OPEN' && wo.st !== 'OPEN') return false;
+            // Dropdown filter (if no button selected)
+            if (!wtwCurrentStatus) {{
+                if (status === 'COMPLETED' && wo.st !== 'COMPLETED') return false;
+                if (status === 'OPEN' && wo.st !== 'OPEN' && wo.est !== '') return false;
+                if (status && status !== 'OPEN' && status !== 'COMPLETED' && wo.est !== status) return false;
+            }}
             if (search) {{
                 const searchStr = (wo.s + ' ' + wo.city + ' ' + wo.t + ' ' + wo.fm + ' ' + wo.loc).toLowerCase();
                 if (!searchStr.includes(search)) return false;
