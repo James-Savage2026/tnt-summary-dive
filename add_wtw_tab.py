@@ -9,7 +9,7 @@ from datetime import datetime
 
 # Paths
 DASHBOARD_PATH = Path(__file__).parent / 'index.html'
-WTW_DATA_PATH = Path.home() / 'bigquery_results' / 'wtw-pm-scores-crystal-method-20260205-221427.csv'
+WTW_DATA_PATH = Path.home() / 'bigquery_results' / 'wtw-pm-scores-final-20260206-111831.csv'
 
 def load_csv(path):
     """Load CSV file and return list of dicts"""
@@ -269,10 +269,6 @@ def main():
                     <button onclick="setWtwPmFilter('critical')" id="wtw-pm-critical"
                             class="wtw-pm-btn px-4 py-2 rounded-lg text-sm font-semibold border-2 border-red-400 bg-red-50 text-red-700 hover:bg-red-100">
                         \u26a0 Critical Reopen (<span id="wtw-pm-critical-count">0</span>)
-                    </button>
-                    <button onclick="setWtwPmFilter('div1')" id="wtw-pm-div1"
-                            class="wtw-pm-btn px-4 py-2 rounded-lg text-sm font-semibold border-2 border-orange-400 bg-orange-50 text-orange-700 hover:bg-orange-100">
-                        \U0001F3EA Div1 Stores (<span id="wtw-pm-div1-count">0</span>)
                     </button>
                 </div>
                 <div class="text-center text-xs text-gray-500 mt-2">
