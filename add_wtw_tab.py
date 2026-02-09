@@ -1269,8 +1269,8 @@ def main():
     
     # Insert WTW content before Footer
     html = re.sub(
-        r'(</div>\s*<!-- Footer -->)',
-        wtw_content + '\n\n    <!-- Footer -->',
+        r'(\s*<!-- Footer -->)',
+        '\n' + wtw_content + '\n\n    <!-- Footer -->',
         html,
         count=1
     )
