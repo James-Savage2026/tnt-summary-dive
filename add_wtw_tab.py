@@ -441,6 +441,55 @@ def main():
                     </table>
                 </div>
             </div>
+            
+            <!-- Completion % by Manager Tables -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                <!-- FSM Completion Table -->
+                <div class="bg-white rounded-lg shadow">
+                    <div class="p-4 border-b border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-800">\U0001F4CA Phase Completion by FSM</h3>
+                        <p class="text-sm text-gray-500">Filtered by Sr. Director & FM Director only</p>
+                    </div>
+                    <div class="overflow-x-auto max-h-96">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50 sticky top-0">
+                                <tr>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">FSM</th>
+                                    <th class="px-3 py-2 text-center text-xs font-medium text-blue-600 uppercase">PH1 %</th>
+                                    <th class="px-3 py-2 text-center text-xs font-medium text-green-600 uppercase">PH2 %</th>
+                                    <th class="px-3 py-2 text-center text-xs font-medium text-purple-600 uppercase">PH3 %</th>
+                                    <th class="px-3 py-2 text-center text-xs font-medium text-gray-600 uppercase">Overall</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200" id="fsmCompletionTable">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- RFM Completion Table -->
+                <div class="bg-white rounded-lg shadow">
+                    <div class="p-4 border-b border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-800">\U0001F4CA Phase Completion by RFM</h3>
+                        <p class="text-sm text-gray-500">Filtered by Sr. Director & FM Director only</p>
+                    </div>
+                    <div class="overflow-x-auto max-h-96">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50 sticky top-0">
+                                <tr>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">RFM</th>
+                                    <th class="px-3 py-2 text-center text-xs font-medium text-blue-600 uppercase">PH1 %</th>
+                                    <th class="px-3 py-2 text-center text-xs font-medium text-green-600 uppercase">PH2 %</th>
+                                    <th class="px-3 py-2 text-center text-xs font-medium text-purple-600 uppercase">PH3 %</th>
+                                    <th class="px-3 py-2 text-center text-xs font-medium text-gray-600 uppercase">Overall</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200" id="rfmCompletionTable">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
     '''
@@ -666,6 +715,9 @@ def main():
         
         // Render table
         renderWtwTable();
+        
+        // Update completion tables (only responds to Sr Dir & FM Dir filters)
+        updateCompletionTables();
     }}
     
     // Update KPIs
@@ -891,6 +943,125 @@ def main():
         if (sorted.length > 300) {{
             table.innerHTML += `<tr><td colspan="12" class="px-3 py-3 text-center text-gray-400 text-sm bg-gray-50">Showing 300 of ${{sorted.length.toLocaleString()}} results. Use filters to narrow down.</td></tr>`;
         }}
+    }}
+    
+    // Completion Tables by FSM and RFM (only responds to Sr Dir & FM Dir filters)
+    function updateCompletionTables() {{
+        const srDir = document.getElementById('wtwFilterSrDirector').value;
+        const fmDir = document.getElementById('wtwFilterDirector').value;
+        
+        // Filter data by Sr Dir and FM Dir only
+        const filteredData = WTW_DATA.filter(wo => {{
+            if (srDir && wo.srd !== srDir) return false;
+            if (fmDir && wo.fm !== fmDir) return false;
+            return true;
+        }});
+        
+        // Calculate completion % by FSM
+        const fsmStats = {{}};
+        filteredData.forEach(wo => {{
+            const fsm = wo.fsm || 'Unknown';
+            if (!fsmStats[fsm]) {{
+                fsmStats[fsm] = {{
+                    PH1: {{ total: 0, completed: 0 }},
+                    PH2: {{ total: 0, completed: 0 }},
+                    PH3: {{ total: 0, completed: 0 }}
+                }};
+            }}
+            if (wo.ph && fsmStats[fsm][wo.ph]) {{
+                fsmStats[fsm][wo.ph].total++;
+                if (wo.st === 'COMPLETED') fsmStats[fsm][wo.ph].completed++;
+            }}
+        }});
+        
+        // Calculate completion % by RFM
+        const rfmStats = {{}};
+        filteredData.forEach(wo => {{
+            const rfm = wo.rm || 'Unknown';
+            if (!rfmStats[rfm]) {{
+                rfmStats[rfm] = {{
+                    PH1: {{ total: 0, completed: 0 }},
+                    PH2: {{ total: 0, completed: 0 }},
+                    PH3: {{ total: 0, completed: 0 }}
+                }};
+            }}
+            if (wo.ph && rfmStats[rfm][wo.ph]) {{
+                rfmStats[rfm][wo.ph].total++;
+                if (wo.st === 'COMPLETED') rfmStats[rfm][wo.ph].completed++;
+            }}
+        }});
+        
+        // Helper to calculate % and color
+        const getPct = (completed, total) => total > 0 ? ((completed / total) * 100).toFixed(1) : '0.0';
+        const getColor = (pct) => {{
+            if (pct >= 80) return 'text-green-600 font-bold';
+            if (pct >= 50) return 'text-yellow-600';
+            return 'text-red-600';
+        }};
+        
+        // Render FSM table
+        const fsmTable = document.getElementById('fsmCompletionTable');
+        const fsmRows = Object.entries(fsmStats)
+            .map(([fsm, phases]) => {{
+                const ph1Pct = getPct(phases.PH1.completed, phases.PH1.total);
+                const ph2Pct = getPct(phases.PH2.completed, phases.PH2.total);
+                const ph3Pct = getPct(phases.PH3.completed, phases.PH3.total);
+                const totalCompleted = phases.PH1.completed + phases.PH2.completed + phases.PH3.completed;
+                const totalAll = phases.PH1.total + phases.PH2.total + phases.PH3.total;
+                const overallPct = getPct(totalCompleted, totalAll);
+                return {{
+                    fsm,
+                    ph1Pct: parseFloat(ph1Pct),
+                    ph2Pct: parseFloat(ph2Pct),
+                    ph3Pct: parseFloat(ph3Pct),
+                    overallPct: parseFloat(overallPct),
+                    total: totalAll
+                }};
+            }})
+            .filter(r => r.total > 0)
+            .sort((a, b) => a.overallPct - b.overallPct);
+        
+        fsmTable.innerHTML = fsmRows.map(r => `
+            <tr class="hover:bg-gray-50">
+                <td class="px-3 py-2 text-sm font-medium text-gray-800">${{r.fsm}}</td>
+                <td class="px-3 py-2 text-sm text-center ${{getColor(r.ph1Pct)}}">${{r.ph1Pct}}%</td>
+                <td class="px-3 py-2 text-sm text-center ${{getColor(r.ph2Pct)}}">${{r.ph2Pct}}%</td>
+                <td class="px-3 py-2 text-sm text-center ${{getColor(r.ph3Pct)}}">${{r.ph3Pct}}%</td>
+                <td class="px-3 py-2 text-sm text-center ${{getColor(r.overallPct)}}">${{r.overallPct}}%</td>
+            </tr>
+        `).join('');
+        
+        // Render RFM table
+        const rfmTable = document.getElementById('rfmCompletionTable');
+        const rfmRows = Object.entries(rfmStats)
+            .map(([rfm, phases]) => {{
+                const ph1Pct = getPct(phases.PH1.completed, phases.PH1.total);
+                const ph2Pct = getPct(phases.PH2.completed, phases.PH2.total);
+                const ph3Pct = getPct(phases.PH3.completed, phases.PH3.total);
+                const totalCompleted = phases.PH1.completed + phases.PH2.completed + phases.PH3.completed;
+                const totalAll = phases.PH1.total + phases.PH2.total + phases.PH3.total;
+                const overallPct = getPct(totalCompleted, totalAll);
+                return {{
+                    rfm,
+                    ph1Pct: parseFloat(ph1Pct),
+                    ph2Pct: parseFloat(ph2Pct),
+                    ph3Pct: parseFloat(ph3Pct),
+                    overallPct: parseFloat(overallPct),
+                    total: totalAll
+                }};
+            }})
+            .filter(r => r.total > 0)
+            .sort((a, b) => a.overallPct - b.overallPct);
+        
+        rfmTable.innerHTML = rfmRows.map(r => `
+            <tr class="hover:bg-gray-50">
+                <td class="px-3 py-2 text-sm font-medium text-gray-800">${{r.rfm}}</td>
+                <td class="px-3 py-2 text-sm text-center ${{getColor(r.ph1Pct)}}">${{r.ph1Pct}}%</td>
+                <td class="px-3 py-2 text-sm text-center ${{getColor(r.ph2Pct)}}">${{r.ph2Pct}}%</td>
+                <td class="px-3 py-2 text-sm text-center ${{getColor(r.ph3Pct)}}">${{r.ph3Pct}}%</td>
+                <td class="px-3 py-2 text-sm text-center ${{getColor(r.overallPct)}}">${{r.overallPct}}%</td>
+            </tr>
+        `).join('');
     }}
     
     // Charts
