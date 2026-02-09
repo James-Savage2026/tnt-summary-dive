@@ -831,11 +831,11 @@ def main():
                     <td class="px-3 py-2 text-sm text-center">
                         ${{wo.pm ? `
                             <div class="flex items-center justify-center gap-1">
-                                <span class="px-2 py-1 rounded text-xs font-bold ${{wo.allP === 'PASS' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}}">
+                                <span class="px-2 py-1 rounded text-xs font-bold ${{parseFloat(wo.pm) >= 87 ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}}">
                                     ${{parseFloat(wo.pm).toFixed(1)}}%
                                 </span>
-                                <span class="text-sm ${{wo.allP === 'PASS' ? 'text-green-600' : 'text-red-600'}}">
-                                    ${{wo.allP === 'PASS' ? '✓' : '✗'}}
+                                <span class="text-sm ${{parseFloat(wo.pm) >= 87 ? 'text-green-600' : 'text-red-600'}}">
+                                    ${{parseFloat(wo.pm) >= 87 ? '✓' : '✗'}}
                                 </span>
                             </div>
                         ` : '-'}}
