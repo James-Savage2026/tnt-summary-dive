@@ -456,8 +456,9 @@ def main():
                                 <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
                                 <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortWtwTable('ph')">Phase \u21C5</th>
                                 <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortWtwTable('est')">Status \u21C5</th>
-                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">FM Director</th>
-                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Regional Mgr</th>
+                                <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortWtwTable('banner')">Banner \u21C5</th>
+                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">RFM</th>
+                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">FSM</th>
                                 <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortWtwTable('pm')">PM Score \u21C5</th>
                                 <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortWtwTable('rack')">Rack \u21C5</th>
                                 <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortWtwTable('tnt')">TnT \u21C5</th>
@@ -959,8 +960,13 @@ def main():
                         <span class="px-2 py-1 rounded-full text-xs font-semibold ${{phaseClass}}">${{wo.ph}}</span>
                     </td>
                     <td class="px-3 py-2 text-sm ${{statusClass}}">${{statusText}}</td>
-                    <td class="px-3 py-2 text-sm text-gray-600">${{wo.fm || '-'}}</td>
+                    <td class="px-3 py-2 text-center">
+                        ${{wo.banner && wo.banner.includes('Sam') ? 
+                            '<span class="px-2 py-0.5 rounded text-xs font-semibold bg-blue-800 text-white">Sam\'s</span>' : 
+                            '<span class="px-2 py-0.5 rounded text-xs font-semibold bg-yellow-400 text-blue-900">WM</span>'}}
+                    </td>
                     <td class="px-3 py-2 text-sm text-gray-600">${{wo.rm || '-'}}</td>
+                    <td class="px-3 py-2 text-sm text-gray-600">${{wo.fsm || '-'}}</td>
                     <td class="px-3 py-2 text-sm text-center">
                         ${{wo.pm ? `
                             <div class="flex items-center justify-center gap-1">
@@ -1039,7 +1045,7 @@ def main():
         }}).join('');
         
         if (sorted.length > 300) {{
-            table.innerHTML += `<tr><td colspan="14" class="px-3 py-3 text-center text-gray-400 text-sm bg-gray-50">Showing 300 of ${{sorted.length.toLocaleString()}} results. Use filters to narrow down.</td></tr>`;
+            table.innerHTML += `<tr><td colspan="15" class="px-3 py-3 text-center text-gray-400 text-sm bg-gray-50">Showing 300 of ${{sorted.length.toLocaleString()}} results. Use filters to narrow down.</td></tr>`;
         }}
     }}
     
