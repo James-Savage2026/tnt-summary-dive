@@ -448,17 +448,17 @@ def main():
                 <div class="bg-white rounded-lg shadow">
                     <div class="p-4 border-b border-gray-200">
                         <h3 class="text-lg font-semibold text-gray-800">\U0001F4CA Phase Completion by FSM</h3>
-                        <p class="text-sm text-gray-500">Filtered by Sr. Director & FM Director only</p>
+                        <p class="text-sm text-gray-500">Filtered by Sr. Director & FM Director only. Click headers to sort.</p>
                     </div>
                     <div class="overflow-x-auto max-h-96">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50 sticky top-0">
                                 <tr>
-                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">FSM</th>
-                                    <th class="px-3 py-2 text-center text-xs font-medium text-blue-600 uppercase">PH1 %</th>
-                                    <th class="px-3 py-2 text-center text-xs font-medium text-green-600 uppercase">PH2 %</th>
-                                    <th class="px-3 py-2 text-center text-xs font-medium text-purple-600 uppercase">PH3 %</th>
-                                    <th class="px-3 py-2 text-center text-xs font-medium text-gray-600 uppercase">Overall</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortFsmTable('name')">FSM \u21C5</th>
+                                    <th class="px-3 py-2 text-center text-xs font-medium text-blue-600 uppercase cursor-poer:bg-blue-50" onclick="sortFsmTable('ph1')">PH1 % \u21C5</th>
+                                    <th class="px-3 py-2 text-center text-xs font-medium text-green-600 uppercase cursor-pointer hover:bg-green-50" onclick="sortFsmTable('ph2')">PH2 % \u21C5</th>
+                                    <th class="px-3 py-2 text-center text-xs font-medium text-purple-600 uppercase cursor-pointer hover:bg-purple-50" onclick="sortFsmTable('ph3')">PH3 % \u21C5</th>
+                                    <th class="px-3 py-2 text-center text-xs font-medium text-gray-600 uppercase cursor-pointer hover:bg-gray-100" onclick="sortFsmTable('overall')">Overall \u21C5</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200" id="fsmCompletionTable">
@@ -471,17 +471,17 @@ def main():
                 <div class="bg-white rounded-lg shadow">
                     <div class="p-4 border-b border-gray-200">
                         <h3 class="text-lg font-semibold text-gray-800">\U0001F4CA Phase Completion by RFM</h3>
-                        <p class="text-sm text-gray-500">Filtered by Sr. Director & FM Director only</p>
+                        <p class="text-sm text-gray-500">Filtered by Sr. Director & FM Director only. Click headers to sort.</p>
                     </div>
                     <div class="overflow-x-auto max-h-96">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50 sticky top-0">
                                 <tr>
-                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">RFM</th>
-                                    <th class="px-3 py-2 text-center text-xs font-medium text-blue-600 uppercase">PH1 %</th>
-                                    <th class="px-3 py-2 text-center text-xs font-medium text-green-600 uppercase">PH2 %</th>
-                                    <th class="px-3 py-2 text-center text-xs font-medium text-purple-600 uppercase">PH3 %</th>
-                                    <th class="px-3 py-2 text-center text-xs font-medium text-gray-600 uppercase">Overall</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortRfmTable('name')">RFM \u21C5</th>
+                                    <th class="px-3 py-2 text-center text-xs font-medium text-blue-600 uppercase cursor-pointer hover:bg-blue-50" onclick="sortRfmTable('ph1')">PH1 % \u21C5</th>
+                                    <th class="px-3 py-2 text-center text-xs font-medium text-green-600 uppercase cursor-pointer hover:bg-green-50" onclick="sortRfmTable('ph2')">PH2 % \u21C5</th>
+                                    <th class="px-3 py-2 text-center text-xs font-medium text-purple-600 uppercase cursor-pointer hover:bg-purple-50" onclick="sortRfmTable('ph3')">PH3 % \u21C5</th>
+                                    <th class="px-3 py-2 text-center text-xs font-medium text-gray-600 uppercase cursor-pointer hover:bg-gray-100" onclick="sortRfmTable('overall')">Overall \u21C5</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200" id="rfmCompletionTable">
@@ -945,6 +945,34 @@ def main():
         }}
     }}
     
+    // Completion table sort state
+    let fsmSortField = 'overall';
+    let fsmSortDesc = true;
+    let rfmSortField = 'overall';
+    let rfmSortDesc = true;
+    let fsmRowsData = [];
+    let rfmRowsData = [];
+    
+    function sortFsmTable(field) {{
+        if (fsmSortField === field) {{
+            fsmSortDesc = !fsmSortDesc;
+        }} else {{
+            fsmSortField = field;
+            fsmSortDesc = true;
+        }}
+        renderFsmTable();
+    }}
+    
+    function sortRfmTable(field) {{
+        if (rfmSortField === field) {{
+            rfmSortDesc = !rfmSortDesc;
+        }} else {{
+            rfmSortField = field;
+            rfmSortDesc = true;
+        }}
+        renderRfmTable();
+    }}
+    
     // Completion Tables by FSM and RFM (only responds to Sr Dir & FM Dir filters)
     function updateCompletionTables() {{
         const srDir = document.getElementById('wtwFilterSrDirector').value;
@@ -999,9 +1027,8 @@ def main():
             return 'text-red-600';
         }};
         
-        // Render FSM table
-        const fsmTable = document.getElementById('fsmCompletionTable');
-        const fsmRows = Object.entries(fsmStats)
+        // Build FSM rows data
+        fsmRowsData = Object.entries(fsmStats)
             .map(([fsm, phases]) => {{
                 const ph1Pct = getPct(phases.PH1.completed, phases.PH1.total);
                 const ph2Pct = getPct(phases.PH2.completed, phases.PH2.total);
@@ -1010,7 +1037,7 @@ def main():
                 const totalAll = phases.PH1.total + phases.PH2.total + phases.PH3.total;
                 const overallPct = getPct(totalCompleted, totalAll);
                 return {{
-                    fsm,
+                    name: fsm,
                     ph1Pct: parseFloat(ph1Pct),
                     ph1Completed: phases.PH1.completed,
                     ph1Total: phases.PH1.total,
@@ -1025,22 +1052,12 @@ def main():
                     total: totalAll
                 }};
             }})
-            .filter(r => r.total > 0)
-            .sort((a, b) => b.overallPct - a.overallPct);
+            .filter(r => r.total > 0);
         
-        fsmTable.innerHTML = fsmRows.map(r => `
-            <tr class="hover:bg-gray-50">
-                <td class="px-3 py-2 text-sm font-medium text-gray-800">${{r.fsm}}</td>
-                <td class="px-3 py-2 text-sm text-center ${{getColor(r.ph1Pct)}}">${{r.ph1Pct}}% <span class="text-gray-400 text-xs">(${{r.ph1Completed}}/${{r.ph1Total}})</span></td>
-                <td class="px-3 py-2 text-sm text-center ${{getColor(r.ph2Pct)}}">${{r.ph2Pct}}% <span class="text-gray-400 text-xs">(${{r.ph2Completed}}/${{r.ph2Total}})</span></td>
-                <td class="px-3 py-2 text-sm text-center ${{getColor(r.ph3Pct)}}">${{r.ph3Pct}}% <span class="text-gray-400 text-xs">(${{r.ph3Completed}}/${{r.ph3Total}})</span></td>
-                <td class="px-3 py-2 text-sm text-center ${{getColor(r.overallPct)}}">${{r.overallPct}}% <span class="text-gray-400 text-xs">(${{r.totalCompleted}}/${{r.total}})</span></td>
-            </tr>
-        `).join('');
+        renderFsmTable();
         
-        // Render RFM table
-        const rfmTable = document.getElementById('rfmCompletionTable');
-        const rfmRows = Object.entries(rfmStats)
+        // Build RFM rows data
+        rfmRowsData = Object.entries(rfmStats)
             .map(([rfm, phases]) => {{
                 const ph1Pct = getPct(phases.PH1.completed, phases.PH1.total);
                 const ph2Pct = getPct(phases.PH2.completed, phases.PH2.total);
@@ -1049,7 +1066,7 @@ def main():
                 const totalAll = phases.PH1.total + phases.PH2.total + phases.PH3.total;
                 const overallPct = getPct(totalCompleted, totalAll);
                 return {{
-                    rfm,
+                    name: rfm,
                     ph1Pct: parseFloat(ph1Pct),
                     ph1Completed: phases.PH1.completed,
                     ph1Total: phases.PH1.total,
@@ -1064,16 +1081,78 @@ def main():
                     total: totalAll
                 }};
             }})
-            .filter(r => r.total > 0)
-            .sort((a, b) => b.overallPct - a.overallPct);
+            .filter(r => r.total > 0);
         
-        rfmTable.innerHTML = rfmRows.map(r => `
+        renderRfmTable();
+    }}
+    
+    // Helper for color
+    function getCompletionColor(pct) {{
+        if (pct >= 80) return 'text-green-600 font-bold';
+        if (pct >= 50) return 'text-yellow-600';
+        return 'text-red-600';
+    }}
+    
+    // Render FSM table with current sort
+    function renderFsmTable() {{
+        const sorted = [...fsmRowsData].sort((a, b) => {{
+            let aVal, bVal;
+            if (fsmSortField === 'name') {{
+                aVal = a.name || '';
+                bVal = b.name || '';
+                return fsmSortDesc ? bVal.localeCompare(aVal) : aVal.localeCompare(bVal);
+            }} else if (fsmSortField === 'ph1') {{
+                aVal = a.ph1Pct; bVal = b.ph1Pct;
+            }} else if (fsmSortField === 'ph2') {{
+                aVal = a.ph2Pct; bVal = b.ph2Pct;
+            }} else if (fsmSortField === 'ph3') {{
+                aVal = a.ph3Pct; bVal = b.ph3Pct;
+            }} else {{
+                aVal = a.overallPct; bVal = b.overallPct;
+            }}
+            return fsmSortDesc ? bVal - aVal : aVal - bVal;
+        }});
+        
+        const table = document.getElementById('fsmCompletionTable');
+        table.innerHTML = sorted.map(r => `
             <tr class="hover:bg-gray-50">
-                <td class="px-3 py-2 text-sm font-medium text-gray-800">${{r.rfm}}</td>
-                <td class="px-3 py-2 text-sm text-center ${{getColor(r.ph1Pct)}}">${{r.ph1Pct}}% <span class="text-gray-400 text-xs">(${{r.ph1Completed}}/${{r.ph1Total}})</span></td>
-                <td class="px-3 py-2 text-sm text-center ${{getColor(r.ph2Pct)}}">${{r.ph2Pct}}% <span class="text-gray-400 text-xs">(${{r.ph2Completed}}/${{r.ph2Total}})</span></td>
-                <td class="px-3 py-2 text-sm text-center ${{getColor(r.ph3Pct)}}">${{r.ph3Pct}}% <span class="text-gray-400 text-xs">(${{r.ph3Completed}}/${{r.ph3Total}})</span></td>
-                <td class="px-3 py-2 text-sm text-center ${{getColor(r.overallPct)}}">${{r.overallPct}}% <span class="text-gray-400 text-xs">(${{r.totalCompleted}}/${{r.total}})</span></td>
+                <td class="px-3 py-2 text-sm font-medium text-gray-800">${{r.name}}</td>
+                <td class="px-3 py-2 text-sm text-center ${{getCompletionColor(r.ph1Pct)}}">${{r.ph1Pct}}% <span class="text-gray-400 text-xs">(${{r.ph1Completed}}/${{r.ph1Total}})</span></td>
+                <td class="px-3 py-2 text-sm text-center ${{getCompletionColor(r.ph2Pct)}}">${{r.ph2Pct}}% <span class="text-gray-400 text-xs">(${{r.ph2Completed}}/${{r.ph2Total}})</span></td>
+                <td class="px-3 py-2 text-sm text-center ${{getCompletionColor(r.ph3Pct)}}">${{r.ph3Pct}}% <span class="text-gray-400 text-xs">(${{r.ph3Completed}}/${{r.ph3Total}})</span></td>
+                <td class="px-3 py-2 text-sm text-center ${{getCompletionColor(r.overallPct)}}">${{r.overallPct}}% <span class="text-gray-400 text-xs">(${{r.totalCompleted}}/${{r.total}})</span></td>
+            </tr>
+        `).join('');
+    }}
+    
+    // Render RFM table with current sort
+    function renderRfmTable() {{
+        const sorted = [...rfmRowsData].sort((a, b) => {{
+            let aVal, bVal;
+            if (rfmSortField === 'name') {{
+                aVal = a.name || '';
+                bVal = b.name || '';
+                return rfmSortDesc ? bVal.localeCompare(aVal) : aVal.localeCompare(bVal);
+            }} else if (rfmSortField === 'ph1') {{
+                aVal = a.ph1Pct; bVal = b.ph1Pct;
+            }} else if (rfmSortField === 'ph2') {{
+                aVal = a.ph2Pct; bVal = b.ph2Pct;
+            }} else if (rfmSortField === 'ph3') {{
+                aVal = a.ph3Pct; bVal = b.ph3Pct;
+            }} else {{
+                aVal = a.overallPct; bVal = b.overallPct;
+            }}
+            return rfmSortDesc ? bVal - aVal : aVal - bVal;
+        }});
+        
+        const table = document.getElementById('rfmCompletionTable');
+        table.innerHTML = sorted.map(r => `
+            <tr class="hover:bg-gray-50">
+                <td class="px-3 py-2 text-sm font-medium text-gray-800">${{r.name}}</td>
+                <td class="px-3 py-2 text-sm text-center ${{getCompletionColor(r.ph1Pct)}}">${{r.ph1Pct}}% <span class="text-gray-400 text-xs">(${{r.ph1Completed}}/${{r.ph1Total}})</span></td>
+                <td class="px-3 py-2 text-sm text-center ${{getCompletionColor(r.ph2Pct)}}">${{r.ph2Pct}}% <span class="text-gray-400 text-xs">(${{r.ph2Completed}}/${{r.ph2Total}})</span></td>
+                <td class="px-3 py-2 text-sm text-center ${{getCompletionColor(r.ph3Pct)}}">${{r.ph3Pct}}% <span class="text-gray-400 text-xs">(${{r.ph3Completed}}/${{r.ph3Total}})</span></td>
+                <td class="px-3 py-2 text-sm text-center ${{getCompletionColor(r.overallPct)}}">${{r.overallPct}}% <span class="text-gray-400 text-xs">(${{r.totalCompleted}}/${{r.total}})</span></td>
             </tr>
         `).join('');
     }}
