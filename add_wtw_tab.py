@@ -9,7 +9,7 @@ from datetime import datetime
 
 # Paths
 DASHBOARD_PATH = Path(__file__).parent / 'index.html'
-WTW_DATA_PATH = Path.home() / 'bigquery_results' / 'wtw-fy26-workorders-pm-scores-fixed-20260209-133223.csv'
+WTW_DATA_PATH = Path.home() / 'bigquery_results' / 'wtw-fy26-workorders-pm-scores-labor-20260209-151220.csv'
 
 def load_csv(path):
     """Load CSV file and return list of dicts"""
@@ -66,6 +66,11 @@ def main():
             'banner': wo.get('banner_desc', ''),
             'city': wo.get('city_name', ''),
             'state': wo.get('state_cd', ''),
+            'repH': wo.get('repair_hrs', ''),
+            'trvH': wo.get('travel_hrs', ''),
+            'totH': wo.get('total_hrs', ''),
+            'vis': wo.get('num_visits', ''),
+            'techs': wo.get('num_techs', ''),
         })
     
     # Calculate summary stats with phase breakdown
@@ -380,6 +385,28 @@ def main():
                 </div>
             </div>
             
+            <!-- Labor Hours Summary -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-white rounded-lg shadow p-4 border-l-4 border-indigo-500">
+                    <p class="text-sm text-gray-500 uppercase">Total Hours</p>
+                    <p class="text-2xl font-bold text-indigo-600" id="wtwKpiTotalHrs">0</p>
+                    <p class="text-xs text-gray-400" id="wtwKpiAvgHrs">0 avg/WO</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-4 border-l-4 border-cyan-500">
+                    <p class="text-sm text-gray-500 uppercase">Repair Hours</p>
+                    <p class="text-2xl font-bold text-cyan-600" id="wtwKpiRepairHrs">0</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-4 border-l-4 border-teal-500">
+                    <p class="text-sm text-gray-500 uppercase">Travel Hours</p>
+                    <p class="text-2xl font-bold text-teal-600" id="wtwKpiTravelHrs">0</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-4 border-l-4 border-purple-500">
+                    <p class="text-sm text-gray-500 uppercase">Total Visits</p>
+                    <p class="text-2xl font-bold text-purple-600" id="wtwKpiTotalVisits">0</p>
+                    <p class="text-xs text-gray-400" id="wtwKpiAvgVisits">0 avg/WO</p>
+                </div>
+            </div>
+            
             <!-- Charts Row -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div class="bg-white rounded-lg shadow p-4">
@@ -435,6 +462,8 @@ def main():
                                 <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortWtwTable('rack')">Rack \u21C5</th>
                                 <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortWtwTable('tnt')">TnT \u21C5</th>
                                 <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase">Dewpoint</th>
+                                <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortWtwTable('totH')">Hours \u21C5</th>
+                                <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortWtwTable('vis')">Visits \u21C5</th>
                                 <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortWtwTable('exp')">Expires \u21C5</th>
                                 <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase">Links</th>
                             </tr>
@@ -770,6 +799,28 @@ def main():
         document.getElementById('wtwKpiPartsDelivered').textContent = counts['PARTS DELIVERED'].toLocaleString();
         document.getElementById('wtwKpiPartsOrder').textContent = counts['PARTS ON ORDER'].toLocaleString();
         document.getElementById('wtwKpiOpen').textContent = counts['OPEN'].toLocaleString();
+        
+        // Labor hours KPIs
+        let totalHrs = 0, repairHrs = 0, travelHrs = 0, totalVisits = 0, wosWithHrs = 0;
+        wtwFilteredData.forEach(wo => {{
+            const tot = parseFloat(wo.totH) || 0;
+            const rep = parseFloat(wo.repH) || 0;
+            const trv = parseFloat(wo.trvH) || 0;
+            const vis = parseInt(wo.vis) || 0;
+            totalHrs += tot;
+            repairHrs += rep;
+            travelHrs += trv;
+            totalVisits += vis;
+            if (tot > 0) wosWithHrs++;
+        }});
+        const avgHrs = wosWithHrs > 0 ? (totalHrs / wosWithHrs).toFixed(1) : 0;
+        const avgVisits = wosWithHrs > 0 ? (totalVisits / wosWithHrs).toFixed(1) : 0;
+        document.getElementById('wtwKpiTotalHrs').textContent = Math.round(totalHrs).toLocaleString();
+        document.getElementById('wtwKpiAvgHrs').textContent = avgHrs + ' avg/WO';
+        document.getElementById('wtwKpiRepairHrs').textContent = Math.round(repairHrs).toLocaleString();
+        document.getElementById('wtwKpiTravelHrs').textContent = Math.round(travelHrs).toLocaleString();
+        document.getElementById('wtwKpiTotalVisits').textContent = totalVisits.toLocaleString();
+        document.getElementById('wtwKpiAvgVisits').textContent = avgVisits + ' avg/WO';
     }}
     
     // Update Phase Cards based on filtered data
@@ -879,9 +930,9 @@ def main():
         const sorted = [...wtwFilteredData].sort((a, b) => {{
             let aVal = a[wtwSortField] || '';
             let bVal = b[wtwSortField] || '';
-            if (wtwSortField === 's') {{
-                aVal = parseInt(aVal) || 0;
-                bVal = parseInt(bVal) || 0;
+            if (['s', 'totH', 'vis', 'pm', 'rack', 'tnt'].includes(wtwSortField)) {{
+                aVal = parseFloat(aVal) || 0;
+                bVal = parseFloat(bVal) || 0;
             }}
             if (aVal < bVal) return wtwSortAsc ? -1 : 1;
             if (aVal > bVal) return wtwSortAsc ? 1 : -1;
@@ -949,6 +1000,23 @@ def main():
                             </span>
                         ` : '-'}}
                     </td>
+                    <td class="px-3 py-2 text-sm text-center">
+                        ${{wo.totH ? `
+                            <div class="text-xs">
+                                <span class="font-bold text-gray-800">${{parseFloat(wo.totH).toFixed(1)}}</span>
+                                <span class="text-gray-400">hrs</span>
+                            </div>
+                            <div class="text-xs text-gray-400">
+                                R:${{parseFloat(wo.repH || 0).toFixed(0)}} T:${{parseFloat(wo.trvH || 0).toFixed(0)}}
+                            </div>
+                        ` : '<span class="text-gray-300">—</span>'}}
+                    </td>
+                    <td class="px-3 py-2 text-sm text-center">
+                        ${{wo.vis ? `
+                            <span class="font-semibold text-gray-700">${{wo.vis}}</span>
+                            <span class="text-xs text-gray-400">${{wo.techs ? '/ ' + wo.techs + ' tech' + (parseInt(wo.techs) > 1 ? 's' : '') : ''}}</span>
+                        ` : '<span class="text-gray-300">—</span>'}}
+                    </td>
                     <td class="px-3 py-2 text-sm text-center text-gray-500">${{wo.exp}}</td>
                     <td class="px-3 py-2 text-sm text-center">
                         <div class="flex gap-2 justify-center">
@@ -971,7 +1039,7 @@ def main():
         }}).join('');
         
         if (sorted.length > 300) {{
-            table.innerHTML += `<tr><td colspan="12" class="px-3 py-3 text-center text-gray-400 text-sm bg-gray-50">Showing 300 of ${{sorted.length.toLocaleString()}} results. Use filters to narrow down.</td></tr>`;
+            table.innerHTML += `<tr><td colspan="14" class="px-3 py-3 text-center text-gray-400 text-sm bg-gray-50">Showing 300 of ${{sorted.length.toLocaleString()}} results. Use filters to narrow down.</td></tr>`;
         }}
     }}
     
