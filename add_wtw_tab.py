@@ -57,10 +57,10 @@ def main():
             'dew': wo.get('dewpoint_raw', ''),
             'dewS': wo.get('dewpoint_score', ''),
             'pm': wo.get('pm_score', ''),
-            'rackP': wo.get('rack_pass', ''),
-            'tntP': wo.get('tnt_pass', ''),
-            'dewP': wo.get('dewpoint_pass', ''),
-            'allP': wo.get('overall_pass', ''),
+            'rackP': {'Y': 'PASS', 'N': 'FAIL'}.get(wo.get('rack_pass', ''), 'NO DATA'),
+            'tntP': {'Y': 'PASS', 'N': 'FAIL'}.get(wo.get('tnt_pass', ''), 'NO DATA'),
+            'dewP': {'Y': 'PASS', 'N': 'FAIL'}.get(wo.get('dewpoint_pass', ''), 'NO DATA'),
+            'allP': {'Y': 'PASS', 'N': 'FAIL'}.get(wo.get('overall_pass', ''), 'FAIL'),
             'comp': wo.get('components_available', '3'),
             'div1': wo.get('is_div1', 'N'),
             'banner': wo.get('banner_desc', ''),
@@ -223,7 +223,7 @@ def main():
                         <span class="font-bold text-gray-700">All Phases</span>
                         <span class="text-xl font-bold text-gray-800" id="wtw-phase-all-count">0</span>
                     </div>
-                    <div class="h-3 rounded-full overflow-hidden flex bg-gray-200" id="wtw-phase-all-bar"></div>
+                    <div class="h-6 rounded-full overflow-hidden flex bg-gray-200" id="wtw-phase-all-bar"></div>
                     <div class="flex justify-between text-xs text-gray-500 mt-1" id="wtw-phase-all-legend"></div>
                 </div>
                 
@@ -234,7 +234,7 @@ def main():
                         <span class="font-bold text-blue-700">\U0001F7E6 Phase 1</span>
                         <span class="text-xl font-bold text-blue-800" id="wtw-phase-PH1-count">0</span>
                     </div>
-                    <div class="h-3 rounded-full overflow-hidden flex bg-blue-200" id="wtw-phase-PH1-bar"></div>
+                    <div class="h-6 rounded-full overflow-hidden flex bg-gray-200" id="wtw-phase-PH1-bar"></div>
                     <div class="flex justify-between text-xs text-blue-600 mt-1" id="wtw-phase-PH1-legend"></div>
                 </div>
                 
@@ -245,7 +245,7 @@ def main():
                         <span class="font-bold text-green-700">\U0001F7E2 Phase 2</span>
                         <span class="text-xl font-bold text-green-800" id="wtw-phase-PH2-count">0</span>
                     </div>
-                    <div class="h-3 rounded-full overflow-hidden flex bg-green-200" id="wtw-phase-PH2-bar"></div>
+                    <div class="h-6 rounded-full overflow-hidden flex bg-gray-200" id="wtw-phase-PH2-bar"></div>
                     <div class="flex justify-between text-xs text-green-600 mt-1" id="wtw-phase-PH2-legend"></div>
                 </div>
                 
@@ -256,7 +256,7 @@ def main():
                         <span class="font-bold text-purple-700">\U0001F7E3 Phase 3</span>
                         <span class="text-xl font-bold text-purple-800" id="wtw-phase-PH3-count">0</span>
                     </div>
-                    <div class="h-3 rounded-full overflow-hidden flex bg-purple-200" id="wtw-phase-PH3-bar"></div>
+                    <div class="h-6 rounded-full overflow-hidden flex bg-gray-200" id="wtw-phase-PH3-bar"></div>
                     <div class="flex justify-between text-xs text-purple-600 mt-1" id="wtw-phase-PH3-legend"></div>
                 </div>
             </div>
@@ -557,24 +557,47 @@ def main():
         }}
     }}
     
-    // Populate filter dropdowns
+    // Populate filter dropdowns dynamically (cascading)
     function populateWtwFilters() {{
-        const filters = WTW_SUMMARY.filters;
+        updateCascadingFilters();
+    }}
+    
+    function updateCascadingFilters() {{
+        const srDir = document.getElementById('wtwFilterSrDirector').value;
+        const fmDir = document.getElementById('wtwFilterDirector').value;
+        const rm = document.getElementById('wtwFilterManager').value;
+        const fsm = document.getElementById('wtwFilterFSManager').value;
+        const mkt = document.getElementById('wtwFilterMarket').value;
         
-        const srSel = document.getElementById('wtwFilterSrDirector');
-        filters.sr_directors.forEach(v => srSel.add(new Option(v, v)));
+        const getValidOptions = (excludeField) => {{
+            return WTW_DATA.filter(wo => {{
+                if (excludeField !== 'srd' && srDir && wo.srd !== srDir) return false;
+                if (excludeField !== 'fm' && fmDir && wo.fm !== fmDir) return false;
+                if (excludeField !== 'rm' && rm && wo.rm !== rm) return false;
+                if (excludeField !== 'fsm' && fsm && wo.fsm !== fsm) return false;
+                if (excludeField !== 'mkt' && mkt && wo.mkt !== mkt) return false;
+                return true;
+            }});
+        }};
         
-        const fmSel = document.getElementById('wtwFilterDirector');
-        filters.fm_directors.forEach(v => fmSel.add(new Option(v, v)));
+        const updateSelect = (id, field, excludeField, currentVal) => {{
+            const sel = document.getElementById(id);
+            const validData = getValidOptions(excludeField);
+            const options = [...new Set(validData.map(wo => wo[field]).filter(Boolean))].sort();
+            sel.innerHTML = '<option value="">All</option>';
+            options.forEach(v => {{
+                const opt = new Option(v, v);
+                if (v === currentVal) opt.selected = true;
+                sel.add(opt);
+            }});
+            if (currentVal && !options.includes(currentVal)) sel.value = '';
+        }};
         
-        const rmSel = document.getElementById('wtwFilterManager');
-        filters.reg_managers.forEach(v => rmSel.add(new Option(v, v)));
-        
-        const fsmSel = document.getElementById('wtwFilterFSManager');
-        filters.fs_managers.forEach(v => fsmSel.add(new Option(v, v)));
-        
-        const mktSel = document.getElementById('wtwFilterMarket');
-        filters.markets.forEach(v => mktSel.add(new Option(v, v)));
+        updateSelect('wtwFilterSrDirector', 'srd', 'srd', srDir);
+        updateSelect('wtwFilterDirector', 'fm', 'fm', fmDir);
+        updateSelect('wtwFilterManager', 'rm', 'rm', rm);
+        updateSelect('wtwFilterFSManager', 'fsm', 'fsm', fsm);
+        updateSelect('wtwFilterMarket', 'mkt', 'mkt', mkt);
     }}
     
     // Set phase filter
@@ -704,6 +727,9 @@ def main():
         // Update filtered count
         document.getElementById('wtwFilteredCount').textContent = wtwFilteredData.length.toLocaleString();
         
+        // Update cascading filter dropdowns
+        updateCascadingFilters();
+        
         // Update KPIs based on filtered data
         updateWtwKpis();
         
@@ -782,21 +808,22 @@ def main():
             // Update count
             document.getElementById(`${{prefix}}-count`).textContent = stats.total.toLocaleString();
             
-            // Update progress bar
-            const completedPct = (stats['COMPLETED'] / total * 100).toFixed(1);
-            const inProgressPct = (stats['IN PROGRESS'] / total * 100).toFixed(1);
-            const openPct = (stats['OPEN'] / total * 100).toFixed(1);
+            // Update progress bar - multi-colored with Walmart colors
+            const completedPct = (stats['COMPLETED'] / total * 100);
+            const inProgressPct = (stats['IN PROGRESS'] / total * 100);
+            const openPct = (stats['OPEN'] / total * 100);
+            const barLabel = (pct) => pct >= 12 ? `<span class="text-xs font-bold text-white drop-shadow">${{pct.toFixed(0)}}%</span>` : '';
             document.getElementById(`${{prefix}}-bar`).innerHTML = `
-                <div class="bg-green-500" style="width: ${{completedPct}}%" title="Completed"></div>
-                <div class="bg-yellow-500" style="width: ${{inProgressPct}}%" title="In Progress"></div>
-                <div class="bg-gray-400" style="width: ${{openPct}}%" title="Open"></div>
+                <div class="flex items-center justify-center" style="width: ${{completedPct.toFixed(1)}}%; background: #2a8703;" title="Completed: ${{stats['COMPLETED'].toLocaleString()}} (${{completedPct.toFixed(1)}}%)">${{barLabel(completedPct)}}</div>
+                <div class="flex items-center justify-center" style="width: ${{inProgressPct.toFixed(1)}}%; background: #ffc220;" title="In Progress: ${{stats['IN PROGRESS'].toLocaleString()}} (${{inProgressPct.toFixed(1)}}%)">${{barLabel(inProgressPct)}}</div>
+                <div class="flex items-center justify-center" style="width: ${{openPct.toFixed(1)}}%; background: #9ca3af;" title="Open: ${{stats['OPEN'].toLocaleString()}} (${{openPct.toFixed(1)}}%)">${{barLabel(openPct)}}</div>
             `;
             
-            // Update legend
+            // Update legend with colored dots
             document.getElementById(`${{prefix}}-legend`).innerHTML = `
-                <span>\u2713 ${{stats['COMPLETED'].toLocaleString()}}</span>
-                <span>\u23f3 ${{stats['IN PROGRESS'].toLocaleString()}}</span>
-                <span>\u25cb ${{stats['OPEN'].toLocaleString()}}</span>
+                <span><span class="inline-block w-2 h-2 rounded-full mr-1" style="background:#2a8703"></span>Done ${{stats['COMPLETED'].toLocaleString()}}</span>
+                <span><span class="inline-block w-2 h-2 rounded-full mr-1" style="background:#ffc220"></span>WIP ${{stats['IN PROGRESS'].toLocaleString()}}</span>
+                <span><span class="inline-block w-2 h-2 rounded-full mr-1" style="background:#9ca3af"></span>Open ${{stats['OPEN'].toLocaleString()}}</span>
             `;
         }});
     }}
@@ -1197,33 +1224,33 @@ def main():
             plugins: [ChartDataLabels]
         }});
         
-        // Phase chart
+        // Phase chart - stacked bar showing Completed / In Progress / Open
         const phaseCtx = document.getElementById('wtwPhaseChart').getContext('2d');
         wtwPhaseChart = new Chart(phaseCtx, {{
             type: 'bar',
             data: {{
                 labels: ['Phase 1', 'Phase 2', 'Phase 3'],
-                datasets: [{{
-                    label: 'Work Orders',
-                    data: [0, 0, 0],
-                    backgroundColor: ['#3b82f6', '#22c55e', '#a855f7'],
-                    borderRadius: 6
-                }}]
+                datasets: [
+                    {{ label: 'Completed', data: [0, 0, 0], backgroundColor: '#2a8703' }},
+                    {{ label: 'In Progress', data: [0, 0, 0], backgroundColor: '#ffc220' }},
+                    {{ label: 'Open', data: [0, 0, 0], backgroundColor: '#9ca3af' }}
+                ]
             }},
             options: {{
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {{
-                    legend: {{ display: false }},
+                    legend: {{ position: 'top', labels: {{ boxWidth: 12, padding: 15 }} }},
                     datalabels: {{
                         color: '#fff',
                         anchor: 'center',
-                        font: {{ weight: 'bold', size: 14 }},
+                        font: {{ weight: 'bold', size: 12 }},
                         formatter: (value) => value > 0 ? value.toLocaleString() : ''
                     }}
                 }},
                 scales: {{
-                    y: {{ beginAtZero: true }}
+                    x: {{ stacked: true }},
+                    y: {{ stacked: true, beginAtZero: true }}
                 }}
             }},
             plugins: [ChartDataLabels]
@@ -1260,11 +1287,23 @@ def main():
         ];
         wtwStatusChart.update();
         
-        wtwPhaseChart.data.datasets[0].data = [
-            phaseCounts['PH1'],
-            phaseCounts['PH2'],
-            phaseCounts['PH3']
-        ];
+        // Count phase statuses for stacked bars
+        const phaseStatus = {{
+            'PH1': {{c: 0, ip: 0, o: 0}},
+            'PH2': {{c: 0, ip: 0, o: 0}},
+            'PH3': {{c: 0, ip: 0, o: 0}}
+        }};
+        wtwFilteredData.forEach(wo => {{
+            const ps = phaseStatus[wo.ph];
+            if (ps) {{
+                if (wo.st === 'COMPLETED') ps.c++;
+                else if (wo.st === 'IN PROGRESS') ps.ip++;
+                else ps.o++;
+            }}
+        }});
+        wtwPhaseChart.data.datasets[0].data = [phaseStatus.PH1.c, phaseStatus.PH2.c, phaseStatus.PH3.c];
+        wtwPhaseChart.data.datasets[1].data = [phaseStatus.PH1.ip, phaseStatus.PH2.ip, phaseStatus.PH3.ip];
+        wtwPhaseChart.data.datasets[2].data = [phaseStatus.PH1.o, phaseStatus.PH2.o, phaseStatus.PH3.o];
         wtwPhaseChart.update();
     }}
     </script>
