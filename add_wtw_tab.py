@@ -962,7 +962,7 @@ def main():
                     <td class="px-3 py-2 text-sm ${{statusClass}}">${{statusText}}</td>
                     <td class="px-3 py-2 text-center">
                         ${{wo.banner && wo.banner.includes('Sam') ? 
-                            '<span class="px-2 py-0.5 rounded text-xs font-semibold bg-blue-800 text-white">Sam\'s</span>' : 
+                            '<span class="px-2 py-0.5 rounded text-xs font-semibold bg-blue-800 text-white">Sam&#39;s</span>' : 
                             '<span class="px-2 py-0.5 rounded text-xs font-semibold bg-yellow-400 text-blue-900">WM</span>'}}
                     </td>
                     <td class="px-3 py-2 text-sm text-gray-600">${{wo.rm || '-'}}</td>
