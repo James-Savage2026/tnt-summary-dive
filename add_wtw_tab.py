@@ -178,10 +178,13 @@ def main():
         )
     
     # Ensure tnt-content div is closed before WTW content
-    if '</div>\n    \n    <!-- WTW Tab Content -->' not in html:
-        html = html.replace(
-            '</main>\n    \n    <!-- WTW Tab Content -->',
-            '</main>\n    </div>\n    \n    <!-- WTW Tab Content -->'
+    # Use regex to handle variable whitespace
+    if not re.search(r'</div>\s*<!-- WTW Tab Content -->', html):
+        html = re.sub(
+            r'(</main>)(\s*)(<!-- WTW Tab Content -->)',
+            r'\1\n    </div>\2\3',
+            html,
+            count=1
         )
     
     # Create WTW tab content with full filters
