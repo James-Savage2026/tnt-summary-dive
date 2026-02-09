@@ -1012,22 +1012,29 @@ def main():
                 return {{
                     fsm,
                     ph1Pct: parseFloat(ph1Pct),
+                    ph1Completed: phases.PH1.completed,
+                    ph1Total: phases.PH1.total,
                     ph2Pct: parseFloat(ph2Pct),
+                    ph2Completed: phases.PH2.completed,
+                    ph2Total: phases.PH2.total,
                     ph3Pct: parseFloat(ph3Pct),
+                    ph3Completed: phases.PH3.completed,
+                    ph3Total: phases.PH3.total,
                     overallPct: parseFloat(overallPct),
+                    totalCompleted: totalCompleted,
                     total: totalAll
                 }};
             }})
             .filter(r => r.total > 0)
-            .sort((a, b) => a.overallPct - b.overallPct);
+            .sort((a, b) => b.overallPct - a.overallPct);
         
         fsmTable.innerHTML = fsmRows.map(r => `
             <tr class="hover:bg-gray-50">
                 <td class="px-3 py-2 text-sm font-medium text-gray-800">${{r.fsm}}</td>
-                <td class="px-3 py-2 text-sm text-center ${{getColor(r.ph1Pct)}}">${{r.ph1Pct}}%</td>
-                <td class="px-3 py-2 text-sm text-center ${{getColor(r.ph2Pct)}}">${{r.ph2Pct}}%</td>
-                <td class="px-3 py-2 text-sm text-center ${{getColor(r.ph3Pct)}}">${{r.ph3Pct}}%</td>
-                <td class="px-3 py-2 text-sm text-center ${{getColor(r.overallPct)}}">${{r.overallPct}}%</td>
+                <td class="px-3 py-2 text-sm text-center ${{getColor(r.ph1Pct)}}">${{r.ph1Pct}}% <span class="text-gray-400 text-xs">(${{r.ph1Completed}}/${{r.ph1Total}})</span></td>
+                <td class="px-3 py-2 text-sm text-center ${{getColor(r.ph2Pct)}}">${{r.ph2Pct}}% <span class="text-gray-400 text-xs">(${{r.ph2Completed}}/${{r.ph2Total}})</span></td>
+                <td class="px-3 py-2 text-sm text-center ${{getColor(r.ph3Pct)}}">${{r.ph3Pct}}% <span class="text-gray-400 text-xs">(${{r.ph3Completed}}/${{r.ph3Total}})</span></td>
+                <td class="px-3 py-2 text-sm text-center ${{getColor(r.overallPct)}}">${{r.overallPct}}% <span class="text-gray-400 text-xs">(${{r.totalCompleted}}/${{r.total}})</span></td>
             </tr>
         `).join('');
         
@@ -1044,22 +1051,29 @@ def main():
                 return {{
                     rfm,
                     ph1Pct: parseFloat(ph1Pct),
+                    ph1Completed: phases.PH1.completed,
+                    ph1Total: phases.PH1.total,
                     ph2Pct: parseFloat(ph2Pct),
+                    ph2Completed: phases.PH2.completed,
+                    ph2Total: phases.PH2.total,
                     ph3Pct: parseFloat(ph3Pct),
+                    ph3Completed: phases.PH3.completed,
+                    ph3Total: phases.PH3.total,
                     overallPct: parseFloat(overallPct),
+                    totalCompleted: totalCompleted,
                     total: totalAll
                 }};
             }})
             .filter(r => r.total > 0)
-            .sort((a, b) => a.overallPct - b.overallPct);
+            .sort((a, b) => b.overallPct - a.overallPct);
         
         rfmTable.innerHTML = rfmRows.map(r => `
             <tr class="hover:bg-gray-50">
                 <td class="px-3 py-2 text-sm font-medium text-gray-800">${{r.rfm}}</td>
-                <td class="px-3 py-2 text-sm text-center ${{getColor(r.ph1Pct)}}">${{r.ph1Pct}}%</td>
-                <td class="px-3 py-2 text-sm text-center ${{getColor(r.ph2Pct)}}">${{r.ph2Pct}}%</td>
-                <td class="px-3 py-2 text-sm text-center ${{getColor(r.ph3Pct)}}">${{r.ph3Pct}}%</td>
-                <td class="px-3 py-2 text-sm text-center ${{getColor(r.overallPct)}}">${{r.overallPct}}%</td>
+                <td class="px-3 py-2 text-sm text-center ${{getColor(r.ph1Pct)}}">${{r.ph1Pct}}% <span class="text-gray-400 text-xs">(${{r.ph1Completed}}/${{r.ph1Total}})</span></td>
+                <td class="px-3 py-2 text-sm text-center ${{getColor(r.ph2Pct)}}">${{r.ph2Pct}}% <span class="text-gray-400 text-xs">(${{r.ph2Completed}}/${{r.ph2Total}})</span></td>
+                <td class="px-3 py-2 text-sm text-center ${{getColor(r.ph3Pct)}}">${{r.ph3Pct}}% <span class="text-gray-400 text-xs">(${{r.ph3Completed}}/${{r.ph3Total}})</span></td>
+                <td class="px-3 py-2 text-sm text-center ${{getColor(r.overallPct)}}">${{r.overallPct}}% <span class="text-gray-400 text-xs">(${{r.totalCompleted}}/${{r.total}})</span></td>
             </tr>
         `).join('');
     }}
