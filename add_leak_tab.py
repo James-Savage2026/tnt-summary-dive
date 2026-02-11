@@ -22,9 +22,8 @@ from leak_tab_js import build_leak_js
 DASHBOARD = Path(__file__).parent / 'index.html'
 BQ = Path.home() / 'bigquery_results'
 
-STORE_FILE = BQ / 'leak-store-cy2026-20260210-100447.csv'
-MGMT_FILE = BQ / 'leak-mgmt-cy2026-20260210-100441.csv'
-CUMUL_FILE = BQ / 'leak-monthly-cumulative-20260210-100208.csv'
+STORE_FILE = BQ / 'leak-store-corrected.csv'
+CUMUL_FILE = BQ / 'leak-monthly-cumulative-corrected.csv'
 
 THRESHOLD = 9
 # Walmart brand colors
@@ -61,19 +60,8 @@ def compress_stores(rows):
         'tl': si(r.get('total_leaks')), 'tq': round(sf(r.get('total_trigger_qty')), 1),
         'cyl': si(r.get('cy_leaks')), 'cytq': round(sf(r.get('cy_trigger_qty')), 1),
         'cylr': round(sf(r.get('cy_leak_rate_pct')), 2),
-        'ld': (r.get('latest_leak_date') or '')[:10],
     } for r in rows]
 
-
-def compress_mgmt(rows):
-    return [{
-        'srd': r.get('sr_dir', ''), 'fm': r.get('fm_dir', ''),
-        'assets': si(r.get('total_assets')), 'stores': si(r.get('store_count')),
-        'charge': round(sf(r.get('total_charge')), 1),
-        'cyl': si(r.get('cy_leaks')),
-        'cytq': round(sf(r.get('cy_trigger_qty')), 1),
-        'cylr': round(sf(r.get('cy_leak_rate_pct')), 2),
-    } for r in rows]
 
 
 def build_cumul_data(rows):
@@ -116,8 +104,9 @@ def calc_burn_rate(cy_tq, fleet_charge):
 def main():
     print('\U0001f9ca Loading Leak Management data (v5 — Burn Rate)...')
     stores = compress_stores(load_csv(STORE_FILE))
-    mgmt = compress_mgmt(load_csv(MGMT_FILE))
     cumul = build_cumul_data(load_csv(CUMUL_FILE))
+    # Derive mgmt from store data (no separate query needed)
+    mgmt = []
 
     fleet_charge = sum(d['sc'] for d in stores)
     cy_tq = sum(d['cytq'] for d in stores)
@@ -133,7 +122,7 @@ def main():
     print(f'   Day {burn["days_elapsed"]} of {burn["days_in_year"]}')
 
     store_json = json.dumps(stores, separators=(',', ':'))
-    mgmt_json = json.dumps(mgmt, separators=(',', ':'))
+    mgmt_json = json.dumps(mgmt, separators=(',', ':'))  # empty, computed client-side
     cumul_json = json.dumps(cumul, separators=(',', ':'))
     burn_json = json.dumps(burn, separators=(',', ':'))
 
