@@ -771,25 +771,19 @@ def main():
     
     // Update KPIs
     function updateWtwKpis() {{
-        const counts = {{'COMPLETED': 0, 'INCOMPLETE': 0, 'DISPATCH CONFIRMED': 0, 'PARTS DELIVERED': 0, 'PARTS ON ORDER': 0, 'OPEN': 0}};
+        const counts = {{'COMPLETED': 0, 'IN PROGRESS': 0, 'OPEN': 0}};
         wtwFilteredData.forEach(wo => {{
-            if (wo.st === 'COMPLETED') {{
-                counts['COMPLETED']++;
-            }} else {{
-                const est = wo.est || 'OPEN';
-                if (counts.hasOwnProperty(est)) counts[est]++;
-                else if (est.includes('PARTS')) counts['PARTS ON ORDER']++;
-            }}
+            if (wo.st === 'COMPLETED') counts['COMPLETED']++;
+            else if (wo.st === 'IN PROGRESS') counts['IN PROGRESS']++;
+            else counts['OPEN']++;
         }});
         const total = wtwFilteredData.length;
         const completionRate = total > 0 ? ((counts['COMPLETED'] / total) * 100).toFixed(1) : 0;
         document.getElementById('wtwKpiCompleted').textContent = counts['COMPLETED'].toLocaleString();
         document.getElementById('wtwKpiCompletionRate').textContent = completionRate + '% complete';
-        document.getElementById('wtwKpiIncomplete').textContent = counts['INCOMPLETE'].toLocaleString();
-        document.getElementById('wtwKpiDispatch').textContent = counts['DISPATCH CONFIRMED'].toLocaleString();
-        document.getElementById('wtwKpiPartsDelivered').textContent = counts['PARTS DELIVERED'].toLocaleString();
-        document.getElementById('wtwKpiPartsOrder').textContent = counts['PARTS ON ORDER'].toLocaleString();
+        document.getElementById('wtwKpiInProgress').textContent = counts['IN PROGRESS'].toLocaleString();
         document.getElementById('wtwKpiOpen').textContent = counts['OPEN'].toLocaleString();
+        document.getElementById('wtwKpiTotal').textContent = total.toLocaleString();
         
         // Labor hours KPIs
         let totalHrs = 0, repairHrs = 0, travelHrs = 0, totalVisits = 0, wosWithHrs = 0;
