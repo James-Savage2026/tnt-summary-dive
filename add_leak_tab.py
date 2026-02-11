@@ -64,6 +64,26 @@ def compress_stores(rows):
 
 
 
+def load_leak_wos(path):
+    """Load leak WO data, group by store."""
+    import json as _json
+    with open(path, 'r') as f:
+        raw = _json.load(f)
+    by_store = {}
+    for r in raw:
+        s = str(r.get('store_nbr', ''))
+        if s not in by_store:
+            by_store[s] = []
+        by_store[s].append({
+            'tr': r.get('tr', ''),
+            'dt': r.get('leak_date', ''),
+            'qty': r.get('trigger_qty', 0),
+            'tag': r.get('tag_id', ''),
+            'rep': r.get('repair_date', ''),
+        })
+    return by_store
+
+
 def build_cumul_data(rows):
     months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
     years = sorted(set(si(r['yr']) for r in rows))
@@ -105,7 +125,7 @@ def main():
     print('\U0001f9ca Loading Leak Management data (v5 — Burn Rate)...')
     stores = compress_stores(load_csv(STORE_FILE))
     cumul = build_cumul_data(load_csv(CUMUL_FILE))
-    # Derive mgmt from store data (no separate query needed)
+    leak_wos = load_leak_wos(BQ / 'leak-wo-cy2026.json')
     mgmt = []
 
     fleet_charge = sum(d['sc'] for d in stores)
@@ -125,6 +145,7 @@ def main():
     mgmt_json = json.dumps(mgmt, separators=(',', ':'))  # empty, computed client-side
     cumul_json = json.dumps(cumul, separators=(',', ':'))
     burn_json = json.dumps(burn, separators=(',', ':'))
+    wo_json = json.dumps(leak_wos, separators=(',', ':'))
 
     print('\n\U0001f4dd Reading dashboard HTML...')
     html = DASHBOARD.read_text(encoding='utf-8')
@@ -142,7 +163,7 @@ def main():
         html = html.replace('</nav>\n        </div>\n    </div>', btn + '\n            </nav>\n        </div>\n    </div>', 1)
 
     leak_html = build_leak_html(fleet_charge, cy_tq, cy_rate, cy_leaks, threshold_lbs, burn)
-    leak_js = build_leak_js(store_json, mgmt_json, cumul_json, burn_json)
+    leak_js = build_leak_js(store_json, mgmt_json, cumul_json, burn_json, wo_json)
 
     html = re.sub(r'(\s*<!-- Footer -->)', '\n' + leak_html + '\n\n    <!-- Footer -->', html, count=1)
     html = html.replace('</body>', leak_js + '\n</body>')
