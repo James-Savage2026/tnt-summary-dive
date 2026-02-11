@@ -1,5 +1,7 @@
 """JS builder for Leak Management tab — v5 with burn rate."""
 
+from store_detail_js import build_store_detail_js
+
 THRESHOLD = 9
 B = '#0053e2'
 S = '#ffc220'
@@ -7,7 +9,7 @@ R = '#ea1100'
 G = '#2a8703'
 
 
-def build_leak_js(store_json, mgmt_json, cumul_json, burn_json, wo_json='{}', monthly_store_json='{}'):
+def build_leak_js(store_json, mgmt_json, cumul_json, burn_json, wo_json='{}', monthly_store_json='{}', assets_json='{}'):
     T = THRESHOLD
     return f'''
     <script>
@@ -18,9 +20,11 @@ def build_leak_js(store_json, mgmt_json, cumul_json, burn_json, wo_json='{}', mo
     const LK_BURN = {burn_json};
     const LK_WOS = {wo_json};
     const LK_MONTHLY = {monthly_store_json};
+    const STORE_ASSETS = {assets_json};
     const LK_T = {T};
     let lkExpandedStore = null;
     let lkYoyChart = null;
+    let lkDetailFilter = 'all'; // 'all', 'refrig', 'hvac'
 
     let lkFiltered = [];
     let lkSortField = 'cylr';
@@ -393,52 +397,7 @@ def build_leak_js(store_json, mgmt_json, cumul_json, burn_json, wo_json='{}', mo
         renderLeakTable();
     }}
 
-    function toggleLeakWo(storeNbr) {{
-        lkExpandedStore = lkExpandedStore === storeNbr ? null : storeNbr;
-        renderLeakTable();
-    }}
-
-    function buildWoRows(storeNbr) {{
-        const wos = LK_WOS[storeNbr];
-        if (!wos || wos.length === 0) {{
-            return `<tr class="bg-gray-50"><td colspan="10" class="px-6 py-3 text-sm text-gray-400 italic">No CY2026 leak work orders found for store ${{storeNbr}}</td></tr>`;
-        }}
-        let html = `<tr class="bg-blue-50"><td colspan="10" class="px-0 py-0">
-            <div class="px-6 py-3">
-                <div class="flex items-center gap-2 mb-2">
-                    <span class="text-xs font-bold text-[{B}]">\U0001f4cb CY2026 Leak Events — Store ${{storeNbr}}</span>
-                    <span class="text-xs text-gray-500">(${{wos.length}} event${{wos.length > 1 ? 's' : ''}})</span>
-                </div>
-                <table class="w-full text-xs">
-                    <thead><tr class="text-left text-gray-500 border-b border-blue-200">
-                        <th class="px-2 py-1">Tracking #</th>
-                        <th class="px-2 py-1">Leak Date</th>
-                        <th class="px-2 py-1">Tag ID</th>
-                        <th class="px-2 py-1 text-right">Trigger Qty (lbs)</th>
-                        <th class="px-2 py-1">Repair Date</th>
-                        <th class="px-2 py-1">Status</th>
-                    </tr></thead>
-                    <tbody>`;
-        wos.forEach(w => {{
-            const repaired = w.rep && w.rep !== 'null' && w.rep !== '';
-            const statusBadge = repaired
-                ? '<span class="px-1.5 py-0.5 rounded bg-[{G}] text-white text-xs">Repaired</span>'
-                : '<span class="px-1.5 py-0.5 rounded bg-amber-500 text-white text-xs">Open</span>';
-            html += `<tr class="border-b border-blue-100 hover:bg-blue-100">
-                <td class="px-2 py-1.5">
-                    <a href="https://www.servicechannel.com/sc/wo/Workorders/index?id=${{w.tr}}" target="_blank"
-                       class="text-[{B}] font-semibold hover:underline">#${{w.tr}}</a>
-                </td>
-                <td class="px-2 py-1.5 text-gray-700">${{w.dt || '-'}}</td>
-                <td class="px-2 py-1.5 text-gray-500 font-mono">${{w.tag || '-'}}</td>
-                <td class="px-2 py-1.5 text-right font-semibold ${{parseFloat(w.qty) > 100 ? 'text-[{R}]' : 'text-gray-700'}}">${{parseFloat(w.qty || 0).toLocaleString()}}</td>
-                <td class="px-2 py-1.5 text-gray-700">${{repaired ? w.rep : '-'}}</td>
-                <td class="px-2 py-1.5">${{statusBadge}}</td>
-            </tr>`;
-        }});
-        html += '</tbody></table></div></td></tr>';
-        return html;
-    }}
+    {build_store_detail_js()}
 
     function renderLeakTable() {{
         const sorted = [...lkFiltered].map(s => {{
@@ -462,8 +421,9 @@ def build_leak_js(store_json, mgmt_json, cumul_json, burn_json, wo_json='{}', mo
             const icon = bRate > LK_T * 1.5 ? '\U0001f6a8' : bRate > LK_T ? '\u26A0\uFE0F' : '\u2705';
             const woCount = (LK_WOS[s.s] || []).length;
             const isExpanded = lkExpandedStore === s.s;
-            const expandIcon = woCount > 0 ? (isExpanded ? '\u25BC' : '\u25B6') : '';
-            const clickAttr = woCount > 0 ? `onclick="toggleLeakWo('${{s.s}}')" style="cursor:pointer"` : '';
+            const expandIcon = hasDetail ? (isExpanded ? '\u25BC' : '\u25B6') : '';
+            const hasDetail = woCount > 0 || STORE_ASSETS[s.s];
+            const clickAttr = hasDetail ? `onclick="toggleLeakWo('${{s.s}}')" style="cursor:pointer"` : '';
             let row = `
                 <tr class="hover:bg-gray-50 ${{s.cylr > LK_T ? 'bg-red-50' : ''}} ${{isExpanded ? 'bg-blue-50' : ''}}" ${{clickAttr}}>
                     <td class="px-3 py-1.5 text-sm font-medium text-gray-800">
@@ -485,7 +445,7 @@ def build_leak_js(store_json, mgmt_json, cumul_json, burn_json, wo_json='{}', mo
                     <td class="px-3 py-1.5 text-center text-sm">${{icon}}</td>
                 </tr>
             `;
-            if (isExpanded) row += buildWoRows(s.s);
+            if (isExpanded) row += buildStoreDetail(s.s);
             return row;
         }}).join('');
         if (sorted.length > 300) {{

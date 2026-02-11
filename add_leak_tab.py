@@ -18,6 +18,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from leak_tab_html import build_leak_html
 from leak_tab_js import build_leak_js
+from store_assets import store_assets_json
 
 DASHBOARD = Path(__file__).parent / 'index.html'
 BQ = Path.home() / 'bigquery_results'
@@ -153,6 +154,7 @@ def main():
     burn_json = json.dumps(burn, separators=(',', ':'))
     wo_json = json.dumps(leak_wos, separators=(',', ':'))
     monthly_store_json = json.dumps(monthly_by_store, separators=(',', ':'))
+    assets_json = store_assets_json()
 
     print('\n\U0001f4dd Reading dashboard HTML...')
     html = DASHBOARD.read_text(encoding='utf-8')
@@ -170,7 +172,7 @@ def main():
         html = html.replace('</nav>\n        </div>\n    </div>', btn + '\n            </nav>\n        </div>\n    </div>', 1)
 
     leak_html = build_leak_html(fleet_charge, cy_tq, cy_rate, cy_leaks, threshold_lbs, burn)
-    leak_js = build_leak_js(store_json, mgmt_json, cumul_json, burn_json, wo_json, monthly_store_json)
+    leak_js = build_leak_js(store_json, mgmt_json, cumul_json, burn_json, wo_json, monthly_store_json, assets_json)
 
     html = re.sub(r'(\s*<!-- Footer -->)', '\n' + leak_html + '\n\n    <!-- Footer -->', html, count=1)
     html = html.replace('</body>', leak_js + '\n</body>')
