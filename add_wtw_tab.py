@@ -543,14 +543,17 @@ def main():
         document.getElementById('tab-' + tab).classList.remove('border-transparent', 'text-gray-500');
         document.getElementById('tab-' + tab).classList.add('border-walmart-blue', 'text-walmart-blue');
         
-        if (tab === 'tnt') {{
-            document.getElementById('tnt-content').classList.remove('hidden');
-            document.getElementById('wtw-content').classList.add('hidden');
-        }} else {{
-            document.getElementById('tnt-content').classList.add('hidden');
-            document.getElementById('wtw-content').classList.remove('hidden');
-            initWtwTab();
-        }}
+        // Hide all tab content
+        ['tnt-content', 'wtw-content', 'leak-content'].forEach(id => {{
+            const el = document.getElementById(id);
+            if (el) el.classList.add('hidden');
+        }});
+        // Show selected tab
+        const activeEl = document.getElementById(tab + '-content');
+        if (activeEl) activeEl.classList.remove('hidden');
+        
+        if (tab === 'wtw') initWtwTab();
+        if (tab === 'leak' && typeof initLeakTab === 'function') initLeakTab();
     }}
     
     // Initialize WTW tab
