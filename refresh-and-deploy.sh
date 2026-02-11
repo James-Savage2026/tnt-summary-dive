@@ -19,7 +19,7 @@ echo ""
 
 # Configuration
 PROJECT_DIR="$HOME/Documents/hvac-tnt-dashboard"
-GITHUB_REPO_DIR="$HOME/Documents/tnt-summary-dive-github"
+GITHUB_REPO_DIR="$HOME/Documents/Projects/hvac-tnt-dashboard"
 PYTHON="$HOME/.code-puppy-venv/bin/python"
 BQ="$HOME/google-cloud-sdk/bin/bq"
 export PATH="$HOME/google-cloud-sdk/bin:$PATH"
@@ -163,13 +163,13 @@ if [ -d "$GITHUB_REPO_DIR" ]; then
     echo "   ✅ Pushed to GitHub!"
 else
     echo "   ⚠️  GitHub repo not cloned yet. Run setup first."
-    echo "   Run: git clone https://github.com/james-savage2026/tnt-summary-dive.git $GITHUB_REPO_DIR"
+    echo "   Run: git clone https://gecgithub01.walmart.com/j0s028j/north-bu-hvacr-report-hub.git $GITHUB_REPO_DIR"
 fi
 
 echo ""
 echo "======================================"
 echo "🎉 Done! Your dashboard is updating at:"
-echo "   https://james-savage2026.github.io/tnt-summary-dive/"
+echo "   https://pages.gecgithub01.walmart.com/j0s028j/north-bu-hvacr-report-hub/"
 echo ""
 echo "   (GitHub Pages takes 1-2 minutes to refresh)"
 echo "======================================"

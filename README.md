@@ -1,8 +1,8 @@
 # TnT + Win-the-Winter Dashboard
 
 **Last Updated:** 2026-02-05  
-**GitHub Pages:** https://james-savage2026.github.io/tnt-summary-dive/  
-**Repo:** https://github.com/James-Savage2026/tnt-summary-dive
+**GitHub Pages:** https://pages.gecgithub01.walmart.com/j0s028j/north-bu-hvacr-report-hub/  
+**Repo:** https://gecgithub01.walmart.com/j0s028j/north-bu-hvacr-report-hub
 
 ---
 
@@ -136,7 +136,7 @@ https://www.servicechannel.com/sc/wo/Workorders/index?id={tracking_nbr}
 - [ ] Check "Review Needed" for stores close to passing
 - [ ] Check "Critical Reopen" for stores needing work
 - [ ] Push updates to GitHub Pages
-- [ ] Share link: https://james-savage2026.github.io/tnt-summary-dive/
+- [ ] Share link: https://pages.gecgithub01.walmart.com/j0s028j/north-bu-hvacr-report-hub/
 
 ---
 
