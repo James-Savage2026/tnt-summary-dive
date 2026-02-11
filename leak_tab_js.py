@@ -7,7 +7,7 @@ R = '#ea1100'
 G = '#2a8703'
 
 
-def build_leak_js(store_json, mgmt_json, cumul_json, burn_json, wo_json='{}'):
+def build_leak_js(store_json, mgmt_json, cumul_json, burn_json, wo_json='{}', monthly_store_json='{}'):
     T = THRESHOLD
     return f'''
     <script>
@@ -17,8 +17,10 @@ def build_leak_js(store_json, mgmt_json, cumul_json, burn_json, wo_json='{}'):
     const LK_CUMUL = {cumul_json};
     const LK_BURN = {burn_json};
     const LK_WOS = {wo_json};
+    const LK_MONTHLY = {monthly_store_json};
     const LK_T = {T};
     let lkExpandedStore = null;
+    let lkYoyChart = null;
 
     let lkFiltered = [];
     let lkSortField = 'cylr';
@@ -55,31 +57,9 @@ def build_leak_js(store_json, mgmt_json, cumul_json, burn_json, wo_json='{}'):
     }}
 
     function initLeakYoyChart() {{
-        const colors = {{ 2024: '{S}', 2025: '{B}', 2026: '{G}' }};
-        const datasets = LK_CUMUL.years.map(y => ({{
-            label: '' + y,
-            data: LK_CUMUL.data[y],
-            borderColor: colors[y] || '#999',
-            backgroundColor: 'transparent',
-            fill: false,
-            tension: 0.3,
-            pointRadius: 4,
-            pointBackgroundColor: colors[y] || '#999',
-            borderWidth: y === 2026 ? 3 : 2,
-        }}));
-        datasets.push({{
-            label: LK_T + '% Threshold',
-            data: Array(12).fill(LK_T),
-            borderColor: '{R}',
-            borderWidth: 2,
-            borderDash: [6, 3],
-            pointRadius: 0,
-            fill: false
-        }});
-
-        new Chart(document.getElementById('leakYoyChart').getContext('2d'), {{
+        lkYoyChart = new Chart(document.getElementById('leakYoyChart').getContext('2d'), {{
             type: 'line',
-            data: {{ labels: LK_CUMUL.months, datasets }},
+            data: {{ labels: LK_CUMUL.months, datasets: [] }},
             options: {{
                 responsive: true, maintainAspectRatio: false,
                 plugins: {{
@@ -91,6 +71,67 @@ def build_leak_js(store_json, mgmt_json, cumul_json, burn_json, wo_json='{}'):
                 }}
             }}
         }});
+        updateLeakYoyChart();
+    }}
+
+    function updateLeakYoyChart() {{
+        if (!lkYoyChart) return;
+        const colors = {{ 2024: '{S}', 2025: '{B}', 2026: '{G}' }};
+        // Get set of filtered store numbers
+        const filteredStores = new Set(lkFiltered.map(s => s.s));
+        const isFiltered = filteredStores.size < LK_STORES.length;
+        // Compute filtered fleet charge
+        let filteredCharge = 0;
+        lkFiltered.forEach(s => {{ filteredCharge += s.sc; }});
+        if (filteredCharge <= 0) filteredCharge = 1;
+
+        // Build monthly cumulative per year from fired stores
+        const yearMonthTotals = {{}};
+        filteredStores.forEach(sn => {{
+            const monthly = LK_MONTHLY[sn];
+            if (!monthly) return;
+            monthly.forEach(([y, m, q]) => {{
+                if (!yearMonthTotals[y]) yearMonthTotals[y] = Array(12).fill(0);
+                yearMonthTotals[y][m - 1] += q;
+            }});
+        }});
+
+        // Convert to cumulative rates
+        const datasets = [];
+        const years = Object.keys(yearMonthTotals).map(Number).sort();
+        years.forEach(y => {{
+            const cumData = [];
+            let running = 0;
+            for (let m = 0; m < 12; m++) {{
+                const val = yearMonthTotals[y][m];
+                if (val > 0 || running > 0) {{
+                    running += val;
+                    cumData.push(Math.round(running / filteredCharge * 10000) / 100);
+                }} else {{
+                    cumData.push(null);
+                }}
+            }}
+            datasets.push({{
+                label: (isFiltered ? '\U0001f50d ' : '') + y,
+                data: cumData,
+                borderColor: colors[y] || '#999',
+                backgroundColor: 'transparent',
+                fill: false, tension: 0.3,
+                pointRadius: 4,
+                pointBackgroundColor: colors[y] || '#999',
+                borderWidth: y === 2026 ? 3 : 2,
+                spanGaps: false
+            }});
+        }});
+        datasets.push({{
+            label: LK_T + '% Threshold',
+            data: Array(12).fill(LK_T),
+            borderColor: '{R}', borderWidth: 2,
+            borderDash: [6, 3], pointRadius: 0, fill: false
+        }});
+
+        lkYoyChart.data.datasets = datasets;
+        lkYoyChart.update();
     }}
 
     function renderMgmtChart() {{
@@ -202,6 +243,7 @@ def build_leak_js(store_json, mgmt_json, cumul_json, burn_json, wo_json='{}'):
         document.getElementById('leakFilteredCount').textContent = lkFiltered.length.toLocaleString();
         updateLeakCascade();
         updateLeakKpis();
+        updateLeakYoyChart();
         renderMgmtChart();
         renderLeakTable();
     }}

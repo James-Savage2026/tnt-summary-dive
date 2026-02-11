@@ -33,6 +33,11 @@ WM_RED = '#ea1100'      # red.100
 WM_GREEN = '#2a8703'    # green.100
 
 
+def load_json(path):
+    with open(path, 'r') as f:
+        return json.load(f)
+
+
 def load_csv(path):
     with open(path, 'r', encoding='utf-8') as f:
         return list(csv.DictReader(f))
@@ -126,6 +131,7 @@ def main():
     stores = compress_stores(load_csv(STORE_FILE))
     cumul = build_cumul_data(load_csv(CUMUL_FILE))
     leak_wos = load_leak_wos(BQ / 'leak-wo-cy2026.json')
+    monthly_by_store = load_json(BQ / 'leak-monthly-by-store.json')
     mgmt = []
 
     fleet_charge = sum(d['sc'] for d in stores)
@@ -146,6 +152,7 @@ def main():
     cumul_json = json.dumps(cumul, separators=(',', ':'))
     burn_json = json.dumps(burn, separators=(',', ':'))
     wo_json = json.dumps(leak_wos, separators=(',', ':'))
+    monthly_store_json = json.dumps(monthly_by_store, separators=(',', ':'))
 
     print('\n\U0001f4dd Reading dashboard HTML...')
     html = DASHBOARD.read_text(encoding='utf-8')
@@ -163,7 +170,7 @@ def main():
         html = html.replace('</nav>\n        </div>\n    </div>', btn + '\n            </nav>\n        </div>\n    </div>', 1)
 
     leak_html = build_leak_html(fleet_charge, cy_tq, cy_rate, cy_leaks, threshold_lbs, burn)
-    leak_js = build_leak_js(store_json, mgmt_json, cumul_json, burn_json, wo_json)
+    leak_js = build_leak_js(store_json, mgmt_json, cumul_json, burn_json, wo_json, monthly_store_json)
 
     html = re.sub(r'(\s*<!-- Footer -->)', '\n' + leak_html + '\n\n    <!-- Footer -->', html, count=1)
     html = html.replace('</body>', leak_js + '\n</body>')
