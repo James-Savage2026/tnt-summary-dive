@@ -76,59 +76,71 @@ def build_leak_js(store_json, mgmt_json, cumul_json, burn_json, wo_json='{}', mo
 
     function updateLeakYoyChart() {{
         if (!lkYoyChart) return;
-        const colors = {{ 2024: '{S}', 2025: '{B}', 2026: '{G}' }};
-        // Get set of filtered store numbers
         const filteredStores = new Set(lkFiltered.map(s => s.s));
-        const isFiltered = filteredStores.size < LK_STORES.length;
-        // Compute filtered fleet charge
         let filteredCharge = 0;
         lkFiltered.forEach(s => {{ filteredCharge += s.sc; }});
         if (filteredCharge <= 0) filteredCharge = 1;
 
-        // Build monthly cumulative per year from fired stores
-        const yearMonthTotals = {{}};
+        // Build CY2026 monthly totals from filtered stores
+        const monthTotals = Array(12).fill(0);
         filteredStores.forEach(sn => {{
             const monthly = LK_MONTHLY[sn];
             if (!monthly) return;
             monthly.forEach(([y, m, q]) => {{
-                if (!yearMonthTotals[y]) yearMonthTotals[y] = Array(12).fill(0);
-                yearMonthTotals[y][m - 1] += q;
+                if (y === 2026) monthTotals[m - 1] += q;
             }});
         }});
 
-        // Convert to cumulative rates
-        const datasets = [];
-        const years = Object.keys(yearMonthTotals).map(Number).sort();
-        years.forEach(y => {{
-            const cumData = [];
-            let running = 0;
-            for (let m = 0; m < 12; m++) {{
-                const val = yearMonthTotals[y][m];
-                if (val > 0 || running > 0) {{
-                    running += val;
-                    cumData.push(Math.round(running / filteredCharge * 10000) / 100);
-                }} else {{
-                    cumData.push(null);
-                }}
-            }}
-            datasets.push({{
-                label: (isFiltered ? '\U0001f50d ' : '') + y,
-                data: cumData,
-                borderColor: colors[y] || '#999',
-                backgroundColor: 'transparent',
+        // CY2026 actual cumulative (stops at current month)
+        const now = new Date();
+        const currentMonth = now.getMonth(); // 0-based
+        const actualData = [];
+        let running = 0;
+        for (let m = 0; m <= currentMonth; m++) {{
+            running += monthTotals[m];
+            actualData.push(Math.round(running / filteredCharge * 10000) / 100);
+        }}
+        // Pad rest with null so line stops
+        for (let m = currentMonth + 1; m < 12; m++) actualData.push(null);
+
+        // Burn rate projection (red line, full year)
+        const jan1 = new Date(now.getFullYear(), 0, 1);
+        const elapsed = Math.max(1, Math.floor((now - jan1) / 86400000));
+        const diy = now.getFullYear() % 4 === 0 ? 366 : 365;
+        const dailyBurn = running > 0 ? (running / elapsed) : 0;
+        const projData = [];
+        const daysPerMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+        let cumDays = 0;
+        for (let m = 0; m < 12; m++) {{
+            cumDays += daysPerMonth[m];
+            const projLbs = dailyBurn * cumDays;
+            projData.push(Math.round(projLbs / filteredCharge * 10000) / 100);
+        }}
+
+        const datasets = [
+            {{
+                label: 'CY2026 Actual',
+                data: actualData,
+                borderColor: '{B}', backgroundColor: 'transparent',
                 fill: false, tension: 0.3,
-                pointRadius: 4,
-                pointBackgroundColor: colors[y] || '#999',
-                borderWidth: y === 2026 ? 3 : 2,
-                spanGaps: false
-            }});
-        }});
-        datasets.push({{
-            label: LK_T + '% Threshold',
-            data: Array(12).fill(LK_T),
-            borderColor: '{R}', borderWidth: 2,
-            borderDash: [6, 3], pointRadius: 0, fill: false
-        }});
+                pointRadius: 5, pointBackgroundColor: '{B}',
+                borderWidth: 3, spanGaps: false
+            }},
+            {{
+                label: '\U0001f525 Burn Rate Projection',
+                data: projData,
+                borderColor: '{R}', backgroundColor: '{R}11',
+                fill: true, tension: 0.3,
+                pointRadius: 0, borderWidth: 2,
+                borderDash: [8, 4]
+            }},
+            {{
+                label: LK_T + '% Threshold',
+                data: Array(12).fill(LK_T),
+                borderColor: '#6b7280', borderWidth: 2,
+                borderDash: [4, 4], pointRadius: 0, fill: false
+            }}
+        ];
 
         lkYoyChart.data.datasets = datasets;
         lkYoyChart.update();
