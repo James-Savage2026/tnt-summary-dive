@@ -91,58 +91,107 @@ def build_leak_js(store_json, mgmt_json, cumul_json, burn_json, wo_json='{}', mo
             }});
         }});
 
-        // CY2026 actual cumulative (stops at current month)
         const now = new Date();
         const currentMonth = now.getMonth(); // 0-based
+        const jan1 = new Date(now.getFullYear(), 0, 1);
+        const elapsed = Math.max(1, Math.floor((now - jan1) / 86400000));
+        const daysPerMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+        // CY2026 actual cumulative
         const actualData = [];
         let running = 0;
         for (let m = 0; m <= currentMonth; m++) {{
             running += monthTotals[m];
             actualData.push(Math.round(running / filteredCharge * 10000) / 100);
         }}
-        // Pad rest with null so line stops
         for (let m = currentMonth + 1; m < 12; m++) actualData.push(null);
+        const lastActual = actualData[currentMonth];
 
-        // Burn rate projection (red line, full year)
-        const jan1 = new Date(now.getFullYear(), 0, 1);
-        const elapsed = Math.max(1, Math.floor((now - jan1) / 86400000));
-        const diy = now.getFullYear() % 4 === 0 ? 366 : 365;
+        // Burn rate projection — starts from last actual, continues to Dec
         const dailyBurn = running > 0 ? (running / elapsed) : 0;
         const projData = [];
-        const daysPerMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
         let cumDays = 0;
         for (let m = 0; m < 12; m++) {{
             cumDays += daysPerMonth[m];
-            const projLbs = dailyBurn * cumDays;
-            projData.push(Math.round(projLbs / filteredCharge * 10000) / 100);
+            if (m < currentMonth) {{
+                projData.push(null); // don't show before actual ends
+            }} else {{
+                const projLbs = dailyBurn * cumDays;
+                projData.push(Math.round(projLbs / filteredCharge * 10000) / 100);
+            }}
         }}
 
+        // Safe zone fill (green under threshold)
+        const safeData = projData.map(v => v !== null ? Math.min(v, LK_T) : null);
+        // Danger zone fill (red above threshold)
+        const dangerData = projData.map(v => v !== null && v > LK_T ? v : null);
+        const eoyRate = projData[11] || 0;
+        const crossMonth = projData.findIndex(v => v !== null && v >= LK_T);
+
         const datasets = [
+            // Green safe zone fill (under 9%)
             {{
-                label: 'CY2026 Actual',
-                data: actualData,
-                borderColor: '{B}', backgroundColor: 'transparent',
-                fill: false, tension: 0.3,
-                pointRadius: 5, pointBackgroundColor: '{B}',
-                borderWidth: 3, spanGaps: false
+                label: 'Under ' + LK_T + '%',
+                data: safeData,
+                borderColor: 'transparent',
+                backgroundColor: '{G}18',
+                fill: 'origin', tension: 0.3,
+                pointRadius: 0, borderWidth: 0,
+                spanGaps: true
             }},
+            // Red danger zone fill (projection above 9%)
             {{
-                label: '\U0001f525 Burn Rate Projection',
-                data: projData,
-                borderColor: '{R}', backgroundColor: '{R}11',
-                fill: true, tension: 0.3,
-                pointRadius: 0, borderWidth: 2,
-                borderDash: [8, 4]
+                label: 'Over ' + LK_T + '%',
+                data: projData.map((v, i) => {{
+                    if (v === null) return null;
+                    return v > LK_T ? v : LK_T;
+                }}),
+                borderColor: 'transparent',
+                backgroundColor: projData.some(v => v > LK_T) ? '{R}15' : 'transparent',
+                fill: {{ target: '+1', above: '{R}15' }},
+                tension: 0.3, pointRadius: 0, borderWidth: 0,
+                spanGaps: true
             }},
+            // 9% Threshold
             {{
                 label: LK_T + '% Threshold',
                 data: Array(12).fill(LK_T),
-                borderColor: '#6b7280', borderWidth: 2,
-                borderDash: [4, 4], pointRadius: 0, fill: false
+                borderColor: '{R}',
+                borderWidth: 2, borderDash: [6, 3],
+                pointRadius: 0, fill: false
+            }},
+            // Burn rate projection line
+            {{
+                label: '\U0001f525 Projected (' + eoyRate.toFixed(1) + '% EOY)',
+                data: projData,
+                borderColor: '{R}',
+                backgroundColor: 'transparent',
+                fill: false, tension: 0.3,
+                pointRadius: projData.map((v, i) => i === 11 ? 6 : 0),
+                pointBackgroundColor: '{R}',
+                borderWidth: 2, borderDash: [8, 4],
+                spanGaps: true
+            }},
+            // CY2026 actual (solid blue, stops at current month)
+            {{
+                label: 'CY2026 Actual (' + lastActual.toFixed(2) + '%)',
+                data: actualData,
+                borderColor: '{B}',
+                backgroundColor: '{B}22',
+                fill: 'origin', tension: 0.3,
+                pointRadius: actualData.map(v => v !== null ? 6 : 0),
+                pointBackgroundColor: '{B}',
+                borderWidth: 3, spanGaps: false
             }}
         ];
 
         lkYoyChart.data.datasets = datasets;
+        lkYoyChart.options.plugins.datalabels = {{
+            display: (ctx) => ctx.datasetIndex === 4 && ctx.raw !== null,
+            anchor: 'top', align: 'top', color: '{B}',
+            font: {{ weight: 'bold', size: 11 }},
+            formatter: (v) => v.toFixed(2) + '%'
+        }};
         lkYoyChart.update();
     }}
 
