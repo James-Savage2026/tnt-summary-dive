@@ -323,7 +323,7 @@ def build_leak_js(store_json, mgmt_json, cumul_json, burn_json, wo_json='{}'):
                 : '<span class="px-1.5 py-0.5 rounded bg-amber-500 text-white text-xs">Open</span>';
             html += `<tr class="border-b border-blue-100 hover:bg-blue-100">
                 <td class="px-2 py-1.5">
-                    <a href="https://fixxbook.servicechannel.com/WorkOrders/WorkOrderDetails?wonum=${{w.tr}}" target="_blank"
+                    <a href="https://www.servicechannel.com/sc/wo/Workorders/index?id=${{w.tr}}" target="_blank"
                        class="text-[{B}] font-semibold hover:underline">#${{w.tr}}</a>
                 </td>
                 <td class="px-2 py-1.5 text-gray-700">${{w.dt || '-'}}</td>

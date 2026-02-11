@@ -337,12 +337,9 @@ def main():
                         <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
                         <select id="wtwFilterStatus" onchange="filterWtwData()" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-walmart-blue focus:border-walmart-blue text-sm">
                             <option value="">All Statuses</option>
-                            <option value="INCOMPLETE">Incomplete</option>
-                            <option value="DISPATCH CONFIRMED">Dispatch Confirmed</option>
-                            <option value="PARTS DELIVERED">Parts Delivered</option>
-                            <option value="PARTS ON ORDER">Parts On Order</option>
-                            <option value="OPEN">Open (Unassigned)</option>
                             <option value="COMPLETED">Completed</option>
+                            <option value="IN PROGRESS">In Progress</option>
+                            <option value="OPEN">Open</option>
                         </select>
                     </div>
                     <div>
@@ -357,31 +354,23 @@ def main():
             </div>
             
             <!-- KPIs Row -->
-            <div class="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6" id="wtwKpiRow">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" id="wtwKpiRow">
                 <div class="bg-white rounded-lg shadow p-4 border-l-4 border-green-500">
                     <p class="text-sm text-gray-500 uppercase">Completed</p>
                     <p class="text-2xl font-bold text-green-600" id="wtwKpiCompleted">0</p>
                     <p class="text-xs text-gray-400" id="wtwKpiCompletionRate">0% complete</p>
                 </div>
-                <div class="bg-white rounded-lg shadow p-4 border-l-4 border-red-500">
-                    <p class="text-sm text-gray-500 uppercase">Incomplete</p>
-                    <p class="text-2xl font-bold text-red-600" id="wtwKpiIncomplete">{status_counts.get('INCOMPLETE', 0):,}</p>
-                </div>
                 <div class="bg-white rounded-lg shadow p-4 border-l-4 border-yellow-500">
-                    <p class="text-sm text-gray-500 uppercase">Dispatched</p>
-                    <p class="text-2xl font-bold text-yellow-600" id="wtwKpiDispatch">{status_counts.get('DISPATCH CONFIRMED', 0):,}</p>
-                </div>
-                <div class="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
-                    <p class="text-sm text-gray-500 uppercase">Parts Delivered</p>
-                    <p class="text-2xl font-bold text-blue-600" id="wtwKpiPartsDelivered">{status_counts.get('PARTS DELIVERED', 0):,}</p>
-                </div>
-                <div class="bg-white rounded-lg shadow p-4 border-l-4 border-orange-500">
-                    <p class="text-sm text-gray-500 uppercase">Parts On Order</p>
-                    <p class="text-2xl font-bold text-orange-600" id="wtwKpiPartsOrder">{status_counts.get('PARTS ON ORDER', 0):,}</p>
+                    <p class="text-sm text-gray-500 uppercase">In Progress</p>
+                    <p class="text-2xl font-bold text-yellow-600" id="wtwKpiInProgress">0</p>
                 </div>
                 <div class="bg-white rounded-lg shadow p-4 border-l-4 border-gray-500">
                     <p class="text-sm text-gray-500 uppercase">Open</p>
-                    <p class="text-2xl font-bold text-gray-600" id="wtwKpiOpen">{status_counts.get('', 0):,}</p>
+                    <p class="text-2xl font-bold text-gray-600" id="wtwKpiOpen">0</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-4 border-l-4 border-[#0053e2]">
+                    <p class="text-sm text-gray-500 uppercase">Total</p>
+                    <p class="text-2xl font-bold text-[#0053e2]" id="wtwKpiTotal">0</p>
                 </div>
             </div>
             
@@ -723,10 +712,8 @@ def main():
             if (wtwCurrentStatus === 'IN_PROGRESS' && wo.st !== 'IN PROGRESS') return false;
             if (wtwCurrentStatus === 'OPEN' && wo.st !== 'OPEN') return false;
             // Dropdown filter (if no button selected)
-            if (!wtwCurrentStatus) {{
-                if (status === 'COMPLETED' && wo.st !== 'COMPLETED') return false;
-                if (status === 'OPEN' && wo.st !== 'OPEN' && wo.est !== '') return false;
-                if (status && status !== 'OPEN' && status !== 'COMPLETED' && wo.est !== status) return false;
+            if (!wtwCurrentStatus && status) {{
+                if (wo.st !== status) return false;
             }}
             if (search) {{
                 const searchStr = (wo.s + ' ' + wo.city + ' ' + wo.t + ' ' + wo.fm + ' ' + wo.loc).toLowerCase();
@@ -949,8 +936,8 @@ def main():
                                wo.ph === 'PH2' ? 'bg-green-100 text-green-800' : 
                                'bg-purple-100 text-purple-800';
             const statusClass = wo.st === 'COMPLETED' ? 'text-green-600 font-semibold' : 
-                               wo.est === 'INCOMPLETE' ? 'text-red-600 font-semibold' : 'text-gray-600';
-            const statusText = wo.st === 'COMPLETED' ? '✓ COMPLETED' : (wo.est || wo.st);
+                               wo.st === 'IN PROGRESS' ? 'text-yellow-600 font-semibold' : 'text-gray-600';
+            const statusText = wo.st === 'COMPLETED' ? '✓ COMPLETED' : wo.st;
             const div1Badge = wo.div1 === 'Y' ? '<span class="ml-1 px-1 py-0.5 rounded text-xs bg-orange-100 text-orange-700" title="Div1 - Small format store">D1</span>' : '';
             return `
                 <tr class="hover:bg-gray-50 ${{wo.div1 === 'Y' ? 'bg-orange-50' : ''}}">
@@ -1271,10 +1258,10 @@ def main():
         wtwStatusChart = new Chart(statusCtx, {{
             type: 'doughnut',
             data: {{
-                labels: ['Completed', 'Incomplete', 'Dispatched', 'Parts Delivered', 'Parts On Order', 'Open'],
+                labels: ['Completed', 'In Progress', 'Open'],
                 datasets: [{{
-                    data: [0, 0, 0, 0, 0, 0],
-                    backgroundColor: ['#22c55e', '#ef4444', '#eab308', '#3b82f6', '#f97316', '#6b7280'],
+                    data: [0, 0, 0],
+                    backgroundColor: ['#2a8703', '#ffc220', '#6b7280'],
                     borderWidth: 0
                 }}]
             }},
@@ -1336,27 +1323,28 @@ def main():
     function updateWtwCharts() {{
         if (!wtwStatusChart || !wtwPhaseChart) return;
         
-        // Count statuses in filtered data
-        const statusCounts = {{'COMPLETED': 0, 'INCOMPLETE': 0, 'DISPATCH CONFIRMED': 0, 'PARTS DELIVERED': 0, 'PARTS ON ORDER': 0, 'OPEN': 0}};
+        // Count main statuses in filtered data
+        const statusCounts = {{'COMPLETED': 0, 'IN PROGRESS': 0, 'OPEN': 0}};
         const phaseCounts = {{'PH1': 0, 'PH2': 0, 'PH3': 0}};
         
         wtwFilteredData.forEach(wo => {{
-            if (wo.st === 'COMPLETED') {{
-                statusCounts['COMPLETED']++;
-            }} else {{
-                const est = wo.est || 'OPEN';
-                if (statusCounts.hasOwnProperty(est)) statusCounts[est]++;
-                else if (est.includes('PARTS')) statusCounts['PARTS ON ORDER']++;
-            }}
+            if (wo.st === 'COMPLETED') statusCounts['COMPLETED']++;
+            else if (wo.st === 'IN PROGRESS') statusCounts['IN PROGRESS']++;
+            else statusCounts['OPEN']++;
             phaseCounts[wo.ph] = (phaseCounts[wo.ph] || 0) + 1;
         }});
         
+        // Update KPI cards
+        const total = wtwFilteredData.length;
+        document.getElementById('wtwKpiCompleted').textContent = statusCounts['COMPLETED'].toLocaleString();
+        document.getElementById('wtwKpiCompletionRate').textContent = total > 0 ? ((statusCounts['COMPLETED'] / total) * 100).toFixed(1) + '% complete' : '0% complete';
+        document.getElementById('wtwKpiInProgress').textContent = statusCounts['IN PROGRESS'].toLocaleString();
+        document.getElementById('wtwKpiOpen').textContent = statusCounts['OPEN'].toLocaleString();
+        document.getElementById('wtwKpiTotal').textContent = total.toLocaleString();
+        
         wtwStatusChart.data.datasets[0].data = [
             statusCounts['COMPLETED'],
-            statusCounts['INCOMPLETE'],
-            statusCounts['DISPATCH CONFIRMED'],
-            statusCounts['PARTS DELIVERED'],
-            statusCounts['PARTS ON ORDER'],
+            statusCounts['IN PROGRESS'],
             statusCounts['OPEN']
         ];
         wtwStatusChart.update();
