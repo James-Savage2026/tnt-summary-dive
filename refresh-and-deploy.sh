@@ -169,7 +169,7 @@ fi
 echo ""
 echo "======================================"
 echo "🎉 Done! Your dashboard is updating at:"
-echo "   https://pages.gecgithub01.walmart.com/j0s028j/north-bu-hvacr-report-hub/"
+echo "   https://gecgithub01.walmart.com/pages/j0s028j/north-bu-hvacr-report-hub/"
 echo ""
 echo "   (GitHub Pages takes 1-2 minutes to refresh)"
 echo "======================================"
