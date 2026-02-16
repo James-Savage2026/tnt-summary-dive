@@ -475,10 +475,12 @@ async function generatePdf() {
     try {
         const content = buildPdfContent(pdfExportTab, level, person);
 
-        // Temporarily append to DOM for html2pdf to render
-        content.style.position = 'fixed';
-        content.style.left = '-9999px';
-        content.style.top = '0';
+        // Append visible on page (behind modal) so html2canvas can capture it
+        content.style.position = 'absolute';
+        content.style.left = '0';
+        content.style.top = document.body.scrollHeight + 'px';
+        content.style.zIndex = '1';
+        content.style.opacity = '1';
         document.body.appendChild(content);
 
         const levelSlug = level === 'sr_director' ? 'SrDir' : 'Dir';
