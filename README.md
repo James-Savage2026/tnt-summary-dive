@@ -104,14 +104,17 @@ Run: python3 refresh.py
 
 ## 🔗 BigQuery Data Sources
 
+> **⚠️ See [DATA_SOURCES.md](DATA_SOURCES.md) for the full specification.
+> Do not change data sources without reading that document and getting approval.**
+
 | Table | Purpose | Join Key |
 |-------|---------|----------|
 | `crystal.store_tabular_view` | Store metrics, TnT, dewpoint | `store_number` (INT64) |
 | `crystal.sc_workorder` | Service Channel work orders | `tracking_nbr` (INT64), `store_nbr` (STRING) |
-| `crystal.rack_comprehensive_performance_data` | Rack scorecards | `storeNo` (STRING) |
-| `us_re_ods_prod_pub.sc_walmart_workorder_labor_performed` | Labor hours, check-ins | `tracking_number` (INT64) |
+| `us_re_ods_prod_pub.dip_rack_scorecard` | Rack scores (daily) | `storeNo` (STRING) |
+| `us_re_ods_prod_pub.sc_walmart_workorder_labor_performed` | Labor hours | `tracking_number` (INT64) |
 
-**⚠️ Type gotchas:** `store_nbr` in `sc_workorder` is STRING. Use `SAFE_CAST(store_nbr AS INT64)` when joining to `store_tabular_view`.
+**⚠️ BANNED:** `rack_comprehensive_performance_data` — stale data, DO NOT USE.
 
 ---
 

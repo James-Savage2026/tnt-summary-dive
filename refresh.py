@@ -24,17 +24,28 @@ LATEST_CSV = BQ_DIR / 'wtw-fy26-workorders-pm-scores-labor-LATEST.csv'
 PHASE_MAP_CSV = BQ_DIR / 'wtw-fy26-workorders-pm-scores-labor-20260209-151220.csv'
 BQ_RAW_CSV = BQ_DIR / 'wtw-bq-raw-latest.csv'
 LABOR_CSV = BQ_DIR / 'wtw-labor-latest.csv'
+RACK_CSV = BQ_DIR / 'dip-rack-scores-latest.csv'
 
 
 # === BQ Queries ===
 # Stored as constants so they're version-controlled and never hand-typed again.
 
+# ─── RACK SCORE SOURCE ───────────────────────────────────────────────
+# DO NOT CHANGE THIS TABLE without explicit approval.
+# See DATA_SOURCES.md for full rationale.
+#
+# Correct table:  re-ods-prod.us_re_ods_prod_pub.dip_rack_scorecard
+# Wrong table:    re-crystal-mdm-prod.crystal.rack_comprehensive_performance_data
+#                 (stale — data only through Oct 2024, DO NOT USE)
+#
+# Scoring rules:
+#   - Filter to groupKey = 'rackCallLetter' (rack-level tests only)
+#   - result = 1 means FAILED, result = 0 means PASSED
+#   - Rack Score = 100 * (tests where result=0) / (total tests)
+#   - Use most recent testDate per store
+# ─────────────────────────────────────────────────────────────────────
+
 QUERY_WTW_WORKORDERS = """
-WITH rack_scores AS (
-  SELECT storeNo, AVG(scorecard_score) AS rack_score
-  FROM `re-crystal-mdm-prod.crystal.rack_comprehensive_performance_data`
-  GROUP BY storeNo
-)
 SELECT
   w.tracking_nbr, w.workorder_nbr, w.store_nbr,
   CONCAT(IFNULL(s.city_name,''), ', ', IFNULL(s.state_cd,'')) AS store_name,
@@ -45,7 +56,6 @@ SELECT
   FORMAT_TIMESTAMP('%Y-%m-%dT%H:%M:%S', w.expiration_date) AS expiration_date,
   FORMAT_TIMESTAMP('%Y-%m-%dT%H:%M:%S', w.created_date) AS created_date,
   ROUND(s.twt_ref, 2) AS tnt_score,
-  ROUND(r.rack_score, 2) AS rack_score,
   ROUND(s.dewpoint, 1) AS dewpoint_raw,
   ROUND(s.twt_hvac, 2) AS dewpoint_score,
   IF(s.banner_desc = 'Wal-Mart' OR s.store_type_cd = 'R', 'Y', 'N') AS is_div1,
@@ -53,11 +63,34 @@ SELECT
 FROM `re-crystal-mdm-prod.crystal.sc_workorder` w
 LEFT JOIN `re-crystal-mdm-prod.crystal.store_tabular_view` s
   ON SAFE_CAST(w.store_nbr AS INT64) = s.store_number
-LEFT JOIN rack_scores r ON w.store_nbr = r.storeNo
 WHERE w.problem_code_desc LIKE '%WIN THE WINTER%'
   AND SAFE_CAST(w.store_nbr AS INT64) IS NOT NULL
   AND w.created_date >= '2025-06-01'
 ORDER BY SAFE_CAST(w.store_nbr AS INT64)
+"""
+
+QUERY_RACK_SCORES = """
+-- Rack scores from dip_rack_scorecard (most recent date per store)
+-- DO NOT replace with rack_comprehensive_performance_data — see DATA_SOURCES.md
+WITH latest_date AS (
+  SELECT storeNo, MAX(testDate) AS max_date
+  FROM `re-ods-prod.us_re_ods_prod_pub.dip_rack_scorecard`
+  WHERE groupKey = 'rackCallLetter'
+  GROUP BY storeNo
+)
+SELECT
+  d.storeNo,
+  d.testDate,
+  COUNT(*) AS total_tests,
+  SUM(d.result) AS failed_tests,
+  COUNT(*) - SUM(d.result) AS passed_tests,
+  ROUND(100.0 * (COUNT(*) - SUM(d.result)) / COUNT(*), 2) AS rack_score
+FROM `re-ods-prod.us_re_ods_prod_pub.dip_rack_scorecard` d
+INNER JOIN latest_date ld
+  ON d.storeNo = ld.storeNo AND d.testDate = ld.max_date
+WHERE d.groupKey = 'rackCallLetter'
+GROUP BY d.storeNo, d.testDate
+ORDER BY d.storeNo
 """
 
 QUERY_LABOR = """
@@ -202,12 +235,17 @@ def calc_pm(row: dict) -> dict:
     }
 
 
-def merge_data(bq_rows: list, labor_map: dict, phase_map: dict) -> list[dict]:
-    """Merge BQ WO data + labor + phases into final output rows."""
+def merge_data(
+    bq_rows: list, labor_map: dict, rack_map: dict, phase_map: dict,
+) -> list[dict]:
+    """Merge BQ WO data + rack scores + labor + phases into final output."""
     out = []
     for r in bq_rows:
         tn = str(r['tracking_nbr']).strip()
         lp = labor_map.get(tn, {})
+        store = r.get('store_nbr', '').strip()
+        # Inject rack score from dip_rack_scorecard
+        r['rack_score'] = str(rack_map[store]) if store in rack_map else ''
         pm = calc_pm(r)
 
         out.append({
@@ -318,15 +356,20 @@ def main():
     else:
         print("\n\U0001f4e1 Step 1: Pulling fresh data from BigQuery")
         run_bq(QUERY_WTW_WORKORDERS, BQ_RAW_CSV)
+        run_bq(QUERY_RACK_SCORES, RACK_CSV, max_rows=10000)
         run_bq(QUERY_LABOR, LABOR_CSV)
         run_bq(QUERY_STORES, PROJECT / 'store_data.json')  # for TnT tab
 
-        # Merge BQ data + labor + phases
+        # Merge BQ data + rack scores + labor + phases
         print("\n\U0001f527 Step 2: Merging data")
         bq_rows = load_csv(BQ_RAW_CSV)
+        rack_map = {
+            r['storeNo']: float(r['rack_score'])
+            for r in load_csv(RACK_CSV)
+        }
         labor_map = {r['tracking_number']: r for r in load_csv(LABOR_CSV)}
         phase_map = load_phase_map()
-        merged = merge_data(bq_rows, labor_map, phase_map)
+        merged = merge_data(bq_rows, labor_map, rack_map, phase_map)
         write_csv(merged, LATEST_CSV)
         print_stats(merged)
         print(f"   \u2705 Saved: {LATEST_CSV.name}")
