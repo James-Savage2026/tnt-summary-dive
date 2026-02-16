@@ -926,6 +926,52 @@ def main():
     }}
     
     // Render WTW table
+    // Build mailto: link for emailing RM/FSM about a store's PM status
+    function buildMailto(name, role, wo) {{
+        if (!name || name === '-') return '';
+        const isSams = (wo.banner || '').includes('Sam');
+        const bannerLabel = isSams ? "Sam's Club" : 'Walmart';
+        const threshold = isSams ? '87%' : '90%';
+        const pmVal = wo.pm ? parseFloat(wo.pm).toFixed(1) + '%' : 'N/A';
+        const rackVal = wo.rack ? parseFloat(wo.rack).toFixed(1) + '%' : 'No Data';
+        const tntVal = wo.tnt ? parseFloat(wo.tnt).toFixed(1) + '%' : 'No Data';
+        const dewVal = wo.dew ? parseFloat(wo.dew).toFixed(0) + '°F' : 'No Data';
+        const rackStatus = wo.rackP === 'PASS' ? '✅ Pass' : wo.rackP === 'FAIL' ? '❌ Fail' : '⬜ No Data';
+        const tntStatus = wo.tntP === 'PASS' ? '✅ Pass' : wo.tntP === 'FAIL' ? '❌ Fail' : '⬜ No Data';
+        const dewStatus = wo.dewP === 'PASS' ? '✅ Pass' : wo.dewP === 'FAIL' ? '❌ Fail' : '⬜ No Data';
+        const subject = `WTW FY26 — Store ${{wo.s}} (${{bannerLabel}}) — PM Score Review`;
+        const body = [
+            `Hi ${{name.split(' ')[0]}},`,
+            '',
+            `I'm reaching out regarding Win-the-Winter FY26 PM readiness for Store ${{wo.s}} (${{wo.loc || wo.city || ''}}).`,
+            '',
+            `── Store Summary ──────────────────`,
+            `Store:        ${{wo.s}} — ${{wo.loc || wo.city || ''}}${{wo.state ? ', ' + wo.state : ''}}`,
+            `Banner:       ${{bannerLabel}}`,
+            `Phase:        ${{wo.ph}}`,
+            `Status:       ${{wo.st}}`,
+            `Tracking #:   ${{wo.t}}`,
+            `SC Link:      https://login.servicechannel.com/sc/wo/details/${{wo.t}}`,
+            '',
+            `── PM Scorecard ───────────────────`,
+            `PM Score:     ${{pmVal}} (target: ${{threshold}})`,
+            `Rack Score:   ${{rackVal}} ${{rackStatus}}`,
+            `TnT Score:    ${{tntVal}} ${{tntStatus}}`,
+            `Dewpoint:     ${{dewVal}} ${{dewStatus}}`,
+            '',
+            `── Labor ──────────────────────────`,
+            `Total Hours:  ${{wo.totH || '0'}}  (Repair: ${{wo.repH || '0'}}, Travel: ${{wo.trvH || '0'}})`,
+            `Visits:       ${{wo.vis || '0'}}`,
+            '',
+            `Could you please review this store and advise on next steps?`,
+            '',
+            `Thank you,`,
+            `James Savage`,
+            `North BU HVAC/R`
+        ].join('\n');
+        return `mailto:?subject=${{encodeURIComponent(subject)}}&body=${{encodeURIComponent(body)}}`;
+    }}
+    
     function renderWtwTable() {{
         console.log('renderWtwTable called, data count:', wtwFilteredData.length);
         // Sort data
@@ -966,8 +1012,18 @@ def main():
                             '<span class="px-2 py-0.5 rounded text-xs font-semibold bg-blue-800 text-white">Sam&#39;s</span>' : 
                             '<span class="px-2 py-0.5 rounded text-xs font-semibold bg-yellow-400 text-blue-900">WM</span>'}}
                     </td>
-                    <td class="px-3 py-2 text-sm text-gray-600">${{wo.rm || '-'}}</td>
-                    <td class="px-3 py-2 text-sm text-gray-600">${{wo.fsm || '-'}}</td>
+                    <td class="px-3 py-2 text-sm text-gray-600">
+                        <div class="flex items-center gap-1">
+                            <span>${{wo.rm || '-'}}</span>
+                            ${{wo.rm ? `<a href="${{buildMailto(wo.rm, 'RM', wo)}}" class="inline-flex items-center justify-center w-5 h-5 rounded hover:bg-blue-100 text-walmart-blue" title="Email ${{wo.rm}} about Store ${{wo.s}}">\u2709</a>` : ''}}
+                        </div>
+                    </td>
+                    <td class="px-3 py-2 text-sm text-gray-600">
+                        <div class="flex items-center gap-1">
+                            <span>${{wo.fsm || '-'}}</span>
+                            ${{wo.fsm && !wo.fsm.includes('-FS') ? `<a href="${{buildMailto(wo.fsm, 'FSM', wo)}}" class="inline-flex items-center justify-center w-5 h-5 rounded hover:bg-blue-100 text-walmart-blue" title="Email ${{wo.fsm}} about Store ${{wo.s}}">\u2709</a>` : ''}}
+                        </div>
+                    </td>
                     <td class="px-3 py-2 text-sm text-center">
                         ${{wo.pm ? `
                             <div class="flex items-center justify-center gap-1">
