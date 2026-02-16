@@ -224,7 +224,7 @@ function buildWtwPdf(stores, level, person, isAll) {
 
     // Group breakdown for WTW by director/RM
     const childGroupBy = level === 'sr_director' ? 'fm' : 'rm';
-    const childLabel = level === 'sr_director' ? 'Director' : 'Regional Manager';
+    const wtwChildLabel = level === 'sr_director' ? 'Director' : 'Regional Manager';
     const grpMap = {};
     wtwWos.forEach(w => {
         const grp = w[childGroupBy] || 'Unknown';
@@ -238,10 +238,10 @@ function buildWtwPdf(stores, level, person, isAll) {
         .sort((a,b) => a.pct - b.pct);
 
     if (wtwGroups.length > 1) {
-        html += `<h3 style="font-size:14px; font-weight:700; margin:20px 0 8px; color:#0071ce;">📊 WTW Completion by ${childLabel}</h3>`;
+        html += `<h3 style="font-size:14px; font-weight:700; margin:20px 0 8px; color:#0071ce;">📊 WTW Completion by ${wtwChildLabel}</h3>`;
         html += `<table style="width:100%; border-collapse:collapse; font-size:11px;">
             <thead><tr style="background:#0071ce; color:#fff;">
-                <th style="${th()}">${childLabel}</th><th style="${th()}">Total</th>
+                <th style="${th()}">${wtwChildLabel}</th><th style="${th()}">Total</th>
                 <th style="${th()}">Completed</th><th style="${th()}">Completion %</th>
                 <th style="${th()}">Avg PM</th>
             </tr></thead><tbody>`;
@@ -357,7 +357,7 @@ function buildLeakPdf(stores, level, person, isAll) {
 
     // Group breakdown for WTW by director/RM
     const childGroupBy = level === 'sr_director' ? 'fm' : 'rm';
-    const childLabel = level === 'sr_director' ? 'Director' : 'Regional Manager';
+    const wtwChildLabel = level === 'sr_director' ? 'Director' : 'Regional Manager';
     const grpMap = {};
     wtwWos.forEach(w => {
         const grp = w[childGroupBy] || 'Unknown';
@@ -371,10 +371,10 @@ function buildLeakPdf(stores, level, person, isAll) {
         .sort((a,b) => a.pct - b.pct);
 
     if (wtwGroups.length > 1) {
-        html += `<h3 style="font-size:14px; font-weight:700; margin:20px 0 8px; color:#0071ce;">📊 WTW Completion by ${childLabel}</h3>`;
+        html += `<h3 style="font-size:14px; font-weight:700; margin:20px 0 8px; color:#0071ce;">📊 WTW Completion by ${wtwChildLabel}</h3>`;
         html += `<table style="width:100%; border-collapse:collapse; font-size:11px;">
             <thead><tr style="background:#0071ce; color:#fff;">
-                <th style="${th()}">${childLabel}</th><th style="${th()}">Total</th>
+                <th style="${th()}">${wtwChildLabel}</th><th style="${th()}">Total</th>
                 <th style="${th()}">Completed</th><th style="${th()}">Completion %</th>
                 <th style="${th()}">Avg PM</th>
             </tr></thead><tbody>`;
