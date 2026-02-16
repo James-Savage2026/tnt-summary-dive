@@ -941,9 +941,9 @@ def main():
         const dewStatus = wo.dewP === 'PASS' ? '✅ Pass' : wo.dewP === 'FAIL' ? '❌ Fail' : '⬜ No Data';
         const subject = `WTW FY26 — Store ${{wo.s}} (${{bannerLabel}}) — PM Score Review`;
         const body = [
-            `Hi ${{name.split(' ')[0]}},`,
+            `Hey ${{name.split(' ')[0]}}!`,
             '',
-            `I'm reaching out regarding Win-the-Winter FY26 PM readiness for Store ${{wo.s}} (${{wo.loc || wo.city || ''}}).`,
+            `Just checking in on Win-the-Winter FY26 PM readiness for Store ${{wo.s}} (${{wo.loc || wo.city || ''}}).`,
             '',
             `── Store Summary ──────────────────`,
             `Store:        ${{wo.s}} — ${{wo.loc || wo.city || ''}}${{wo.state ? ', ' + wo.state : ''}}`,
@@ -963,11 +963,8 @@ def main():
             `Total Hours:  ${{wo.totH || '0'}}  (Repair: ${{wo.repH || '0'}}, Travel: ${{wo.trvH || '0'}})`,
             `Visits:       ${{wo.vis || '0'}}`,
             '',
-            `Could you please review this store and advise on next steps?`,
-            '',
-            `Thank you,`,
-            `James Savage`,
-            `North BU HVAC/R`
+            `Is this PM 100% complete? Are you and the team satisfied with the result, or is there anything else we should address before closing this out?`,
+            ''
         ].join('\\n');
         return `mailto:?subject=${{encodeURIComponent(subject)}}&body=${{encodeURIComponent(body)}}`;
     }}
@@ -1015,13 +1012,13 @@ def main():
                     <td class="px-3 py-2 text-sm text-gray-600">
                         <div class="flex items-center gap-1">
                             <span>${{wo.rm || '-'}}</span>
-                            ${{wo.rm ? `<a href="${{buildMailto(wo.rm, 'RM', wo)}}" class="inline-flex items-center justify-center w-5 h-5 rounded hover:bg-blue-100 text-walmart-blue" title="Email ${{wo.rm}} about Store ${{wo.s}}">\u2709</a>` : ''}}
+                            ${{wo.rm ? `<a href="${{buildMailto(wo.rm, 'RM', wo)}}" class="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-blue-100" title="Email ${{wo.rm}} about Store ${{wo.s}}"><svg width="16" height="16" viewBox="0 0 32 32" fill="none"><rect x="2" y="6" width="28" height="20" rx="2" fill="#0078d4"/><path d="M2 8l14 9 14-9" stroke="#fff" stroke-width="2" fill="none"/><rect x="17" y="14" width="13" height="12" rx="1" fill="#0053e2"/><text x="23.5" y="23" text-anchor="middle" font-size="8" font-weight="bold" fill="#fff">O</text></svg></a>` : ''}}
                         </div>
                     </td>
                     <td class="px-3 py-2 text-sm text-gray-600">
                         <div class="flex items-center gap-1">
                             <span>${{wo.fsm || '-'}}</span>
-                            ${{wo.fsm && !wo.fsm.includes('-FS') ? `<a href="${{buildMailto(wo.fsm, 'FSM', wo)}}" class="inline-flex items-center justify-center w-5 h-5 rounded hover:bg-blue-100 text-walmart-blue" title="Email ${{wo.fsm}} about Store ${{wo.s}}">\u2709</a>` : ''}}
+                            ${{wo.fsm && !wo.fsm.includes('-FS') ? `<a href="${{buildMailto(wo.fsm, 'FSM', wo)}}" class="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-blue-100" title="Email ${{wo.fsm}} about Store ${{wo.s}}"><svg width="16" height="16" viewBox="0 0 32 32" fill="none"><rect x="2" y="6" width="28" height="20" rx="2" fill="#0078d4"/><path d="M2 8l14 9 14-9" stroke="#fff" stroke-width="2" fill="none"/><rect x="17" y="14" width="13" height="12" rx="1" fill="#0053e2"/><text x="23.5" y="23" text-anchor="middle" font-size="8" font-weight="bold" fill="#fff">O</text></svg></a>` : ''}}
                         </div>
                     </td>
                     <td class="px-3 py-2 text-sm text-center">
