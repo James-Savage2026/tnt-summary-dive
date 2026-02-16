@@ -1,7 +1,6 @@
 /**
  * PDF Export Module — TnT/WTW/Leak Dashboard
- * Uses html2pdf.js (html2canvas + jsPDF) to generate filtered PDF reports.
- * Two export views: Director-level and Sr. Director-level.
+ * Executive-level PDF reports with insights and action items.
  */
 
 /* ── state ── */
@@ -9,28 +8,23 @@ let pdfExportTab = 'tnt';
 
 /* ── helpers ── */
 function getPeopleForLevel(level) {
-    if (level === 'sr_director') {
+    if (level === 'sr_director')
         return [...new Set(storeData.map(d => d.fm_sr_director_name).filter(Boolean))].sort();
-    }
     return [...new Set(storeData.map(d => d.fm_director_name).filter(Boolean))].sort();
 }
 
 function getStoresForPerson(level, person) {
-    if (level === 'sr_director') {
+    if (level === 'sr_director')
         return storeData.filter(d => d.fm_sr_director_name === person);
-    }
     return storeData.filter(d => d.fm_director_name === person);
 }
 
 /* ── modal ── */
 function openPdfModal(tab) {
     pdfExportTab = tab;
-    const modal = document.getElementById('pdfExportModal');
-    modal.classList.remove('hidden');
+    document.getElementById('pdfExportModal').classList.remove('hidden');
     document.getElementById('pdfTabLabel').textContent =
         tab === 'tnt' ? 'TnT Dashboard' : tab === 'wtw' ? 'Win the Winter' : 'Leak Management';
-
-    // Default to Sr Director
     document.getElementById('pdfViewLevel').value = 'sr_director';
     updatePdfPersonList();
 }
@@ -40,220 +34,316 @@ function closePdfModal() {
 }
 
 function updatePdfPersonList() {
-    const level = document.getElementById('pdfViewLevel').value;
-    const sel = document.getElementById('pdfPersonSelect');
-    const people = getPeopleForLevel(level);
+    var level = document.getElementById('pdfViewLevel').value;
+    var sel = document.getElementById('pdfPersonSelect');
+    var people = getPeopleForLevel(level);
     sel.innerHTML = '<option value="__all__">All (Full Report)</option>' +
-        people.map(p => `<option value="${p}">${p}</option>`).join('');
+        people.map(function(p) { return '<option value="' + p + '">' + p + '</option>'; }).join('');
 }
 
-/* ── build the capture container ── */
-function buildPdfContent(tab, level, person) {
-    const isAll = person === '__all__';
-    const stores = isAll ? storeData : getStoresForPerson(level, person);
-    const levelLabel = level === 'sr_director' ? 'Sr. Director' : 'FM Director';
-    const personLabel = isAll ? 'All Regions' : person;
-    const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+/* ── shared style helpers ── */
+function th() { return 'padding:6px 8px; text-align:left; font-size:11px; font-weight:600;'; }
+function td() { return 'padding:5px 8px; border-bottom:1px solid #e5e7eb;'; }
+function pct(v) { return v != null ? parseFloat(v).toFixed(1) + '%' : 'N/A'; }
 
-    const container = document.createElement('div');
-    container.style.cssText = 'width:1100px; padding:32px; font-family:system-ui,sans-serif; background:#fff; color:#1a1a1a;';
+function scoreColor(v) {
+    if (v == null) return 'color:#999;';
+    if (v >= 90) return 'color:#2a8703; font-weight:700;';
+    if (v >= 80) return 'color:#f59e0b; font-weight:600;';
+    return 'color:#ea1100; font-weight:700;';
+}
+
+function kpiBox(label, value, suffix, color) {
+    var c = color || (parseFloat(value) >= 90 ? '#2a8703' : parseFloat(value) >= 80 ? '#f59e0b' : '#ea1100');
+    var dv = typeof value === 'number' ? value.toFixed(1) : value;
+    return '<div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;text-align:center;background:#fafafa;">'
+        + '<div style="font-size:20px;font-weight:800;color:' + c + ';">' + dv + (suffix || '') + '</div>'
+        + '<div style="font-size:10px;color:#666;margin-top:4px;">' + label + '</div></div>';
+}
+
+function safeAvg(data, field) {
+    var valid = data.filter(function(d) { return d[field] != null && !isNaN(d[field]); });
+    return valid.length ? valid.reduce(function(s, d) { return s + parseFloat(d[field]); }, 0) / valid.length : 0;
+}
+
+function insightBox(items) {
+    var html = '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:16px;margin:16px 0;">';
+    html += '<div style="font-size:13px;font-weight:700;color:#0053e2;margin-bottom:8px;">💡 Key Insights & Action Items</div>';
+    html += '<ul style="margin:0;padding-left:20px;font-size:11px;color:#1e3a5f;line-height:1.7;">';
+    items.forEach(function(item) { html += '<li>' + item + '</li>'; });
+    html += '</ul></div>';
+    return html;
+}
+
+function sectionTitle(icon, text) {
+    return '<h3 style="font-size:14px;font-weight:700;margin:20px 0 8px;color:#0053e2;border-bottom:1px solid #e5e7eb;padding-bottom:4px;">' + icon + ' ' + text + '</h3>';
+}
+
+/* ── group stores by field ── */
+function groupStores(stores, groupBy) {
+    var map = {};
+    stores.forEach(function(s) {
+        var key = s[groupBy] || 'Unknown';
+        if (!map[key]) map[key] = [];
+        map[key].push(s);
+    });
+    return Object.entries(map)
+        .map(function(entry) {
+            var name = entry[0], ss = entry[1];
+            return {
+                name: name, count: ss.length,
+                avgRef30: safeAvg(ss, 'twt_ref_30_day'),
+                avgHvac30: safeAvg(ss, 'twt_hvac_30_day'),
+                totalLoss: ss.reduce(function(s, d) { return s + (d.total_loss || 0); }, 0),
+                casesOOT: ss.reduce(function(s, d) { return s + (d.cases_out_of_target || 0); }, 0)
+            };
+        })
+        .sort(function(a, b) { return a.avgRef30 - b.avgRef30; });
+}
+
+function buildGroupTable(groups, label) {
+    var html = sectionTitle('📊', 'Performance by ' + label);
+    html += '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="background:#0053e2;color:#fff;">';
+    html += '<th style="' + th() + '">' + label + '</th><th style="' + th() + '">Stores</th>';
+    html += '<th style="' + th() + '">Ref 30d</th><th style="' + th() + '">HVAC 30d</th>';
+    html += '<th style="' + th() + '">Total Loss</th><th style="' + th() + '">Cases OOT</th>';
+    html += '</tr></thead><tbody>';
+    groups.forEach(function(g, i) {
+        var bg = i % 2 === 0 ? '#f9fafb' : '#fff';
+        html += '<tr style="background:' + bg + ';">';
+        html += '<td style="' + td() + 'font-weight:600;">' + g.name + '</td>';
+        html += '<td style="' + td() + '">' + g.count + '</td>';
+        html += '<td style="' + td() + scoreColor(g.avgRef30) + '">' + g.avgRef30.toFixed(1) + '%</td>';
+        html += '<td style="' + td() + scoreColor(g.avgHvac30) + '">' + g.avgHvac30.toFixed(1) + '%</td>';
+        html += '<td style="' + td() + 'color:#ea1100;">$' + g.totalLoss.toLocaleString(undefined,{maximumFractionDigits:0}) + '</td>';
+        html += '<td style="' + td() + '">' + g.casesOOT.toLocaleString() + '</td>';
+        html += '</tr>';
+    });
+    html += '</tbody></table>';
+    return html;
+}
+
+/* ═══════════════════════════════════════════════════════════
+ *  BUILD PDF CONTENT
+ * ═══════════════════════════════════════════════════════════ */
+function buildPdfContent(tab, level, person) {
+    var isAll = person === '__all__';
+    var stores = isAll ? storeData : getStoresForPerson(level, person);
+    var levelLabel = level === 'sr_director' ? 'Sr. Director' : 'FM Director';
+    var personLabel = isAll ? 'All Regions' : person;
+    var dateStr = new Date().toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' });
+
+    var container = document.createElement('div');
+    container.style.cssText = 'width:1100px;padding:32px;font-family:system-ui,sans-serif;background:#fff;color:#1a1a1a;';
+
+    var tabName = tab === 'tnt' ? '📊 Time in Target Report' : tab === 'wtw' ? '❄️ Win the Winter Report' : '🧊 Leak Management Report';
 
     // Header
-    container.innerHTML = buildPdfHeader(tab, levelLabel, personLabel, dateStr, stores.length);
+    container.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:3px solid #0053e2;">'
+        + '<div><h1 style="font-size:22px;font-weight:800;color:#0053e2;margin:0;">' + tabName + '</h1>'
+        + '<p style="font-size:13px;color:#666;margin:4px 0 0;">' + levelLabel + ' Report: ' + personLabel + '</p></div>'
+        + '<div style="text-align:right;"><p style="font-size:12px;color:#666;margin:0;">Generated ' + dateStr + '</p>'
+        + '<p style="font-size:12px;color:#666;margin:2px 0 0;">' + stores.length + ' stores</p></div></div>';
 
     if (tab === 'tnt')  container.innerHTML += buildTntPdf(stores, level, person, isAll);
     if (tab === 'wtw')  container.innerHTML += buildWtwPdf(stores, level, person, isAll);
     if (tab === 'leak') container.innerHTML += buildLeakPdf(stores, level, person, isAll);
 
     // Footer
-    container.innerHTML += `
-        <div style="margin-top:24px; padding-top:12px; border-top:2px solid #0071ce; font-size:11px; color:#666; display:flex; justify-content:space-between;">
-            <span>Generated by TnT Dashboard • ${dateStr}</span>
-            <span>${levelLabel}: ${personLabel} • ${stores.length} stores</span>
-        </div>`;
+    container.innerHTML += '<div style="margin-top:24px;padding-top:12px;border-top:2px solid #0053e2;font-size:10px;color:#999;display:flex;justify-content:space-between;">'
+        + '<span>Generated by HVAC/R TnT Dashboard • ' + dateStr + '</span>'
+        + '<span>' + levelLabel + ': ' + personLabel + ' • ' + stores.length + ' stores</span></div>';
 
     return container;
 }
 
-function buildPdfHeader(tab, levelLabel, personLabel, dateStr, storeCount) {
-    const tabName = tab === 'tnt' ? '📊 TnT Dashboard' : tab === 'wtw' ? '❄️ Win the Winter' : '🧊 Leak Management';
-    return `
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:12px; border-bottom:3px solid #0071ce;">
-            <div>
-                <h1 style="font-size:22px; font-weight:800; color:#0071ce; margin:0;">${tabName}</h1>
-                <p style="font-size:13px; color:#666; margin:4px 0 0;">${levelLabel} Report: ${personLabel}</p>
-            </div>
-            <div style="text-align:right;">
-                <p style="font-size:12px; color:#666; margin:0;">Generated ${dateStr}</p>
-                <p style="font-size:12px; color:#666; margin:2px 0 0;">${storeCount} stores</p>
-            </div>
-        </div>`;
-}
-
-/* ── TnT PDF ── */
+/* ═══════════════════════════════════════════════════════════
+ *  TnT PDF — Executive Summary
+ * ═══════════════════════════════════════════════════════════ */
 function buildTntPdf(stores, level, person, isAll) {
-    const avgRef = safeAvg(stores, 'twt_ref');
-    const avg7d = safeAvg(stores, 'twt_ref_7_day');
-    const avg30d = safeAvg(stores, 'twt_ref_30_day');
-    const avg90d = safeAvg(stores, 'twt_ref_90_day');
-    const avgHvac = safeAvg(stores, 'twt_hvac_30_day');
-    const totalLoss = stores.reduce((s, d) => s + (d.total_loss || 0), 0);
-    const casesOOT = stores.reduce((s, d) => s + (d.cases_out_of_target || 0), 0);
+    var avg30d = safeAvg(stores, 'twt_ref_30_day');
+    var avg7d = safeAvg(stores, 'twt_ref_7_day');
+    var avg90d = safeAvg(stores, 'twt_ref_90_day');
+    var avgHvac = safeAvg(stores, 'twt_hvac_30_day');
+    var totalLoss = stores.reduce(function(s, d) { return s + (d.total_loss || 0); }, 0);
+    var casesOOT = stores.reduce(function(s, d) { return s + (d.cases_out_of_target || 0); }, 0);
+    var below80 = stores.filter(function(s) { return s.twt_ref_30_day != null && s.twt_ref_30_day < 80; }).length;
+    var below90 = stores.filter(function(s) { return s.twt_ref_30_day != null && s.twt_ref_30_day < 90; }).length;
+    var above90 = stores.filter(function(s) { return s.twt_ref_30_day != null && s.twt_ref_30_day >= 90; }).length;
+    var trendDir = avg7d > avg30d ? '📈 Trending Up' : avg7d < avg30d - 1 ? '📉 Trending Down' : '➡️ Stable';
 
-    let html = `
-        <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:20px;">
-            ${kpiBox('Ref TnT (Now)', avgRef, '%')}
-            ${kpiBox('Ref 7-Day', avg7d, '%')}
-            ${kpiBox('Ref 30-Day', avg30d, '%')}
-            ${kpiBox('Ref 90-Day', avg90d, '%')}
-            ${kpiBox('HVAC 30-Day', avgHvac, '%')}
-        </div>
-        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px;">
-            ${kpiBox('Stores', stores.length, '', '#333')}
-            ${kpiBox('Total Loss', '$' + totalLoss.toLocaleString(undefined,{maximumFractionDigits:0}), '', '#ea1100')}
-            ${kpiBox('Cases OOT', casesOOT.toLocaleString(), '', '#ea1100')}
-        </div>`;
+    var html = '';
+
+    // KPI Grid
+    html += '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:12px;">';
+    html += kpiBox('Ref 7-Day', avg7d, '%');
+    html += kpiBox('Ref 30-Day', avg30d, '%');
+    html += kpiBox('Ref 90-Day', avg90d, '%');
+    html += kpiBox('HVAC 30-Day', avgHvac, '%');
+    html += kpiBox('7d Trend', trendDir, '', avg7d >= avg30d ? '#2a8703' : '#ea1100');
+    html += '</div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;">';
+    html += kpiBox('Total Stores', stores.length, '', '#333');
+    html += kpiBox('Total Loss', '$' + (totalLoss/1000000).toFixed(1) + 'M', '', '#ea1100');
+    html += kpiBox('Cases OOT', casesOOT.toLocaleString(), '', '#ea1100');
+    html += kpiBox('Stores <90%', below90, '', below90 > 0 ? '#ea1100' : '#2a8703');
+    html += '</div>';
+
+    // Executive Insights
+    var insights = [];
+    if (avg7d > avg30d + 0.5) insights.push('<strong>Positive momentum:</strong> 7-day avg (' + avg7d.toFixed(1) + '%) is above 30-day (' + avg30d.toFixed(1) + '%), indicating recent improvement.');
+    if (avg7d < avg30d - 0.5) insights.push('<strong>Declining trend:</strong> 7-day avg (' + avg7d.toFixed(1) + '%) is below 30-day (' + avg30d.toFixed(1) + '%). Investigate recent changes.');
+    if (below80 > 0) insights.push('<strong>' + below80 + ' stores below 80% (critical):</strong> These stores need immediate review — likely equipment failures or sensor issues.');
+    if (below90 > 0) insights.push(below90 + ' of ' + stores.length + ' stores (' + (below90/stores.length*100).toFixed(0) + '%) are below 90% target. ' + above90 + ' stores (' + (above90/stores.length*100).toFixed(0) + '%) are meeting target.');
+    insights.push('Total estimated product loss: <strong>$' + (totalLoss/1000000).toFixed(1) + 'M</strong> with ' + casesOOT.toLocaleString() + ' cases out of target.');
+    if (avgHvac >= 93) insights.push('HVAC performance is strong at ' + avgHvac.toFixed(1) + '% — well above target.');
+    else insights.push('HVAC at ' + avgHvac.toFixed(1) + '% — room for improvement vs 93% benchmark.');
+
+    html += insightBox(insights);
+
+    // Store Distribution
+    html += sectionTitle('📊', 'Store Distribution');
+    var dist = [
+        { range: '≥95%', count: stores.filter(function(s) { return s.twt_ref_30_day != null && s.twt_ref_30_day >= 95; }).length, color: '#2a8703' },
+        { range: '90-95%', count: stores.filter(function(s) { return s.twt_ref_30_day != null && s.twt_ref_30_day >= 90 && s.twt_ref_30_day < 95; }).length, color: '#2a8703' },
+        { range: '80-90%', count: stores.filter(function(s) { return s.twt_ref_30_day != null && s.twt_ref_30_day >= 80 && s.twt_ref_30_day < 90; }).length, color: '#f59e0b' },
+        { range: '70-80%', count: stores.filter(function(s) { return s.twt_ref_30_day != null && s.twt_ref_30_day >= 70 && s.twt_ref_30_day < 80; }).length, color: '#ea1100' },
+        { range: '<70%', count: stores.filter(function(s) { return s.twt_ref_30_day != null && s.twt_ref_30_day < 70; }).length, color: '#ea1100' },
+        { range: 'No Data', count: stores.filter(function(s) { return s.twt_ref_30_day == null; }).length, color: '#999' }
+    ];
+    html += '<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:16px;">';
+    dist.forEach(function(d) {
+        html += '<div style="text-align:center;padding:8px;border-radius:6px;background:#f9fafb;border:1px solid #e5e7eb;">'
+            + '<div style="font-size:18px;font-weight:700;color:' + d.color + ';">' + d.count + '</div>'
+            + '<div style="font-size:10px;color:#666;">' + d.range + '</div></div>';
+    });
+    html += '</div>';
 
     // Group breakdown
-    const groupBy = level === 'sr_director' ? 'fm_sr_director_name' : 'fm_director_name';
-    const childGroupBy = level === 'sr_director' ? 'fm_director_name' : 'fm_regional_manager_name';
-    const childLabel = level === 'sr_director' ? 'Director' : 'Regional Manager';
-
-    // If all, show top-level rollup. If filtered, show children.
-    const groups = isAll
-        ? groupStores(stores, groupBy)
-        : groupStores(stores, childGroupBy);
-
+    var groupBy = level === 'sr_director' ? 'fm_sr_director_name' : 'fm_director_name';
+    var childGroupBy = level === 'sr_director' ? 'fm_director_name' : 'fm_regional_manager_name';
+    var childLabel = level === 'sr_director' ? 'Director' : 'Regional Manager';
+    var groups = isAll ? groupStores(stores, groupBy) : groupStores(stores, childGroupBy);
     html += buildGroupTable(groups, isAll ? (level === 'sr_director' ? 'Sr. Director' : 'Director') : childLabel);
 
-    // Bottom 10 stores
-    const bottom10 = [...stores]
-        .filter(d => d.twt_ref_30_day !== null)
-        .sort((a, b) => (a.twt_ref_30_day || 0) - (b.twt_ref_30_day || 0))
-        .slice(0, 10);
-    html += `<h3 style="font-size:14px; font-weight:700; margin:20px 0 8px; color:#0071ce;">⚠️ Bottom 10 Stores (Ref 30-Day TnT)</h3>`;
-    html += `<table style="width:100%; border-collapse:collapse; font-size:11px;">
-        <thead><tr style="background:#0071ce; color:#fff;">
-            <th style="${th()}">Store</th><th style="${th()}">Banner</th>
-            <th style="${th()}">Market</th><th style="${th()}">RM</th>
-            <th style="${th()}">Ref 30d</th><th style="${th()}">HVAC 30d</th>
-            <th style="${th()}">Loss</th><th style="${th()}">Cases OOT</th>
-        </tr></thead><tbody>`;
-    bottom10.forEach((s, i) => {
-        const bg = i % 2 === 0 ? '#f9fafb' : '#fff';
-        html += `<tr style="background:${bg};">
-            <td style="${td()}">${s.store_number}</td>
-            <td style="${td()}">${(s.banner_desc||'').includes('Sam') ? 'SAMS' : 'WMT'}</td>
-            <td style="${td()}">${s.fs_market || '-'}</td>
-            <td style="${td()}">${(s.fm_regional_manager_name || '-').substring(0,20)}</td>
-            <td style="${td()} ${scoreColor(s.twt_ref_30_day)}">${pct(s.twt_ref_30_day)}</td>
-            <td style="${td()} ${scoreColor(s.twt_hvac_30_day)}">${pct(s.twt_hvac_30_day)}</td>
-            <td style="${td()} color:#ea1100;">$${(s.total_loss||0).toLocaleString(undefined,{maximumFractionDigits:0})}</td>
-            <td style="${td()}">${(s.cases_out_of_target||0).toLocaleString()}</td>
-        </tr>`;
+    // Bottom 10
+    var bottom10 = stores.filter(function(d) { return d.twt_ref_30_day != null; })
+        .sort(function(a, b) { return (a.twt_ref_30_day || 0) - (b.twt_ref_30_day || 0); }).slice(0, 10);
+    html += sectionTitle('⚠️', 'Bottom 10 Stores (Ref 30-Day)');
+    html += '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="background:#0053e2;color:#fff;">';
+    html += '<th style="' + th() + '">Store</th><th style="' + th() + '">City</th><th style="' + th() + '">RM</th>';
+    html += '<th style="' + th() + '">Ref 30d</th><th style="' + th() + '">HVAC 30d</th>';
+    html += '<th style="' + th() + '">Loss</th><th style="' + th() + '">Cases OOT</th>';
+    html += '</tr></thead><tbody>';
+    bottom10.forEach(function(s, i) {
+        var bg = i % 2 === 0 ? '#f9fafb' : '#fff';
+        html += '<tr style="background:' + bg + ';">';
+        html += '<td style="' + td() + 'font-weight:600;">' + s.store_number + '</td>';
+        html += '<td style="' + td() + '">' + (s.store_city || '') + ', ' + (s.store_state || '') + '</td>';
+        html += '<td style="' + td() + '">' + (s.fm_regional_manager_name || '-') + '</td>';
+        html += '<td style="' + td() + scoreColor(s.twt_ref_30_day) + '">' + pct(s.twt_ref_30_day) + '</td>';
+        html += '<td style="' + td() + scoreColor(s.twt_hvac_30_day) + '">' + pct(s.twt_hvac_30_day) + '</td>';
+        html += '<td style="' + td() + 'color:#ea1100;">$' + ((s.total_loss||0)/1000).toFixed(0) + 'K</td>';
+        html += '<td style="' + td() + '">' + (s.cases_out_of_target||0).toLocaleString() + '</td></tr>';
     });
     html += '</tbody></table>';
     return html;
 }
 
-/* ── WTW PDF ── */
+/* ═══════════════════════════════════════════════════════════
+ *  WTW PDF — Executive Summary
+ * ═══════════════════════════════════════════════════════════ */
 function buildWtwPdf(stores, level, person, isAll) {
     if (typeof WTW_DATA === 'undefined') return '<p style="color:#999;">No WTW data loaded.</p>';
 
-    const storeNums = new Set(stores.map(s => String(s.store_number)));
-    const wtwWos = WTW_DATA.filter(w => storeNums.has(String(w.s)));
+    var storeNums = new Set(stores.map(function(s) { return String(s.store_number); }));
+    var wos = WTW_DATA.filter(function(w) { return storeNums.has(String(w.s)); });
+    var completed = wos.filter(function(w) { return w.st === 'COMPLETED'; });
+    var open = wos.length - completed.length;
+    var compPct = wos.length > 0 ? (completed.length / wos.length * 100) : 0;
+    var pmValid = wos.filter(function(w) { return w.pm != null; });
+    var pmAvg = pmValid.length > 0 ? pmValid.reduce(function(s, w) { return s + parseFloat(w.pm); }, 0) / pmValid.length : 0;
+    var pmBelow90 = pmValid.filter(function(w) { return parseFloat(w.pm) < 90; }).length;
 
-    const completed = wtwWos.filter(w => w.st === 'COMPLETED');
-    const notCompleted = wtwWos.filter(w => w.st !== 'COMPLETED');
-    const p1 = wtwWos.filter(w => w.ph === 'PH1');
-    const p2 = wtwWos.filter(w => w.ph === 'PH2');
-    const p3 = wtwWos.filter(w => w.ph === 'PH3');
-    const avgPm = wtwWos.filter(w => w.pm != null);
-    const pmAvg = avgPm.length > 0 ? avgPm.reduce((s,w) => s + parseFloat(w.pm), 0) / avgPm.length : 0;
+    var p1 = wos.filter(function(w) { return w.ph === 'PH1'; });
+    var p2 = wos.filter(function(w) { return w.ph === 'PH2'; });
+    var p3 = wos.filter(function(w) { return w.ph === 'PH3'; });
+    var p1done = p1.filter(function(w) { return w.st === 'COMPLETED'; }).length;
+    var p2done = p2.filter(function(w) { return w.st === 'COMPLETED'; }).length;
+    var p3done = p3.filter(function(w) { return w.st === 'COMPLETED'; }).length;
+    var p1pct = p1.length > 0 ? (p1done/p1.length*100) : 0;
+    var p2pct = p2.length > 0 ? (p2done/p2.length*100) : 0;
+    var p3pct = p3.length > 0 ? (p3done/p3.length*100) : 0;
 
-    let html = `
-        <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:20px;">
-            ${kpiBox('Total WOs', wtwWos.length, '', '#333')}
-            ${kpiBox('Completed', completed.length, '', '#2a8703')}
-            ${kpiBox('Not Completed', notCompleted.length, '', '#ea1100')}
-            ${kpiBox('Avg PM Score', pmAvg.toFixed(1), '%')}
-            ${kpiBox('Completion %', wtwWos.length > 0 ? ((completed.length/wtwWos.length)*100).toFixed(1) : '0', '%')}
-        </div>
-        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px;">
-            ${kpiBox('Phase 1', p1.length + ' (' + p1.filter(w=>w.st==='COMPLETED').length + ' done)', '', '#0071ce')}
-            ${kpiBox('Phase 2', p2.length + ' (' + p2.filter(w=>w.st==='COMPLETED').length + ' done)', '', '#0071ce')}
-            ${kpiBox('Phase 3', p3.length + ' (' + p3.filter(w=>w.st==='COMPLETED').length + ' done)', '', '#0071ce')}
-        </div>`;
+    // Readiness
+    var ready = wos.filter(function(w) { return w.st !== 'COMPLETED' && w.pm != null && parseFloat(w.pm) >= 90; }).length;
+    var reviewNeeded = wos.filter(function(w) { return w.st === 'COMPLETED' && w.pm != null && parseFloat(w.pm) >= 90; }).length;
+    var critical = wos.filter(function(w) { return w.st === 'COMPLETED' && w.pm != null && parseFloat(w.pm) < 90; }).length;
 
-    // PM Readiness summary
-    const ready = wtwWos.filter(w => w.st !== 'COMPLETED' && w.pm != null && parseFloat(w.pm) >= 90);
-    const review = wtwWos.filter(w => w.st === 'COMPLETED' && w.pm != null && parseFloat(w.pm) >= 90);
-    const critical = wtwWos.filter(w => w.st === 'COMPLETED' && w.pm != null && parseFloat(w.pm) < 90);
+    var html = '';
 
-    html += `
-        <h3 style="font-size:14px; font-weight:700; margin:16px 0 8px; color:#0071ce;">🎯 PM Readiness Summary</h3>
-        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px;">
-            ${kpiBox('✓ Ready to Complete', ready.length, '', '#2a8703')}
-            ${kpiBox('🔍 Review Needed', review.length, '', '#f59e0b')}
-            ${kpiBox('⚠ Critical Reopen', critical.length, '', '#ea1100')}
-        </div>`;
+    // KPIs
+    html += '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:12px;">';
+    html += kpiBox('Total WOs', wos.length, '', '#333');
+    html += kpiBox('Completed', completed.length, '', '#2a8703');
+    html += kpiBox('Open', open, '', open > 0 ? '#ea1100' : '#2a8703');
+    html += kpiBox('Completion', compPct.toFixed(1), '%');
+    html += kpiBox('Avg PM Score', pmAvg.toFixed(1), '%');
+    html += '</div>';
 
-    // Top not-completed WOs
-    const topOpen = notCompleted.slice(0, 15);
-    if (topOpen.length > 0) {
-        html += `<h3 style="font-size:14px; font-weight:700; margin:16px 0 8px; color:#0071ce;">📋 Top Open WTW Work Orders (by age)</h3>`;
-        html += `<table style="width:100%; border-collapse:collapse; font-size:11px;">
-            <thead><tr style="background:#0071ce; color:#fff;">
-                <th style="${th()}">Store</th><th style="${th()}">Tracking #</th>
-                <th style="${th()}">Phase</th><th style="${th()}">PM Score</th>
-                <th style="${th()}">Status</th>
-            </tr></thead><tbody>`;
-        topOpen.forEach((w, i) => {
-            const bg = i % 2 === 0 ? '#f9fafb' : '#fff';
-            const pm = w.pm != null ? parseFloat(w.pm).toFixed(0) + '%' : 'N/A';
-            html += `<tr style="background:${bg};">
-                <td style="${td()}">${w.s}</td>
-                <td style="${td()}">${w.t}</td>
-                <td style="${td()}">Phase ${(w.ph || '?').replace('PH','')}</td>
-                <td style="${td()} ${scoreColor(w.pm ? parseFloat(w.pm) : null)}">${pm}</td>
-                <td style="${td()}">${w.st}</td>
-            </tr>`;
-        });
-        html += '</tbody></table>';
-    }
+    // Phase breakdown
+    html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px;">';
+    html += kpiBox('Phase 1: ' + p1done + '/' + p1.length, p1pct.toFixed(0), '%');
+    html += kpiBox('Phase 2: ' + p2done + '/' + p2.length, p2pct.toFixed(0), '%');
+    html += kpiBox('Phase 3: ' + p3done + '/' + p3.length, p3pct.toFixed(0), '%');
+    html += '</div>';
 
-    // Group breakdown for WTW by director/RM
-    const childGroupBy = level === 'sr_director' ? 'fm' : 'rm';
-    const wtwChildLabel = level === 'sr_director' ? 'Director' : 'Regional Manager';
-    const grpMap = {};
-    wtwWos.forEach(w => {
-        const grp = w[childGroupBy] || 'Unknown';
-        if (!grpMap[grp]) grpMap[grp] = { total: 0, completed: 0, pmSum: 0, pmCount: 0 };
+    // Readiness
+    html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">';
+    html += kpiBox('✓ Ready to Close', ready, '', '#2a8703');
+    html += kpiBox('🔍 Review Needed', reviewNeeded, '', '#f59e0b');
+    html += kpiBox('⚠ Critical Reopen', critical, '', critical > 0 ? '#ea1100' : '#2a8703');
+    html += '</div>';
+
+    // Insights
+    var insights = [];
+    insights.push('Overall completion at <strong>' + compPct.toFixed(1) + '%</strong> — ' + open + ' work orders still open.');
+    if (p1pct > 50 && p2pct < 20) insights.push('<strong>Phase 2 is lagging:</strong> Only ' + p2pct.toFixed(0) + '% complete vs Phase 1 at ' + p1pct.toFixed(0) + '%. This phase needs immediate focus.');
+    if (p3pct < 15) insights.push('<strong>Phase 3 needs attention:</strong> Only ' + p3pct.toFixed(0) + '% complete. Accelerate scheduling to avoid winter readiness gaps.');
+    if (pmBelow90 > 0) insights.push('<strong>' + pmBelow90 + ' work orders have PM Score below 90%</strong> — these may need to be reopened for additional work.');
+    if (critical > 0) insights.push('<strong>' + critical + ' critical reopens needed:</strong> Completed WOs with PM <90% should be reopened and reworked.');
+    if (ready > 0) insights.push(ready + ' open WOs are <strong>ready to close</strong> (PM ≥90%, all criteria passing).');
+    insights.push('Average PM Score: <strong>' + pmAvg.toFixed(1) + '%</strong> across ' + pmValid.length + ' scored work orders.');
+    html += insightBox(insights);
+
+    // Group breakdown
+    var childKey = level === 'sr_director' ? 'fm' : 'rm';
+    var childLabel = level === 'sr_director' ? 'Director' : 'Regional Manager';
+    var grpMap = {};
+    wos.forEach(function(w) {
+        var grp = w[childKey] || 'Unknown';
+        if (!grpMap[grp]) grpMap[grp] = { total: 0, done: 0, pmSum: 0, pmN: 0 };
         grpMap[grp].total++;
-        if (w.st === 'COMPLETED') grpMap[grp].completed++;
-        if (w.pm != null) { grpMap[grp].pmSum += parseFloat(w.pm); grpMap[grp].pmCount++; }
+        if (w.st === 'COMPLETED') grpMap[grp].done++;
+        if (w.pm != null) { grpMap[grp].pmSum += parseFloat(w.pm); grpMap[grp].pmN++; }
     });
-    const wtwGroups = Object.entries(grpMap)
-        .map(([name, d]) => ({ name, ...d, pct: d.total > 0 ? (d.completed/d.total*100) : 0, pmAvg: d.pmCount > 0 ? d.pmSum/d.pmCount : 0 }))
-        .sort((a,b) => a.pct - b.pct);
+    var grpList = Object.entries(grpMap)
+        .map(function(e) { var n=e[0],d=e[1]; return {name:n,total:d.total,done:d.done,pct:d.total>0?d.done/d.total*100:0,pmAvg:d.pmN>0?d.pmSum/d.pmN:0}; })
+        .sort(function(a,b) { return a.pct - b.pct; });
 
-    if (wtwGroups.length > 1) {
-        html += `<h3 style="font-size:14px; font-weight:700; margin:20px 0 8px; color:#0071ce;">📊 WTW Completion by ${wtwChildLabel}</h3>`;
-        html += `<table style="width:100%; border-collapse:collapse; font-size:11px;">
-            <thead><tr style="background:#0071ce; color:#fff;">
-                <th style="${th()}">${wtwChildLabel}</th><th style="${th()}">Total</th>
-                <th style="${th()}">Completed</th><th style="${th()}">Completion %</th>
-                <th style="${th()}">Avg PM</th>
-            </tr></thead><tbody>`;
-        wtwGroups.forEach((g, i) => {
-            const bg = i % 2 === 0 ? '#f9fafb' : '#fff';
-            html += `<tr style="background:${bg};">
-                <td style="${td()} font-weight:600;">${g.name}</td>
-                <td style="${td()}">${g.total}</td>
-                <td style="${td()}">${g.completed}</td>
-                <td style="${td()} ${scoreColor(g.pct)}">${g.pct.toFixed(1)}%</td>
-                <td style="${td()} ${scoreColor(g.pmAvg)}">${g.pmAvg.toFixed(1)}%</td>
-            </tr>`;
+    if (grpList.length > 1) {
+        html += sectionTitle('📊', 'WTW Completion by ' + childLabel);
+        html += '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="background:#0053e2;color:#fff;">';
+        html += '<th style="' + th() + '">' + childLabel + '</th><th style="' + th() + '">Total</th>';
+        html += '<th style="' + th() + '">Done</th><th style="' + th() + '">Completion</th><th style="' + th() + '">Avg PM</th></tr></thead><tbody>';
+        grpList.forEach(function(g, i) {
+            var bg = i % 2 === 0 ? '#f9fafb' : '#fff';
+            html += '<tr style="background:' + bg + ';">';
+            html += '<td style="' + td() + 'font-weight:600;">' + g.name + '</td>';
+            html += '<td style="' + td() + '">' + g.total + '</td>';
+            html += '<td style="' + td() + '">' + g.done + '</td>';
+            html += '<td style="' + td() + scoreColor(g.pct) + '">' + g.pct.toFixed(1) + '%</td>';
+            html += '<td style="' + td() + scoreColor(g.pmAvg) + '">' + g.pmAvg.toFixed(1) + '%</td></tr>';
         });
         html += '</tbody></table>';
     }
@@ -261,132 +351,96 @@ function buildWtwPdf(stores, level, person, isAll) {
     return html;
 }
 
-/* ── Leak PDF ── */
+/* ═══════════════════════════════════════════════════════════
+ *  LEAK PDF — Executive Summary
+ * ═══════════════════════════════════════════════════════════ */
 function buildLeakPdf(stores, level, person, isAll) {
     if (typeof LK_STORES === 'undefined') return '<p style="color:#999;">No leak data loaded.</p>';
 
-    const storeNums = new Set(stores.map(s => String(s.store_number)));
-    const leakStores = LK_STORES.filter(s => storeNums.has(String(s.s)));
-    const totalCharge = leakStores.reduce((s,d) => s + (d.sc || 0), 0);
-    const totalQty = leakStores.reduce((s,d) => s + (d.cytq || 0), 0);
-    const totalLeaks = leakStores.reduce((s,d) => s + (d.cyl || 0), 0);
-    const avgRate = totalCharge > 0 ? (totalQty / totalCharge * 100) : 0;
-    const LK_T_VAL = typeof LK_T !== 'undefined' ? LK_T : 20;
-    const overThreshold = leakStores.filter(s => s.cylr > LK_T_VAL).length;
+    var storeNums = new Set(stores.map(function(s) { return String(s.store_number); }));
+    var leakStores = LK_STORES.filter(function(s) { return storeNums.has(String(s.s)); });
+    var LK_T_VAL = typeof LK_T !== 'undefined' ? LK_T : 20;
+    var tc = leakStores.reduce(function(s,d) { return s + (d.sc||0); }, 0);
+    var tq = leakStores.reduce(function(s,d) { return s + (d.cytq||0); }, 0);
+    var tl = leakStores.reduce(function(s,d) { return s + (d.cyl||0); }, 0);
+    var avgRate = tc > 0 ? (tq / tc * 100) : 0;
+    var over = leakStores.filter(function(s) { return (s.cylr||0) > LK_T_VAL; }).length;
+    var critical = leakStores.filter(function(s) { return (s.cylr||0) > LK_T_VAL * 1.5; }).length;
 
-    let html = `
-        <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:20px;">
-            ${kpiBox('Stores', leakStores.length, '', '#333')}
-            ${kpiBox('Total Charge (lbs)', totalCharge.toLocaleString(undefined,{maximumFractionDigits:0}), '', '#333')}
-            ${kpiBox('Leaked (lbs)', totalQty.toLocaleString(undefined,{maximumFractionDigits:0}), '', '#ea1100')}
-            ${kpiBox('Avg Leak Rate', avgRate.toFixed(1), '%')}
-            ${kpiBox('Over ' + LK_T_VAL + '%', overThreshold, '', '#ea1100')}
-        </div>`;
+    var html = '';
+
+    // KPIs
+    html += '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px;">';
+    html += kpiBox('Stores', leakStores.length, '', '#333');
+    html += kpiBox('System Charge', (tc/1000000).toFixed(1) + 'M lbs', '', '#333');
+    html += kpiBox('Qty Leaked', (tq/1000).toFixed(0) + 'K lbs', '', '#ea1100');
+    html += kpiBox('Leak Rate', avgRate.toFixed(1), '%', avgRate > LK_T_VAL ? '#ea1100' : '#2a8703');
+    html += kpiBox('Over ' + LK_T_VAL + '% Threshold', over, '', over > 0 ? '#ea1100' : '#2a8703');
+    html += '</div>';
+
+    // Insights
+    var insights = [];
+    insights.push('Overall fleet leak rate: <strong>' + avgRate.toFixed(1) + '%</strong> across ' + leakStores.length + ' stores (' + (tc/1000000).toFixed(1) + 'M lbs total charge).');
+    if (avgRate <= LK_T_VAL) insights.push('Fleet is <strong>within threshold</strong> (' + LK_T_VAL + '%). Good leak management practices overall.');
+    else insights.push('<strong>Fleet exceeds ' + LK_T_VAL + '% threshold</strong> — systemic leak issues to address.');
+    if (over > 0) insights.push('<strong>' + over + ' stores exceed ' + LK_T_VAL + '% leak rate</strong> — prioritize for repair/maintenance.');
+    if (critical > 0) insights.push('<strong>' + critical + ' stores are critically high</strong> (>' + (LK_T_VAL*1.5).toFixed(0) + '%) — immediate intervention recommended.');
+    insights.push('Total of <strong>' + tl.toLocaleString() + ' leak events</strong> recorded, with ' + (tq/1000).toFixed(0) + 'K lbs lost.');
+    html += insightBox(insights);
 
     // Top leaking stores
-    const top15 = [...leakStores]
-        .sort((a,b) => (b.cylr || 0) - (a.cylr || 0))
-        .slice(0, 15);
-
-    html += `<h3 style="font-size:14px; font-weight:700; margin:16px 0 8px; color:#0071ce;">🚨 Top Leaking Stores</h3>`;
-    html += `<table style="width:100%; border-collapse:collapse; font-size:11px;">
-        <thead><tr style="background:#0071ce; color:#fff;">
-            <th style="${th()}">Store</th><th style="${th()}">City</th>
-            <th style="${th()}">Banner</th><th style="${th()}">Charge (lbs)</th>
-            <th style="${th()}">Leaked (lbs)</th><th style="${th()}">Leak Rate</th>
-            <th style="${th()}">Leak Count</th><th style="${th()}">Status</th>
-        </tr></thead><tbody>`;
-    top15.forEach((s, i) => {
-        const bg = i % 2 === 0 ? '#f9fafb' : '#fff';
-        const rateColor = s.cylr > LK_T_VAL ? 'color:#ea1100; font-weight:700;' : s.cylr > LK_T_VAL * 0.7 ? 'color:#f59e0b;' : 'color:#2a8703;';
-        const icon = s.cylr > LK_T_VAL * 1.5 ? '🚨' : s.cylr > LK_T_VAL ? '⚠️' : '✅';
-        html += `<tr style="background:${bg};">
-            <td style="${td()}">${s.s}</td>
-            <td style="${td()}">${s.city || ''}${s.city && s.st ? ', ' : ''}${s.st || ''}</td>
-            <td style="${td()}">${(s.ban||'').includes('Sam') ? 'SAMS' : 'WMT'}</td>
-            <td style="${td()}">${Math.round(s.sc).toLocaleString()}</td>
-            <td style="${td()} color:#ea1100;">${Math.round(s.cytq).toLocaleString()}</td>
-            <td style="${td()} ${rateColor}">${s.cylr.toFixed(1)}%</td>
-            <td style="${td()}">${s.cyl}</td>
-            <td style="${td()}">${icon}</td>
-        </tr>`;
+    var top15 = leakStores.sort(function(a,b) { return (b.cylr||0) - (a.cylr||0); }).slice(0, 15);
+    html += sectionTitle('🚨', 'Top Leaking Stores');
+    html += '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="background:#0053e2;color:#fff;">';
+    html += '<th style="' + th() + '">Store</th><th style="' + th() + '">Location</th>';
+    html += '<th style="' + th() + '">Charge</th><th style="' + th() + '">Leaked</th>';
+    html += '<th style="' + th() + '">Rate</th><th style="' + th() + '">Events</th></tr></thead><tbody>';
+    top15.forEach(function(s, i) {
+        var bg = i % 2 === 0 ? '#f9fafb' : '#fff';
+        var rc = (s.cylr||0) > LK_T_VAL ? 'color:#ea1100;font-weight:700;' : 'color:#2a8703;';
+        html += '<tr style="background:' + bg + ';">';
+        html += '<td style="' + td() + 'font-weight:600;">' + s.s + '</td>';
+        html += '<td style="' + td() + '">' + (s.city||'') + ', ' + (s.st||'') + '</td>';
+        html += '<td style="' + td() + '">' + Math.round(s.sc).toLocaleString() + '</td>';
+        html += '<td style="' + td() + 'color:#ea1100;">' + Math.round(s.cytq).toLocaleString() + '</td>';
+        html += '<td style="' + td() + rc + '">' + (s.cylr||0).toFixed(1) + '%</td>';
+        html += '<td style="' + td() + '">' + (s.cyl||0) + '</td></tr>';
     });
     html += '</tbody></table>';
 
-    // Group summary by RM or Director — leak data has srd/fm/rm directly
-    const leakGroupKey = level === 'sr_director' ? 'fm' : 'rm';
-    const childLabel = level === 'sr_director' ? 'Director' : 'Regional Manager';
-
-    const groupMap = {};
-    leakStores.forEach(ls => {
-        const grp = ls[leakGroupKey] || 'Unknown';
-        if (!groupMap[grp]) groupMap[grp] = { charge: 0, qty: 0, leaks: 0, stores: 0, over: 0 };
-        groupMap[grp].charge += ls.sc || 0;
-        groupMap[grp].qty += ls.cytq || 0;
-        groupMap[grp].leaks += ls.cyl || 0;
-        groupMap[grp].stores++;
-        if (ls.cylr > LK_T_VAL) groupMap[grp].over++;
+    // Group summary
+    var grpKey = level === 'sr_director' ? 'fm' : 'rm';
+    var grpLabel = level === 'sr_director' ? 'Director' : 'Regional Manager';
+    var grpMap = {};
+    leakStores.forEach(function(ls) {
+        var grp = ls[grpKey] || 'Unknown';
+        if (!grpMap[grp]) grpMap[grp] = { charge:0, qty:0, leaks:0, stores:0, over:0 };
+        grpMap[grp].charge += ls.sc || 0;
+        grpMap[grp].qty += ls.cytq || 0;
+        grpMap[grp].leaks += ls.cyl || 0;
+        grpMap[grp].stores++;
+        if ((ls.cylr||0) > LK_T_VAL) grpMap[grp].over++;
     });
+    var grpList = Object.entries(grpMap)
+        .map(function(e) { var n=e[0],d=e[1]; return {name:n,stores:d.stores,charge:d.charge,qty:d.qty,leaks:d.leaks,over:d.over,rate:d.charge>0?d.qty/d.charge*100:0}; })
+        .sort(function(a,b) { return b.rate - a.rate; });
 
-    const groups = Object.entries(groupMap)
-        .map(([name, d]) => ({ name, ...d, rate: d.charge > 0 ? (d.qty / d.charge * 100) : 0 }))
-        .sort((a, b) => b.rate - a.rate);
-
-    if (groups.length > 1) {
-        html += `<h3 style="font-size:14px; font-weight:700; margin:20px 0 8px; color:#0071ce;">📊 Leak Rate by ${childLabel}</h3>`;
-        html += `<table style="width:100%; border-collapse:collapse; font-size:11px;">
-            <thead><tr style="background:#0071ce; color:#fff;">
-                <th style="${th()}">${childLabel}</th><th style="${th()}">Stores</th>
-                <th style="${th()}">Charge</th><th style="${th()}">Leaked</th>
-                <th style="${th()}">Leak Rate</th><th style="${th()}">Over ${LK_T_VAL}%</th>
-            </tr></thead><tbody>`;
-        groups.forEach((g, i) => {
-            const bg = i % 2 === 0 ? '#f9fafb' : '#fff';
-            const rateColor = g.rate > LK_T_VAL ? 'color:#ea1100; font-weight:700;' : 'color:#2a8703;';
-            html += `<tr style="background:${bg};">
-                <td style="${td()} font-weight:600;">${g.name}</td>
-                <td style="${td()}">${g.stores}</td>
-                <td style="${td()}">${Math.round(g.charge).toLocaleString()}</td>
-                <td style="${td()}">${Math.round(g.qty).toLocaleString()}</td>
-                <td style="${td()} ${rateColor}">${g.rate.toFixed(1)}%</td>
-                <td style="${td()} ${g.over > 0 ? 'color:#ea1100;' : ''}">${g.over}</td>
-            </tr>`;
-        });
-        html += '</tbody></table>';
-    }
-
-    // Group breakdown for WTW by director/RM
-    const childGroupBy = level === 'sr_director' ? 'fm' : 'rm';
-    const wtwChildLabel = level === 'sr_director' ? 'Director' : 'Regional Manager';
-    const grpMap = {};
-    wtwWos.forEach(w => {
-        const grp = w[childGroupBy] || 'Unknown';
-        if (!grpMap[grp]) grpMap[grp] = { total: 0, completed: 0, pmSum: 0, pmCount: 0 };
-        grpMap[grp].total++;
-        if (w.st === 'COMPLETED') grpMap[grp].completed++;
-        if (w.pm != null) { grpMap[grp].pmSum += parseFloat(w.pm); grpMap[grp].pmCount++; }
-    });
-    const wtwGroups = Object.entries(grpMap)
-        .map(([name, d]) => ({ name, ...d, pct: d.total > 0 ? (d.completed/d.total*100) : 0, pmAvg: d.pmCount > 0 ? d.pmSum/d.pmCount : 0 }))
-        .sort((a,b) => a.pct - b.pct);
-
-    if (wtwGroups.length > 1) {
-        html += `<h3 style="font-size:14px; font-weight:700; margin:20px 0 8px; color:#0071ce;">📊 WTW Completion by ${wtwChildLabel}</h3>`;
-        html += `<table style="width:100%; border-collapse:collapse; font-size:11px;">
-            <thead><tr style="background:#0071ce; color:#fff;">
-                <th style="${th()}">${wtwChildLabel}</th><th style="${th()}">Total</th>
-                <th style="${th()}">Completed</th><th style="${th()}">Completion %</th>
-                <th style="${th()}">Avg PM</th>
-            </tr></thead><tbody>`;
-        wtwGroups.forEach((g, i) => {
-            const bg = i % 2 === 0 ? '#f9fafb' : '#fff';
-            html += `<tr style="background:${bg};">
-                <td style="${td()} font-weight:600;">${g.name}</td>
-                <td style="${td()}">${g.total}</td>
-                <td style="${td()}">${g.completed}</td>
-                <td style="${td()} ${scoreColor(g.pct)}">${g.pct.toFixed(1)}%</td>
-                <td style="${td()} ${scoreColor(g.pmAvg)}">${g.pmAvg.toFixed(1)}%</td>
-            </tr>`;
+    if (grpList.length > 1) {
+        html += sectionTitle('📊', 'Leak Rate by ' + grpLabel);
+        html += '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="background:#0053e2;color:#fff;">';
+        html += '<th style="' + th() + '">' + grpLabel + '</th><th style="' + th() + '">Stores</th>';
+        html += '<th style="' + th() + '">Charge</th><th style="' + th() + '">Leaked</th>';
+        html += '<th style="' + th() + '">Rate</th><th style="' + th() + '">Over ' + LK_T_VAL + '%</th></tr></thead><tbody>';
+        grpList.forEach(function(g, i) {
+            var bg = i % 2 === 0 ? '#f9fafb' : '#fff';
+            var rc = g.rate > LK_T_VAL ? 'color:#ea1100;font-weight:700;' : 'color:#2a8703;';
+            html += '<tr style="background:' + bg + ';">';
+            html += '<td style="' + td() + 'font-weight:600;">' + g.name + '</td>';
+            html += '<td style="' + td() + '">' + g.stores + '</td>';
+            html += '<td style="' + td() + '">' + Math.round(g.charge).toLocaleString() + '</td>';
+            html += '<td style="' + td() + '">' + Math.round(g.qty).toLocaleString() + '</td>';
+            html += '<td style="' + td() + rc + '">' + g.rate.toFixed(1) + '%</td>';
+            html += '<td style="' + td() + (g.over > 0 ? 'color:#ea1100;' : '') + '">' + g.over + '</td></tr>';
         });
         html += '</tbody></table>';
     }
@@ -394,125 +448,55 @@ function buildLeakPdf(stores, level, person, isAll) {
     return html;
 }
 
-/* ── shared helpers ── */
-function safeAvg(data, field) {
-    const valid = data.filter(d => d[field] !== null && d[field] !== undefined && !isNaN(d[field]));
-    return valid.length ? valid.reduce((s, d) => s + d[field], 0) / valid.length : 0;
-}
-
-function groupStores(stores, groupBy) {
-    const map = {};
-    stores.forEach(s => {
-        const key = s[groupBy] || 'Unknown';
-        if (!map[key]) map[key] = [];
-        map[key].push(s);
-    });
-    return Object.entries(map)
-        .map(([name, ss]) => ({
-            name,
-            count: ss.length,
-            avgRef30: safeAvg(ss, 'twt_ref_30_day'),
-            avgHvac30: safeAvg(ss, 'twt_hvac_30_day'),
-            totalLoss: ss.reduce((s, d) => s + (d.total_loss || 0), 0),
-            casesOOT: ss.reduce((s, d) => s + (d.cases_out_of_target || 0), 0),
-        }))
-        .sort((a, b) => a.avgRef30 - b.avgRef30);
-}
-
-function buildGroupTable(groups, label) {
-    let html = `<h3 style="font-size:14px; font-weight:700; margin:16px 0 8px; color:#0071ce;">📊 Performance by ${label}</h3>`;
-    html += `<table style="width:100%; border-collapse:collapse; font-size:11px;">
-        <thead><tr style="background:#0071ce; color:#fff;">
-            <th style="${th()}">${label}</th><th style="${th()}">Stores</th>
-            <th style="${th()}">Ref 30d</th><th style="${th()}">HVAC 30d</th>
-            <th style="${th()}">Total Loss</th><th style="${th()}">Cases OOT</th>
-        </tr></thead><tbody>`;
-    groups.forEach((g, i) => {
-        const bg = i % 2 === 0 ? '#f9fafb' : '#fff';
-        html += `<tr style="background:${bg};">
-            <td style="${td()} font-weight:600;">${g.name}</td>
-            <td style="${td()}">${g.count}</td>
-            <td style="${td()} ${scoreColor(g.avgRef30)}">${g.avgRef30.toFixed(1)}%</td>
-            <td style="${td()} ${scoreColor(g.avgHvac30)}">${g.avgHvac30.toFixed(1)}%</td>
-            <td style="${td()} color:#ea1100;">$${g.totalLoss.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
-            <td style="${td()}">${g.casesOOT.toLocaleString()}</td>
-        </tr>`;
-    });
-    html += '</tbody></table>';
-    return html;
-}
-
-function kpiBox(label, value, suffix, color) {
-    const c = color || (parseFloat(value) >= 90 ? '#2a8703' : parseFloat(value) >= 80 ? '#f59e0b' : '#ea1100');
-    const displayVal = typeof value === 'number' ? value.toFixed(1) : value;
-    return `
-        <div style="border:1px solid #e5e7eb; border-radius:8px; padding:12px; text-align:center; background:#fafafa;">
-            <div style="font-size:22px; font-weight:800; color:${c};">${displayVal}${suffix || ''}</div>
-            <div style="font-size:11px; color:#666; margin-top:4px;">${label}</div>
-        </div>`;
-}
-
-function th() { return 'padding:6px 8px; text-align:left; font-size:11px; font-weight:600;'; }
-function td() { return 'padding:5px 8px; border-bottom:1px solid #e5e7eb;'; }
-function pct(v) { return v !== null && v !== undefined ? v.toFixed(1) + '%' : 'N/A'; }
-
-function scoreColor(v) {
-    if (v === null || v === undefined) return 'color:#999;';
-    if (v >= 90) return 'color:#2a8703; font-weight:700;';
-    if (v >= 80) return 'color:#f59e0b; font-weight:600;';
-    return 'color:#ea1100; font-weight:700;';
-}
-
-/* ── generate PDF ── */
+/* ═══════════════════════════════════════════════════════════
+ *  GENERATE PDF
+ * ═══════════════════════════════════════════════════════════ */
 async function generatePdf() {
-    const level = document.getElementById('pdfViewLevel').value;
-    const person = document.getElementById('pdfPersonSelect').value;
-    const btn = document.getElementById('pdfGenerateBtn');
+    var level = document.getElementById('pdfViewLevel').value;
+    var person = document.getElementById('pdfPersonSelect').value;
+    var btn = document.getElementById('pdfGenerateBtn');
 
     btn.disabled = true;
     btn.textContent = '⏳ Generating...';
 
     try {
-        const content = buildPdfContent(pdfExportTab, level, person);
-        const htmlStr = content.innerHTML;
+        var content = buildPdfContent(pdfExportTab, level, person);
+        var htmlStr = content.innerHTML;
 
         if (!htmlStr || htmlStr.length < 50) {
             alert('No data to export. Check your filters.');
             return;
         }
 
-        const levelSlug = level === 'sr_director' ? 'SrDir' : 'Dir';
-        const personSlug = person === '__all__' ? 'All' : person.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 20);
-        const tabSlug = pdfExportTab.toUpperCase();
-        const dateSlug = new Date().toISOString().slice(0, 10);
-        const filename = `${tabSlug}_${levelSlug}_${personSlug}_${dateSlug}.pdf`;
+        var levelSlug = level === 'sr_director' ? 'SrDir' : 'Dir';
+        var personSlug = person === '__all__' ? 'All' : person.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 20);
+        var tabSlug = pdfExportTab.toUpperCase();
+        var dateSlug = new Date().toISOString().slice(0, 10);
+        var filename = tabSlug + '_' + levelSlug + '_' + personSlug + '_' + dateSlug + '.pdf';
 
-        // Create a visible iframe for html2canvas to capture
-        const iframe = document.createElement('iframe');
+        // Create iframe for html2canvas capture
+        var iframe = document.createElement('iframe');
         iframe.style.cssText = 'position:fixed;left:0;top:0;width:1200px;height:900px;opacity:0.01;z-index:-1;border:none;';
         document.body.appendChild(iframe);
 
-        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
         iframeDoc.open();
-        iframeDoc.write(`<!DOCTYPE html>
-<html><head><style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family:system-ui,-apple-system,sans-serif; background:#fff; color:#1a1a1a; padding:32px; width:1100px; }
-  table { border-collapse:collapse; width:100%; }
-</style></head>
-<body>${htmlStr}</body></html>`);
+        iframeDoc.write('<!DOCTYPE html><html><head><style>'
+            + '* { margin:0; padding:0; box-sizing:border-box; }'
+            + 'body { font-family:system-ui,-apple-system,sans-serif; background:#fff; color:#1a1a1a; padding:32px; width:1100px; }'
+            + 'table { border-collapse:collapse; width:100%; }'
+            + '</style></head><body>' + htmlStr + '</body></html>');
         iframeDoc.close();
 
-        // Wait for iframe to render
-        await new Promise(r => setTimeout(r, 500));
+        await new Promise(function(r) { setTimeout(r, 500); });
 
-        const opt = {
-            margin:       [0.3, 0.3, 0.3, 0.3],
-            filename:     filename,
-            image:        { type: 'jpeg', quality: 0.95 },
-            html2canvas:  { scale: 2, useCORS: true, logging: false },
-            jsPDF:        { unit: 'in', format: 'letter', orientation: 'landscape' },
-            pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
+        var opt = {
+            margin: [0.3, 0.3, 0.3, 0.3],
+            filename: filename,
+            image: { type: 'jpeg', quality: 0.95 },
+            html2canvas: { scale: 2, useCORS: true, logging: false },
+            jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' },
+            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
         };
 
         await html2pdf().set(opt).from(iframeDoc.body).save();
