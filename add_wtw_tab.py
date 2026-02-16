@@ -941,7 +941,7 @@ def main():
         const dewStatus = wo.dewP === 'PASS' ? '✅ Pass' : wo.dewP === 'FAIL' ? '❌ Fail' : '⬜ No Data';
         const subject = `WTW FY26 — Store ${{wo.s}} (${{bannerLabel}}) — PM Score Review`;
         const body = [
-            `Hey ${{name.split(' ')[0]}}!`,
+            `Hey ${{[wo.rm, wo.fsm].filter(n => n && !n.includes('-FS')).map(n => n.split(' ')[0]).filter((v,i,a) => a.indexOf(v)===i).join(' and ')}}!`,
             '',
             `Just checking in on Win-the-Winter FY26 PM readiness for Store ${{wo.s}} (${{wo.loc || wo.city || ''}}).`,
             '',
