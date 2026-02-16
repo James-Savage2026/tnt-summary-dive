@@ -171,8 +171,25 @@ A store passes overall **only if**:
 |----------|----------------|--------|
 | ✓ Ready to Complete | `status != 'COMPLETED'` AND overall_pass = Y | Can be closed |
 | 🔍 Review Needed | `status = 'COMPLETED'` AND PM ≥ 90% AND overall_pass = N | Almost there — 1+ criteria failing |
-| ⚠ Critical Reopen | `status = 'COMPLETED'` AND PM < 90% | Needs significant work |
+| ⚠ Critical Reopen | `status = 'COMPLETED'` AND PM < threshold AND failing 2+ metrics AND repair < 8hrs | Needs significant work |
 | 🏪 Div1 Stores | `banner_desc = 'Wal-Mart'` OR `store_type_cd = 'R'` | Manual review, excluded from reopen counts |
+
+### PM Threshold by Banner
+
+| Banner | PM Threshold | TnT Pass |
+|--------|-------------|----------|
+| Walmart (WM Supercenter, Wal-Mart) | 90% | ≥ 90% |
+| Sam's Club | 87% | ≥ 87% |
+
+### Critical Reopen — ALL 4 conditions must be true
+
+1. WO status is `COMPLETED`
+2. PM Score **< 90%** (Walmart) or **< 87%** (Sam's)
+3. Failing **2 or more** of the 3 metrics (rack, tnt, dewpoint)
+4. Repair hours **< 8** (indicates insufficient work was done)
+
+Do not simplify this to just "PM < 90%". The repair hour and fail count
+guardrails prevent false alarms on stores that got real work done.
 
 ---
 

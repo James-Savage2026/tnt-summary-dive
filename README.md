@@ -85,7 +85,7 @@ Run: python3 refresh.py
 |----------|----------|--------|
 | ✓ Ready to Complete | Not Completed + All PM Pass | Can be closed |
 | 🔍 Review Needed | Completed + PM ≥90% but failing 1+ criteria | Minor fix needed |
-| ⚠ Critical Reopen | Completed + PM <90% | Needs work — reopen WO |
+| ⚠ Critical Reopen | Completed + PM below threshold + 2+ fails + <8 repair hrs | Needs work — reopen WO |
 | 🏪 Div1 Stores | Small-format legacy stores | Manual review |
 
 ---

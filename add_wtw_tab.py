@@ -101,11 +101,17 @@ def main():
         if is_div1:
             div1_count += 1
         
-        # Count ready to complete and should reopen (based on PM score < 87%)
+        # Count ready to complete and critical reopen
+        # Critical Reopen: Completed + PM below banner threshold + 2+ fails + <8 repair hrs
         pm_score = float(wo.get('pm', 0) or 0)
-        if pm_score >= 87 and st != 'COMPLETED':
+        is_sams = 'Sam' in wo.get('banner', '')
+        pm_threshold = 87 if is_sams else 90
+        fail_count = sum(1 for x in [wo.get('rackP',''), wo.get('tntP',''), wo.get('dewP','')] if x == 'FAIL')
+        repair_hrs = float(wo.get('repH', 0) or 0)
+        
+        if st != 'COMPLETED' and wo.get('allP') == 'PASS':
             ready_to_complete += 1
-        elif pm_score < 87 and st == 'COMPLETED':
+        elif st == 'COMPLETED' and pm_score < pm_threshold and fail_count >= 2 and repair_hrs < 8:
             if is_div1:
                 should_reopen_div1 += 1
             else:
@@ -728,14 +734,21 @@ def main():
                 if (wo.st === 'COMPLETED' || wo.allP !== 'PASS') return false;
             }}
             if (wtwPmFilter === 'review') {{
-                // Review needed: Completed + PM >= 87% but failing 1+ criteria (exclude Div1)
+                // Review needed: Completed + PM >= banner threshold but failing 1+ criteria (exclude Div1)
                 const pmScore = parseFloat(wo.pm) || 0;
-                if (wo.st !== 'COMPLETED' || wo.allP === 'PASS' || pmScore < 87 || wo.div1 === 'Y') return false;
+                const isSams = (wo.banner || '').includes('Sam');
+                const threshold = isSams ? 87 : 90;
+                if (wo.st !== 'COMPLETED' || wo.allP === 'PASS' || pmScore < threshold || wo.div1 === 'Y') return false;
             }}
             if (wtwPmFilter === 'critical') {{
-                // Critical reopen: Completed + PM < 87% (exclude Div1)
+                // Critical reopen: Completed + PM below banner threshold
+                // + failing 2+ of 3 metrics + repair < 8 hrs (exclude Div1)
                 const pmScore = parseFloat(wo.pm) || 0;
-                if (wo.st !== 'COMPLETED' || pmScore >= 87 || wo.div1 === 'Y') return false;
+                const isSams = (wo.banner || '').includes('Sam');
+                const threshold = isSams ? 87 : 90;
+                const failCount = [wo.rackP, wo.tntP, wo.dewP].filter(x => x === 'FAIL').length;
+                const repairHrs = parseFloat(wo.repH) || 0;
+                if (wo.st !== 'COMPLETED' || pmScore >= threshold || failCount < 2 || repairHrs >= 8 || wo.div1 === 'Y') return false;
             }}
             if (wtwPmFilter === 'div1') {{
                 // Div1 stores only
@@ -882,10 +895,14 @@ def main():
             }}
             
             if (wo.st === 'COMPLETED' && wo.allP === 'FAIL' && !isDiv1) {{
-                if (pmScore >= 87) {{
-                    review++;  // PM >= 87% but failing criteria
-                }} else {{
-                    critical++;  // PM < 87%
+                const isSams = (wo.banner || '').includes('Sam');
+                const threshold = isSams ? 87 : 90;
+                const failCount = [wo.rackP, wo.tntP, wo.dewP].filter(x => x === 'FAIL').length;
+                const repairHrs = parseFloat(wo.repH) || 0;
+                if (pmScore < threshold && failCount >= 2 && repairHrs < 8) {{
+                    critical++;  // PM below banner threshold + 2+ fails + <8 repair hrs
+                }} else if (pmScore >= threshold) {{
+                    review++;  // PM above threshold but failing 1+ criteria
                 }}
             }}
         }});
