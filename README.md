@@ -1,6 +1,6 @@
 # TnT + Win-the-Winter + Leak Dashboard
 
-**Last Updated:** 2026-02-16  
+**Last Updated:** 2026-02-09  
 **GHE Pages:** https://gecgithub01.walmart.com/pages/j0s028j/north-bu-hvacr-report-hub/  
 **GitHub Pages:** https://james-savage2026.github.io/tnt-summary-dive/  
 **Repo:** https://gecgithub01.walmart.com/j0s028j/north-bu-hvacr-report-hub
@@ -17,9 +17,13 @@ python3 refresh.py
 That's it. The script:
 1. Pulls fresh WTW work orders + PM scores from BigQuery
 2. Pulls labor hours from `sc_walmart_workorder_labor_performed`
-3. Merges everything, calculates PM scores (NULL-excluded)
-4. Rebuilds all 3 tabs (TnT, WTW, Leak)
-5. Pushes to both GitHub remotes
+3. Pulls rack scorecard data (latest test date, `COUNT DISTINCT` per rack)
+4. Pulls HVAC unit counts (`COUNT DISTINCT hvacName` — not reading counts)
+5. Pulls store-level TnT/HVAC metrics from `store_tabular_view`
+6. Pulls 30-day Ref/HVAC work orders with `problem_code_desc`
+7. Merges everything, calculates PM scores (NULL-excluded)
+8. Rebuilds all 3 tabs (TnT, WTW, Leak)
+9. Pushes to both GitHub remotes
 
 ### Options
 
@@ -47,7 +51,15 @@ Run: python3 refresh.py
 
 ### Tab 1: TnT Dashboard
 - Store-level Time-in-Target scores (Ref + HVAC)
+- **Global banner filter** (All / Walmart / Sam’s) affects all KPIs, charts, and tables
 - Filters: Sr. Director, FM Director, RM, FSM, Market
+- Bottom 10 worst stores with drill-down
+- Store detail panel with:
+  - Refrigeration assets (racks, scorecard, cases, alarms)
+  - HVAC assets (RTU/AHU counts, TnT, dewpoint)
+  - Work orders with **Problem Code**, **Trade** (Ref/HVAC), **Equipment**, **Resolution**
+  - Trade filter on WO table (All / Refrigeration / HVAC)
+  - ✉️ **Email button** — generates mailto with full store report
 - Links to Crystal store pages
 
 ### Tab 2: Win-the-Winter (WTW)
@@ -59,7 +71,9 @@ Run: python3 refresh.py
 ### Tab 3: Leak Management
 - CY2026 refrigerant leak rates with burn rate projection
 - Cumulative YoY chart
-- Per-store detail with asset cross-reference
+- Per-store detail with asset cross-reference (click any store row to expand)
+- Refrigeration + HVAC asset detail panels
+- CY2026 leak events table per store
 
 ---
 
@@ -98,7 +112,10 @@ Run: python3 refresh.py
 | `index.html` | Main dashboard (TnT + WTW + Leak tabs) |
 | `add_wtw_tab.py` | WTW tab HTML/JS generator |
 | `add_leak_tab.py` | Leak tab HTML/JS generator |
-| `store_assets.py` | Store asset data loader |
+| `leak_tab_js.py` | Leak tab JS logic (table, charts, filters) |
+| `leak_tab_html.py` | Leak tab HTML structure |
+| `store_assets.py` | Store asset data loader (rack, HVAC, case, terminal) |
+| `store_detail_js.py` | Shared store detail panel (Ref/HVAC assets, leak events) |
 
 ---
 
@@ -111,8 +128,10 @@ Run: python3 refresh.py
 |-------|---------|----------|
 | `crystal.store_tabular_view` | Store metrics, TnT, dewpoint | `store_number` (INT64) |
 | `crystal.sc_workorder` | Service Channel work orders | `tracking_nbr` (INT64), `store_nbr` (STRING) |
-| `us_re_ods_prod_pub.dip_rack_scorecard` | Rack scores (daily) | `storeNo` (STRING) |
+| `us_re_ods_prod_pub.dip_rack_scorecard` | Rack scores (latest date, `COUNT DISTINCT` per rack) | `storeNo` (STRING) |
 | `us_re_ods_prod_pub.sc_walmart_workorder_labor_performed` | Labor hours | `tracking_number` (INT64) |
+| `crystal.ahu_hvac_time_in_target_score` | AHU unit count (`COUNT DISTINCT hvacName`) | `storeNo` (STRING) |
+| `crystal.rtu_hvac_time_in_target_score` | RTU unit count (`COUNT DISTINCT hvacName`) | `storeNo` (STRING) |
 
 **⚠️ BANNED:** `rack_comprehensive_performance_data` — stale data, DO NOT USE.
 
@@ -137,6 +156,10 @@ Run: python3 refresh.py
 | PM score too low | Check if NULL data is being treated as 0 — should be excluded |
 | "No Data" for metrics | Correct behavior — NULL excluded from PM average |
 | Module not found | Use system python3, not a venv |
+| HVAC units too high | Must use `COUNT DISTINCT hvacName`, not `COUNT(*)` of readings |
+| Rack pass/fail counts absurd | Must filter to latest `testDate` only, not all history |
+| Leak tab store details missing | Check `hasDetail` declared before use (JS `const` hoisting bug) |
+| WO table missing problem codes | Ensure `problem_code_desc` is in the BQ query and mapped to `pc` |
 
 ---
 

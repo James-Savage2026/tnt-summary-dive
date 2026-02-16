@@ -33,6 +33,8 @@
 | **Store Metrics** | `crystal.store_tabular_view` | `re-crystal-mdm-prod` | ✅ Approved |
 | **Rack Scores** | `us_re_ods_prod_pub.dip_rack_scorecard` | `re-ods-prod` | ✅ Approved |
 | **Labor Hours** | `us_re_ods_prod_pub.sc_walmart_workorder_labor_performed` | `re-ods-prod` | ✅ Approved |
+| **AHU Units** | `crystal.ahu_hvac_time_in_target_score` | `re-crystal-mdm-prod` | ✅ Approved |
+| **RTU Units** | `crystal.rtu_hvac_time_in_target_score` | `re-crystal-mdm-prod` | ✅ Approved |
 
 ### Do not substitute these tables. Period.
 
@@ -231,6 +233,24 @@ GROUP BY tracking_number
 
 ## 6. Column Type Reference
 
+### ⚠️ HVAC Unit Counts
+
+**MUST use `COUNT(DISTINCT hvacName)` — NOT `COUNT(*)`.**
+
+The HVAC tables contain one row per unit per time period. Using `COUNT(*)`
+returns reading counts (avg ~17,838 per store) instead of actual equipment
+counts (avg ~30 per store).
+
+```sql
+-- CORRECT: unique equipment per store
+SELECT storeNo, COUNT(DISTINCT hvacName) as unit_count
+FROM `re-crystal-mdm-prod.crystal.rtu_hvac_time_in_target_score`
+GROUP BY storeNo
+
+-- WRONG: counts readings, not units
+SELECT storeNo, COUNT(*) as unit_count  -- BUG!
+```
+
 These type mismatches have caused query failures. Do not guess — use this table.
 
 | Table | Column | Type | Notes |
@@ -272,6 +292,10 @@ Replace it with `dip_rack_scorecard` using the approved SQL above.
 
 | Date | Change | Approved By |
 |------|--------|-------------|
+| 2026-02-09 | Fixed HVAC unit counts: `COUNT DISTINCT hvacName` from `ahu_hvac_time_in_target_score` and `rtu_hvac_time_in_target_score` (was `COUNT(*)` of readings — avg 17,838 vs correct avg 30 per store). | James Savage |
+| 2026-02-09 | Fixed rack scorecard pass/fail: filter to latest `testDate` only, use `COUNT DISTINCT groupValue` for rack count. | James Savage |
+| 2026-02-09 | Added `problem_code_desc` to embedded WO data for TnT store detail. | James Savage |
+| 2026-02-09 | Added global banner filter (All/Walmart/Sam’s) to TnT tab — affects all visuals. | James Savage |
 | 2026-02-16 | Switched rack source from `rack_comprehensive_performance_data` to `dip_rack_scorecard`. Fixed `result` column encoding (1=fail, 0=pass). | James Savage |
 | 2026-02-16 | Added labor hours from `sc_walmart_workorder_labor_performed`. | James Savage |
 | 2026-02-16 | Confirmed PM score calculation matches Crystal within 0.34% for Store 14. | James Savage |

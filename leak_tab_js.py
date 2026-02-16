@@ -421,8 +421,8 @@ def build_leak_js(store_json, mgmt_json, cumul_json, burn_json, wo_json='{}', mo
             const icon = bRate > LK_T * 1.5 ? '\U0001f6a8' : bRate > LK_T ? '\u26A0\uFE0F' : '\u2705';
             const woCount = (LK_WOS[s.s] || []).length;
             const isExpanded = lkExpandedStore === s.s;
-            const expandIcon = hasDetail ? (isExpanded ? '\u25BC' : '\u25B6') : '';
             const hasDetail = woCount > 0 || STORE_ASSETS[s.s];
+            const expandIcon = hasDetail ? (isExpanded ? '\u25BC' : '\u25B6') : '';
             const clickAttr = hasDetail ? `onclick="toggleLeakWo('${{s.s}}')" style="cursor:pointer"` : '';
             let row = `
                 <tr class="hover:bg-gray-50 ${{s.cylr > LK_T ? 'bg-red-50' : ''}} ${{isExpanded ? 'bg-blue-50' : ''}}" ${{clickAttr}}>
