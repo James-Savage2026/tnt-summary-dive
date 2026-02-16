@@ -968,7 +968,7 @@ def main():
             `Thank you,`,
             `James Savage`,
             `North BU HVAC/R`
-        ].join('\n');
+        ].join('\\n');
         return `mailto:?subject=${{encodeURIComponent(subject)}}&body=${{encodeURIComponent(body)}}`;
     }}
     
