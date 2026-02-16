@@ -474,14 +474,12 @@ async function generatePdf() {
 
     try {
         const content = buildPdfContent(pdfExportTab, level, person);
+        const htmlStr = content.innerHTML;
 
-        // Append visible on page (behind modal) so html2canvas can capture it
-        content.style.position = 'absolute';
-        content.style.left = '0';
-        content.style.top = document.body.scrollHeight + 'px';
-        content.style.zIndex = '1';
-        content.style.opacity = '1';
-        document.body.appendChild(content);
+        if (!htmlStr || htmlStr.length < 50) {
+            alert('No data to export. Check your filters.');
+            return;
+        }
 
         const levelSlug = level === 'sr_director' ? 'SrDir' : 'Dir';
         const personSlug = person === '__all__' ? 'All' : person.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 20);
@@ -489,17 +487,36 @@ async function generatePdf() {
         const dateSlug = new Date().toISOString().slice(0, 10);
         const filename = `${tabSlug}_${levelSlug}_${personSlug}_${dateSlug}.pdf`;
 
+        // Create a visible iframe for html2canvas to capture
+        const iframe = document.createElement('iframe');
+        iframe.style.cssText = 'position:fixed;left:0;top:0;width:1200px;height:900px;opacity:0.01;z-index:-1;border:none;';
+        document.body.appendChild(iframe);
+
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        iframeDoc.open();
+        iframeDoc.write(`<!DOCTYPE html>
+<html><head><style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:system-ui,-apple-system,sans-serif; background:#fff; color:#1a1a1a; padding:32px; width:1100px; }
+  table { border-collapse:collapse; width:100%; }
+</style></head>
+<body>${htmlStr}</body></html>`);
+        iframeDoc.close();
+
+        // Wait for iframe to render
+        await new Promise(r => setTimeout(r, 500));
+
         const opt = {
             margin:       [0.3, 0.3, 0.3, 0.3],
             filename:     filename,
             image:        { type: 'jpeg', quality: 0.95 },
-            html2canvas:  { scale: 2, useCORS: true, logging: false, width: 1100 },
+            html2canvas:  { scale: 2, useCORS: true, logging: false },
             jsPDF:        { unit: 'in', format: 'letter', orientation: 'landscape' },
             pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
         };
 
-        await html2pdf().set(opt).from(content).save();
-        document.body.removeChild(content);
+        await html2pdf().set(opt).from(iframeDoc.body).save();
+        document.body.removeChild(iframe);
         closePdfModal();
     } catch (err) {
         console.error('PDF generation failed:', err);
