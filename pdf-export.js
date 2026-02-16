@@ -75,6 +75,113 @@ function insightBox(items) {
     return html;
 }
 
+/* ══════════════════════════════════════════════════════════
+ *  SVG CHART HELPERS (inline, no external library needed)
+ * ══════════════════════════════════════════════════════════ */
+
+/** Horizontal bar chart — [{label, value, color?}], max auto-detected */
+function svgBarChart(title, data, opts) {
+    opts = opts || {};
+    var W = opts.width || 520, barH = opts.barHeight || 22, gap = 4, labelW = opts.labelWidth || 140;
+    var maxVal = opts.max || Math.max.apply(null, data.map(function(d) { return d.value; })) || 1;
+    var chartW = W - labelW - 60;
+    var H = data.length * (barH + gap) + 30;
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" style="font-family:system-ui,sans-serif;">';
+    if (title) svg += '<text x="0" y="14" font-size="12" font-weight="700" fill="#333">' + title + '</text>';
+    var y0 = title ? 26 : 6;
+    data.forEach(function(d, i) {
+        var y = y0 + i * (barH + gap);
+        var barW = Math.max(2, (d.value / maxVal) * chartW);
+        var c = d.color || '#0053e2';
+        var textColor = d.value >= maxVal * 0.3 ? '#fff' : '#333';
+        // Label
+        svg += '<text x="' + (labelW - 4) + '" y="' + (y + barH/2 + 4) + '" font-size="10" fill="#333" text-anchor="end">' + d.label + '</text>';
+        // Bar bg
+        svg += '<rect x="' + labelW + '" y="' + y + '" width="' + chartW + '" height="' + barH + '" rx="3" fill="#f3f4f6"/>';
+        // Bar fill
+        svg += '<rect x="' + labelW + '" y="' + y + '" width="' + barW + '" height="' + barH + '" rx="3" fill="' + c + '"/>';
+        // Value text
+        var valStr = opts.suffix === '%' ? d.value.toFixed(1) + '%' : d.value.toLocaleString();
+        var tx = barW > 50 ? (labelW + barW - 4) : (labelW + barW + 4);
+        var ta = barW > 50 ? 'end' : 'start';
+        var tc = barW > 50 ? textColor : '#333';
+        svg += '<text x="' + tx + '" y="' + (y + barH/2 + 4) + '" font-size="10" font-weight="600" fill="' + tc + '" text-anchor="' + ta + '">' + valStr + '</text>';
+    });
+    svg += '</svg>';
+    return svg;
+}
+
+/** Donut/ring chart — [{label, value, color}] */
+function svgDonutChart(title, data, opts) {
+    opts = opts || {};
+    var size = opts.size || 160, r = size * 0.35, stroke = opts.stroke || 24;
+    var cx = size / 2, cy = size / 2;
+    var total = data.reduce(function(s, d) { return s + d.value; }, 0) || 1;
+    var W = size + 200; // chart + legend
+    var H = Math.max(size, data.length * 22 + 30);
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" style="font-family:system-ui,sans-serif;">';
+    if (title) svg += '<text x="0" y="14" font-size="12" font-weight="700" fill="#333">' + title + '</text>';
+    var offy = title ? 20 : 0;
+    // Center text
+    svg += '<text x="' + cx + '" y="' + (cy + offy - 4) + '" font-size="18" font-weight="800" fill="#333" text-anchor="middle">' + total.toLocaleString() + '</text>';
+    svg += '<text x="' + cx + '" y="' + (cy + offy + 12) + '" font-size="9" fill="#666" text-anchor="middle">Total</text>';
+    // Arcs
+    var cumAngle = -90;
+    data.forEach(function(d) {
+        var angle = (d.value / total) * 360;
+        if (angle < 0.5) { cumAngle += angle; return; }
+        var startRad = cumAngle * Math.PI / 180;
+        var endRad = (cumAngle + angle) * Math.PI / 180;
+        var x1 = cx + r * Math.cos(startRad), y1 = (cy + offy) + r * Math.sin(startRad);
+        var x2 = cx + r * Math.cos(endRad), y2 = (cy + offy) + r * Math.sin(endRad);
+        var large = angle > 180 ? 1 : 0;
+        svg += '<path d="M ' + x1 + ' ' + y1 + ' A ' + r + ' ' + r + ' 0 ' + large + ' 1 ' + x2 + ' ' + y2 + '" fill="none" stroke="' + d.color + '" stroke-width="' + stroke + '"/>';
+        cumAngle += angle;
+    });
+    // Legend
+    var lx = size + 12, ly = offy + 10;
+    data.forEach(function(d, i) {
+        var y = ly + i * 22;
+        svg += '<rect x="' + lx + '" y="' + (y - 8) + '" width="12" height="12" rx="2" fill="' + d.color + '"/>';
+        svg += '<text x="' + (lx + 18) + '" y="' + (y + 2) + '" font-size="10" fill="#333">' + d.label + '</text>';
+        svg += '<text x="' + (lx + 18) + '" y="' + (y + 14) + '" font-size="9" font-weight="600" fill="#666">' + d.value.toLocaleString() + ' (' + (d.value/total*100).toFixed(1) + '%)</text>';
+    });
+    svg += '</svg>';
+    return svg;
+}
+
+/** Gauge chart — single value 0-100 */
+function svgGauge(label, value, opts) {
+    opts = opts || {};
+    var size = opts.size || 120, stroke = 16;
+    var r = size * 0.35, cx = size / 2, cy = size * 0.55;
+    var color = value >= 90 ? '#2a8703' : value >= 80 ? '#f59e0b' : '#ea1100';
+    // Semi-circle from 180 to 0 degrees
+    var angle = Math.min(180, value / 100 * 180);
+    var startRad = Math.PI; // 180deg
+    var endRad = Math.PI - (angle * Math.PI / 180);
+    var x1 = cx + r * Math.cos(startRad), y1 = cy + r * Math.sin(startRad);
+    var x2 = cx + r * Math.cos(endRad), y2 = cy + r * Math.sin(endRad);
+    var large = angle > 90 ? 1 : 0;
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + (size * 0.7) + '" style="font-family:system-ui,sans-serif;">';
+    // Background arc
+    svg += '<path d="M ' + (cx - r) + ' ' + cy + ' A ' + r + ' ' + r + ' 0 0 1 ' + (cx + r) + ' ' + cy + '" fill="none" stroke="#e5e7eb" stroke-width="' + stroke + '" stroke-linecap="round"/>';
+    // Value arc
+    if (angle > 0.5)
+        svg += '<path d="M ' + x1 + ' ' + y1 + ' A ' + r + ' ' + r + ' 0 ' + large + ' 1 ' + x2 + ' ' + y2 + '" fill="none" stroke="' + color + '" stroke-width="' + stroke + '" stroke-linecap="round"/>';
+    // Value text
+    svg += '<text x="' + cx + '" y="' + (cy - 2) + '" font-size="18" font-weight="800" fill="' + color + '" text-anchor="middle">' + value.toFixed(1) + '%</text>';
+    svg += '<text x="' + cx + '" y="' + (cy + 14) + '" font-size="9" fill="#666" text-anchor="middle">' + label + '</text>';
+    svg += '</svg>';
+    return svg;
+}
+
+/** Chart wrapper for side-by-side layout */
+function chartRow() {
+    var charts = Array.prototype.slice.call(arguments);
+    return '<div style="display:flex;gap:16px;margin:12px 0;align-items:flex-start;flex-wrap:wrap;">' + charts.join('') + '</div>';
+}
+
 function sectionTitle(icon, text) {
     return '<h3 style="font-size:14px;font-weight:700;margin:20px 0 8px;color:#0053e2;border-bottom:1px solid #e5e7eb;padding-bottom:4px;">' + icon + ' ' + text + '</h3>';
 }
@@ -201,29 +308,36 @@ function buildTntPdf(stores, level, person, isAll) {
 
     html += insightBox(insights);
 
-    // Store Distribution
-    html += sectionTitle('📊', 'Store Distribution');
+    // CHARTS: Gauges + Distribution Bar
+    html += chartRow(
+        svgGauge('Ref 7-Day', avg7d),
+        svgGauge('Ref 30-Day', avg30d),
+        svgGauge('Ref 90-Day', avg90d),
+        svgGauge('HVAC 30-Day', avgHvac)
+    );
+
     var dist = [
-        { range: '≥95%', count: stores.filter(function(s) { return s.twt_ref_30_day != null && s.twt_ref_30_day >= 95; }).length, color: '#2a8703' },
-        { range: '90-95%', count: stores.filter(function(s) { return s.twt_ref_30_day != null && s.twt_ref_30_day >= 90 && s.twt_ref_30_day < 95; }).length, color: '#2a8703' },
-        { range: '80-90%', count: stores.filter(function(s) { return s.twt_ref_30_day != null && s.twt_ref_30_day >= 80 && s.twt_ref_30_day < 90; }).length, color: '#f59e0b' },
-        { range: '70-80%', count: stores.filter(function(s) { return s.twt_ref_30_day != null && s.twt_ref_30_day >= 70 && s.twt_ref_30_day < 80; }).length, color: '#ea1100' },
-        { range: '<70%', count: stores.filter(function(s) { return s.twt_ref_30_day != null && s.twt_ref_30_day < 70; }).length, color: '#ea1100' },
-        { range: 'No Data', count: stores.filter(function(s) { return s.twt_ref_30_day == null; }).length, color: '#999' }
+        { label: '≥95%', value: stores.filter(function(s) { return s.twt_ref_30_day != null && s.twt_ref_30_day >= 95; }).length, color: '#166534' },
+        { label: '90-95%', value: stores.filter(function(s) { return s.twt_ref_30_day != null && s.twt_ref_30_day >= 90 && s.twt_ref_30_day < 95; }).length, color: '#2a8703' },
+        { label: '80-90%', value: stores.filter(function(s) { return s.twt_ref_30_day != null && s.twt_ref_30_day >= 80 && s.twt_ref_30_day < 90; }).length, color: '#f59e0b' },
+        { label: '70-80%', value: stores.filter(function(s) { return s.twt_ref_30_day != null && s.twt_ref_30_day >= 70 && s.twt_ref_30_day < 80; }).length, color: '#ea1100' },
+        { label: '<70%', value: stores.filter(function(s) { return s.twt_ref_30_day != null && s.twt_ref_30_day < 70; }).length, color: '#991b1b' },
+        { label: 'No Data', value: stores.filter(function(s) { return s.twt_ref_30_day == null; }).length, color: '#9ca3af' }
     ];
-    html += '<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:16px;">';
-    dist.forEach(function(d) {
-        html += '<div style="text-align:center;padding:8px;border-radius:6px;background:#f9fafb;border:1px solid #e5e7eb;">'
-            + '<div style="font-size:18px;font-weight:700;color:' + d.color + ';">' + d.count + '</div>'
-            + '<div style="font-size:10px;color:#666;">' + d.range + '</div></div>';
-    });
-    html += '</div>';
+    html += svgBarChart('Store Distribution (Ref 30-Day TnT)', dist, { width: 520, labelWidth: 80 });
 
     // Group breakdown
     var groupBy = level === 'sr_director' ? 'fm_sr_director_name' : 'fm_director_name';
     var childGroupBy = level === 'sr_director' ? 'fm_director_name' : 'fm_regional_manager_name';
     var childLabel = level === 'sr_director' ? 'Director' : 'Regional Manager';
     var groups = isAll ? groupStores(stores, groupBy) : groupStores(stores, childGroupBy);
+
+    // CHART: Performance bar chart by group
+    var grpChartData = groups.slice(0, 15).map(function(g) {
+        return { label: g.name.substring(0, 20), value: g.avgRef30, color: g.avgRef30 >= 90 ? '#2a8703' : g.avgRef30 >= 80 ? '#f59e0b' : '#ea1100' };
+    });
+    html += svgBarChart('Ref 30-Day TnT by ' + (isAll ? (level === 'sr_director' ? 'Sr. Director' : 'Director') : childLabel), grpChartData, { width: 540, labelWidth: 150, max: 100, suffix: '%' });
+
     html += buildGroupTable(groups, isAll ? (level === 'sr_director' ? 'Sr. Director' : 'Director') : childLabel);
 
     // Bottom 10
@@ -291,19 +405,42 @@ function buildWtwPdf(stores, level, person, isAll) {
     html += kpiBox('Avg PM Score', pmAvg.toFixed(1), '%');
     html += '</div>';
 
-    // Phase breakdown
-    html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px;">';
-    html += kpiBox('Phase 1: ' + p1done + '/' + p1.length, p1pct.toFixed(0), '%');
-    html += kpiBox('Phase 2: ' + p2done + '/' + p2.length, p2pct.toFixed(0), '%');
-    html += kpiBox('Phase 3: ' + p3done + '/' + p3.length, p3pct.toFixed(0), '%');
-    html += '</div>';
+    // CHARTS: Donut for status + bar for phases
+    html += chartRow(
+        svgDonutChart('WO Status', [
+            { label: 'Completed', value: completed.length, color: '#2a8703' },
+            { label: 'Open', value: open, color: '#ea1100' }
+        ]),
+        svgDonutChart('PM Readiness', [
+            { label: 'Ready to Close', value: ready, color: '#2a8703' },
+            { label: 'Review Needed', value: reviewNeeded, color: '#f59e0b' },
+            { label: 'Critical Reopen', value: critical, color: '#ea1100' }
+        ])
+    );
 
-    // Readiness
-    html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">';
+    html += svgBarChart('Phase Completion', [
+        { label: 'Phase 1 (' + p1done + '/' + p1.length + ')', value: p1pct, color: p1pct >= 50 ? '#2a8703' : '#f59e0b' },
+        { label: 'Phase 2 (' + p2done + '/' + p2.length + ')', value: p2pct, color: p2pct >= 50 ? '#2a8703' : p2pct >= 20 ? '#f59e0b' : '#ea1100' },
+        { label: 'Phase 3 (' + p3done + '/' + p3.length + ')', value: p3pct, color: p3pct >= 50 ? '#2a8703' : p3pct >= 20 ? '#f59e0b' : '#ea1100' }
+    ], { width: 520, labelWidth: 150, max: 100, suffix: '%', barHeight: 28 });
+
+    // Readiness boxes
+    html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0;">';
     html += kpiBox('✓ Ready to Close', ready, '', '#2a8703');
     html += kpiBox('🔍 Review Needed', reviewNeeded, '', '#f59e0b');
     html += kpiBox('⚠ Critical Reopen', critical, '', critical > 0 ? '#ea1100' : '#2a8703');
     html += '</div>';
+
+    // CHART: Gauge for leak rate + donut for threshold
+    var under = leakStores.length - over;
+    html += chartRow(
+        svgGauge('Fleet Leak Rate', avgRate, { size: 140 }),
+        svgDonutChart('Threshold Compliance', [
+            { label: 'Under ' + LK_T_VAL + '%', value: under, color: '#2a8703' },
+            { label: 'Over ' + LK_T_VAL + '%', value: over, color: '#ea1100' },
+            { label: 'Critical (>' + (LK_T_VAL*1.5).toFixed(0) + '%)', value: critical, color: '#991b1b' }
+        ])
+    );
 
     // Insights
     var insights = [];
@@ -332,6 +469,12 @@ function buildWtwPdf(stores, level, person, isAll) {
         .sort(function(a,b) { return a.pct - b.pct; });
 
     if (grpList.length > 1) {
+        // CHART: Completion by group
+        var grpBarData = grpList.slice(0, 15).map(function(g) {
+            return { label: g.name.substring(0, 20), value: g.pct, color: g.pct >= 50 ? '#2a8703' : g.pct >= 20 ? '#f59e0b' : '#ea1100' };
+        });
+        html += svgBarChart('Completion % by ' + childLabel, grpBarData, { width: 540, labelWidth: 150, max: 100, suffix: '%' });
+
         html += sectionTitle('📊', 'WTW Completion by ' + childLabel);
         html += '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="background:#0053e2;color:#fff;">';
         html += '<th style="' + th() + '">' + childLabel + '</th><th style="' + th() + '">Total</th>';
@@ -377,6 +520,17 @@ function buildLeakPdf(stores, level, person, isAll) {
     html += kpiBox('Leak Rate', avgRate.toFixed(1), '%', avgRate > LK_T_VAL ? '#ea1100' : '#2a8703');
     html += kpiBox('Over ' + LK_T_VAL + '% Threshold', over, '', over > 0 ? '#ea1100' : '#2a8703');
     html += '</div>';
+
+    // CHART: Gauge for leak rate + donut for threshold
+    var under = leakStores.length - over;
+    html += chartRow(
+        svgGauge('Fleet Leak Rate', avgRate, { size: 140 }),
+        svgDonutChart('Threshold Compliance', [
+            { label: 'Under ' + LK_T_VAL + '%', value: under, color: '#2a8703' },
+            { label: 'Over ' + LK_T_VAL + '%', value: over, color: '#ea1100' },
+            { label: 'Critical (>' + (LK_T_VAL*1.5).toFixed(0) + '%)', value: critical, color: '#991b1b' }
+        ])
+    );
 
     // Insights
     var insights = [];
@@ -426,6 +580,12 @@ function buildLeakPdf(stores, level, person, isAll) {
         .sort(function(a,b) { return b.rate - a.rate; });
 
     if (grpList.length > 1) {
+        // CHART: Leak rate by group
+        var leakBarData = grpList.slice(0, 15).map(function(g) {
+            return { label: g.name.substring(0, 20), value: g.rate, color: g.rate > LK_T_VAL ? '#ea1100' : '#2a8703' };
+        });
+        html += svgBarChart('Leak Rate by ' + grpLabel, leakBarData, { width: 540, labelWidth: 150, suffix: '%' });
+
         html += sectionTitle('📊', 'Leak Rate by ' + grpLabel);
         html += '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="background:#0053e2;color:#fff;">';
         html += '<th style="' + th() + '">' + grpLabel + '</th><th style="' + th() + '">Stores</th>';
