@@ -306,10 +306,11 @@ function buildGroupTable(groups,label) {
 
 /* ══════════ WTW MANAGER × PHASE MATRIX TABLE ══════════ */
 function buildWtwManagerMatrix(wos, level) {
-    /* Build RM → FSM hierarchy with per-phase completion */
+    /* Build hierarchy: Sr Dir → Director→RM, else RM→FSM */
     var groupKey = level === 'sr_director' ? 'fm' : 'rm';
-    var subKey = 'fsm';
+    var subKey = level === 'sr_director' ? 'rm' : 'fsm';
     var groupLabel = level === 'sr_director' ? 'Director' : 'Regional Manager';
+    var subLabel = level === 'sr_director' ? 'Regional Manager' : 'FS Manager';
     var tree = {};
     wos.forEach(function(w) {
         var gName = w[groupKey] || 'Unknown';
@@ -364,10 +365,10 @@ function buildWtwManagerMatrix(wos, level) {
         var fw = isGroup ? 'font-weight:700;' : '';
         return '<td style="' + td() + 'text-align:center;padding:5px 6px;font-size:10px;' + fw + scoreColor(val) + '">' + val.toFixed(0) + '%' + countStr + '</td>';
     }
-    var h = sectionTitle('\ud83d\udcca', groupLabel + ' \u2192 FS Manager Completion by Phase');
+    var h = sectionTitle('\ud83d\udcca', groupLabel + ' \u2192 ' + subLabel + ' Completion by Phase');
     h += '<table style="width:100%;border-collapse:collapse;font-size:10px;border-radius:8px;overflow:hidden;">';
     h += '<thead><tr style="' + S.hdr + '">';
-    h += '<th style="' + th() + 'font-size:9px;min-width:130px;">' + groupLabel + ' / FS Manager</th>';
+    h += '<th style="' + th() + 'font-size:9px;min-width:130px;">' + groupLabel + ' / ' + subLabel + '</th>';
     h += '<th style="' + th() + 'font-size:9px;text-align:center;">WOs</th>';
     h += '<th style="' + th() + 'font-size:9px;text-align:center;">Overall</th>';
     h += '<th style="' + th() + 'font-size:9px;text-align:center;">PH1</th>';
@@ -411,8 +412,9 @@ function buildLeakManagerMatrix(leakStores, level) {
     if (!leakStores || leakStores.length === 0) return '';
     var LKT = typeof LK_T !== 'undefined' ? LK_T : 20;
     var groupKey = level === 'sr_director' ? 'fm' : 'rm';
-    var subKey = 'fsm';
+    var subKey = level === 'sr_director' ? 'rm' : 'fsm';
     var groupLabel = level === 'sr_director' ? 'Director' : 'Regional Manager';
+    var subLabel = level === 'sr_director' ? 'Regional Manager' : 'FS Manager';
 
     /* Burn rate calc (mirrors leak_tab_js.py) */
     function calcBurnPdf(cytq, sc) {
@@ -488,10 +490,10 @@ function buildLeakManagerMatrix(leakStores, level) {
         return { label: '\u2705 On Track', color: '#16a34a' };
     }
 
-    var h = sectionTitle('\ud83d\udca7', groupLabel + ' \u2192 FS Manager Leak & Burn Rate');
+    var h = sectionTitle('\ud83d\udca7', groupLabel + ' \u2192 ' + subLabel + ' Leak & Burn Rate');
     h += '<table style="width:100%;border-collapse:collapse;font-size:10px;border-radius:8px;overflow:hidden;">';
     h += '<thead><tr style="' + S.hdr + '">';
-    h += '<th style="' + th() + 'font-size:9px;min-width:130px;">' + groupLabel + ' / FS Manager</th>';
+    h += '<th style="' + th() + 'font-size:9px;min-width:130px;">' + groupLabel + ' / ' + subLabel + '</th>';
     h += '<th style="' + th() + 'font-size:9px;text-align:center;">Stores</th>';
     h += '<th style="' + th() + 'font-size:9px;text-align:center;">Charge (lbs)</th>';
     h += '<th style="' + th() + 'font-size:9px;text-align:center;">Leaked (lbs)</th>';
