@@ -406,6 +406,133 @@ function buildWtwManagerMatrix(wos, level) {
     return h;
 }
 
+/* ══════════ LEAK MANAGER × METRICS MATRIX ══════════ */
+function buildLeakManagerMatrix(leakStores, level) {
+    if (!leakStores || leakStores.length === 0) return '';
+    var LKT = typeof LK_T !== 'undefined' ? LK_T : 20;
+    var groupKey = level === 'sr_director' ? 'fm' : 'rm';
+    var subKey = 'fsm';
+    var groupLabel = level === 'sr_director' ? 'Director' : 'Regional Manager';
+
+    /* Burn rate calc (mirrors leak_tab_js.py) */
+    function calcBurnPdf(cytq, sc) {
+        var now = new Date();
+        var jan1 = new Date(now.getFullYear(), 0, 1);
+        var elapsed = Math.max(1, Math.floor((now - jan1) / 86400000));
+        var diy = now.getFullYear() % 4 === 0 ? 366 : 365;
+        var daily = cytq / elapsed;
+        var projTq = daily * diy;
+        var projRate = sc > 0 ? (projTq / sc * 100) : 0;
+        var threshLbs = sc * LKT / 100;
+        var crossDay = -1;
+        if (daily > 0 && cytq < threshLbs) crossDay = elapsed + (threshLbs - cytq) / daily;
+        return { elapsed: elapsed, diy: diy, daily: daily, projTq: projTq, projRate: projRate, crossDay: crossDay };
+    }
+
+    /* Build hierarchy tree */
+    var tree = {};
+    leakStores.forEach(function(s) {
+        var gName = s[groupKey] || 'Unknown';
+        var sName = s[subKey] || 'Unassigned';
+        if (!tree[gName]) tree[gName] = {};
+        if (!tree[gName][sName]) tree[gName][sName] = {
+            n: 0, sc: 0, cytq: 0, cyl: 0, over: 0
+        };
+        var node = tree[gName][sName];
+        node.n++;
+        node.sc += (s.sc || 0);
+        node.cytq += (s.cytq || 0);
+        node.cyl += (s.cyl || 0);
+        if ((s.cylr || 0) > LKT) node.over++;
+    });
+
+    /* Build sorted groups with sub-rows */
+    var groups = Object.keys(tree).sort().map(function(gName) {
+        var subs = Object.keys(tree[gName]).sort().map(function(sName) {
+            var n = tree[gName][sName];
+            var rate = n.sc > 0 ? n.cytq / n.sc * 100 : 0;
+            var burn = calcBurnPdf(n.cytq, n.sc);
+            return {
+                name: sName, n: n.n, sc: n.sc, cytq: n.cytq, cyl: n.cyl,
+                over: n.over, rate: rate,
+                projRate: burn.projRate, crossDay: burn.crossDay, diy: burn.diy
+            };
+        });
+        /* Group totals */
+        var gt = { n: 0, sc: 0, cytq: 0, cyl: 0, over: 0 };
+        subs.forEach(function(s) {
+            gt.n += s.n; gt.sc += s.sc; gt.cytq += s.cytq; gt.cyl += s.cyl; gt.over += s.over;
+        });
+        var gRate = gt.sc > 0 ? gt.cytq / gt.sc * 100 : 0;
+        var gBurn = calcBurnPdf(gt.cytq, gt.sc);
+        return {
+            name: gName, subs: subs, n: gt.n, sc: gt.sc, cytq: gt.cytq, cyl: gt.cyl,
+            over: gt.over, rate: gRate,
+            projRate: gBurn.projRate, crossDay: gBurn.crossDay, diy: gBurn.diy
+        };
+    });
+
+    if (groups.length === 0) return '';
+
+    /* Color helpers for leak rates (lower = better, inverted vs scoreColor) */
+    function leakColor(rate) {
+        if (rate > LKT * 1.5) return 'color:#991b1b;font-weight:700;';
+        if (rate > LKT) return 'color:#dc2626;font-weight:700;';
+        if (rate > LKT * 0.75) return 'color:#d97706;';
+        return 'color:#16a34a;';
+    }
+    function burnStatus(projRate, crossDay, diy) {
+        if (projRate > LKT * 1.5) return { label: '\u26a0 Critical', color: '#991b1b' };
+        if (projRate > LKT) return { label: '\u26a0 Over', color: '#dc2626' };
+        if (crossDay > 0 && crossDay <= diy) return { label: '\u23f3 At Risk', color: '#d97706' };
+        return { label: '\u2705 On Track', color: '#16a34a' };
+    }
+
+    var h = sectionTitle('\ud83d\udca7', groupLabel + ' \u2192 FS Manager Leak & Burn Rate');
+    h += '<table style="width:100%;border-collapse:collapse;font-size:10px;border-radius:8px;overflow:hidden;">';
+    h += '<thead><tr style="' + S.hdr + '">';
+    h += '<th style="' + th() + 'font-size:9px;min-width:130px;">' + groupLabel + ' / FS Manager</th>';
+    h += '<th style="' + th() + 'font-size:9px;text-align:center;">Stores</th>';
+    h += '<th style="' + th() + 'font-size:9px;text-align:center;">Charge (lbs)</th>';
+    h += '<th style="' + th() + 'font-size:9px;text-align:center;">Leaked (lbs)</th>';
+    h += '<th style="' + th() + 'font-size:9px;text-align:center;">Leak Rate</th>';
+    h += '<th style="' + th() + 'font-size:9px;text-align:center;">Proj Rate</th>';
+    h += '<th style="' + th() + 'font-size:9px;text-align:center;">Status</th>';
+    h += '<th style="' + th() + 'font-size:9px;text-align:center;">Over ' + LKT + '%</th>';
+    h += '</tr></thead><tbody>';
+
+    groups.forEach(function(g) {
+        var bs = burnStatus(g.projRate, g.crossDay, g.diy);
+        /* Group header row */
+        h += '<tr style="background:#fef2f2;">';
+        h += '<td style="' + td() + 'font-weight:800;font-size:11px;padding:7px 8px;color:#991b1b;">' + g.name + '</td>';
+        h += '<td style="' + td() + 'text-align:center;font-weight:700;padding:7px 6px;">' + g.n + '</td>';
+        h += '<td style="' + td() + 'text-align:center;font-weight:700;padding:7px 6px;">' + Math.round(g.sc).toLocaleString() + '</td>';
+        h += '<td style="' + td() + 'text-align:center;font-weight:700;padding:7px 6px;color:#dc2626;">' + Math.round(g.cytq).toLocaleString() + '</td>';
+        h += '<td style="' + td() + 'text-align:center;font-weight:700;padding:7px 6px;' + leakColor(g.rate) + '">' + g.rate.toFixed(1) + '%</td>';
+        h += '<td style="' + td() + 'text-align:center;font-weight:700;padding:7px 6px;' + leakColor(g.projRate) + '">' + g.projRate.toFixed(1) + '%</td>';
+        h += '<td style="' + td() + 'text-align:center;font-weight:700;padding:7px 6px;color:' + bs.color + ';">' + bs.label + '</td>';
+        h += '<td style="' + td() + 'text-align:center;font-weight:700;padding:7px 6px;' + (g.over > 0 ? 'color:#dc2626;' : 'color:#16a34a;') + '">' + g.over + '</td>';
+        h += '</tr>';
+        /* Sub-rows for each FSM */
+        g.subs.forEach(function(s, si) {
+            var bg = si % 2 === 0 ? '#fff' : '#f8fafc';
+            var sbs = burnStatus(s.projRate, s.crossDay, s.diy);
+            h += '<tr style="background:' + bg + ';">';
+            h += '<td style="' + td() + 'padding:5px 8px 5px 24px;font-size:10px;color:#475569;">\u2514 ' + s.name + '</td>';
+            h += '<td style="' + td() + 'text-align:center;padding:5px 6px;font-size:10px;">' + s.n + '</td>';
+            h += '<td style="' + td() + 'text-align:center;padding:5px 6px;font-size:10px;">' + Math.round(s.sc).toLocaleString() + '</td>';
+            h += '<td style="' + td() + 'text-align:center;padding:5px 6px;font-size:10px;color:#dc2626;">' + Math.round(s.cytq).toLocaleString() + '</td>';
+            h += '<td style="' + td() + 'text-align:center;padding:5px 6px;font-size:10px;' + leakColor(s.rate) + '">' + s.rate.toFixed(1) + '%</td>';
+            h += '<td style="' + td() + 'text-align:center;padding:5px 6px;font-size:10px;' + leakColor(s.projRate) + '">' + s.projRate.toFixed(1) + '%</td>';
+            h += '<td style="' + td() + 'text-align:center;padding:5px 6px;font-size:10px;color:' + sbs.color + ';">' + sbs.label + '</td>';
+            h += '<td style="' + td() + 'text-align:center;padding:5px 6px;font-size:10px;' + (s.over > 0 ? 'color:#dc2626;' : 'color:#16a34a;') + '">' + s.over + '</td>';
+            h += '</tr>';
+        });
+    });
+    h += '</tbody></table>';
+    return h;
+}
 
 /* ══════════ FS MANAGER TABLE (condensed) ══════════ */
 function buildFsManagerTable(stores) {

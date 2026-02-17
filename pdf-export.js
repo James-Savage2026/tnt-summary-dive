@@ -427,6 +427,8 @@ function buildLeakPdf(stores,level,person,isAll) {
         gls.forEach(function(g,i){var bg=i%2===0?'#f8fafc':'#fff';var rc=g.rate>LKT?'color:#dc2626;font-weight:700;':'color:#16a34a;';h+='<tr style="background:'+bg+';">';h+='<td style="'+td()+'font-weight:600;">'+g.name+'</td>';h+='<td style="'+td()+'">'+g.stores+'</td>';h+='<td style="'+td()+'">'+Math.round(g.charge).toLocaleString()+'</td>';h+='<td style="'+td()+'">'+Math.round(g.qty).toLocaleString()+'</td>';h+='<td style="'+td()+rc+'">'+g.rate.toFixed(1)+'%</td>';h+='<td style="'+td()+(g.over>0?'color:#dc2626;':'')+'">'+g.over+'</td></tr>';});
         h+='</tbody></table>';
     }
+    // Manager × Leak & Burn Rate matrix
+    h+=buildLeakManagerMatrix(ls, level);
     return h;
 }
 
@@ -516,6 +518,7 @@ function buildCombinedPdf(stores,level,person,isAll) {
         if(crit>0) wIns.push('<strong>'+crit+' critical reopens</strong> needed (completed with PM <90%).');
         h+=insightBox(wIns);
         h+='</div>'; /* close WTW break-inside wrapper */
+        h+=buildWtwManagerMatrix(wos, level);
     }
 
     // ---- Leak Section (condensed) ----
@@ -542,6 +545,7 @@ function buildCombinedPdf(stores,level,person,isAll) {
         if(ov2>0) lIns.push(ov2+' stores over threshold need priority repair.');
         h+=insightBox(lIns);
         h+='</div>'; /* close leak break-inside wrapper */
+        h+=buildLeakManagerMatrix(lks, level);
     }
     return h;
 }
