@@ -473,10 +473,9 @@ function buildCombinedPdf(stores,level,person,isAll) {
     var gcd=grps.slice(0,10).map(function(g){return{label:g.name.substring(0,22),value:g.avgRef30,color:g.avgRef30>=95?'#15803d':g.avgRef30>=90?'#16a34a':g.avgRef30>=85?'#65a30d':g.avgRef30>=80?'#d97706':'#dc2626'};});
     h+=svgBarChart('Ref 30-Day by '+gLbl,gcd,{width:480,labelWidth:160,max:100,suffix:'%'});
 
-    // Bottom 10 stores in exec summary
+    // Bottom 10 + FS Manager on fresh page
+    h+='<div class="page-break"></div>';
     h+=buildBottom10Table(stores);
-
-    // FS Manager table in exec summary
     h+=sectionBlock('\ud83d\udc64','FS Manager Performance',buildFsManagerTable(stores));
 
     h+='<div class="page-break"></div>'; /* Force page break before WTW */
