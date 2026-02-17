@@ -180,6 +180,31 @@ function buildRmBreakout(stores, level) {
     return h;
 }
 
+/* ══════════ BOTTOM 10 STORES TABLE ══════════ */
+function buildBottom10Table(stores) {
+    var bot = stores.filter(function(d) { return d.twt_ref_30_day != null; })
+        .sort(function(a, b) { return (a.twt_ref_30_day || 0) - (b.twt_ref_30_day || 0); }).slice(0, 10);
+    if (bot.length === 0) return '';
+    var h = '<table style="width:100%;border-collapse:collapse;font-size:11px;border-radius:8px;overflow:hidden;"><thead><tr style="' + S.hdr + '">';
+    h += '<th style="' + th() + '">Store</th><th style="' + th() + '">Banner</th><th style="' + th() + '">RM</th>';
+    h += '<th style="' + th() + '">Ref 30d</th><th style="' + th() + '">HVAC 30d</th>';
+    h += '<th style="' + th() + '">Loss</th><th style="' + th() + '">Cases OOT</th></tr></thead><tbody>';
+    bot.forEach(function(s, i) {
+        var bg = i % 2 === 0 ? '#f8fafc' : '#fff';
+        var bn = isSams(s) ? "Sam's" : isWalmart(s) ? 'WM' : (s.banner_desc || '').substring(0, 10);
+        h += '<tr style="background:' + bg + ';">';
+        h += '<td style="' + td() + 'font-weight:600;">' + s.store_number + '</td>';
+        h += '<td style="' + td() + 'font-size:10px;">' + bn + '</td>';
+        h += '<td style="' + td() + '">' + (s.fm_regional_manager_name || '-') + '</td>';
+        h += '<td style="' + td() + scoreColor(s.twt_ref_30_day) + '">' + pct(s.twt_ref_30_day) + '</td>';
+        h += '<td style="' + td() + scoreColor(s.twt_hvac_30_day) + '">' + pct(s.twt_hvac_30_day) + '</td>';
+        h += '<td style="' + td() + 'color:#dc2626;">$' + ((s.total_loss || 0) / 1e3).toFixed(0) + 'K</td>';
+        h += '<td style="' + td() + '">' + ((s.cases_out_of_target || 0)).toLocaleString() + '</td></tr>';
+    });
+    h += '</tbody></table>';
+    return sectionBlock('\u26a0\ufe0f', 'Bottom 10 Stores (Ref 30-Day)', h);
+}
+
 /* ══════════ BUILD PDF CONTENT ══════════ */
 function buildPdfContent(tab,level,person) {
     var isAll=person==='__all__';
@@ -270,31 +295,13 @@ function buildTntPdf(stores,level,person,isAll) {
         return {label:g.name.substring(0,22),value:g.avgRef30,color:g.avgRef30>=95?'#15803d':g.avgRef30>=90?'#16a34a':g.avgRef30>=85?'#65a30d':g.avgRef30>=80?'#d97706':'#dc2626'};
     });
     h+='<div class="no-break">';
-    h+=svgBarChart('Ref 30-Day by '+grpLabel,gcd,{width:540,labelWidth:160,max:100,suffix:'%'});
+    h+=svgBarChart('Ref 30-Day by '+grpLabel,gcd,{width:480,labelWidth:160,max:100,suffix:'%'});
     h+='</div>';
     h+=buildGroupTable(grps,grpLabel);
 
     // Bottom 10 + FS Managers on fresh page
     h+='<div class="page-break"></div>';
-    var bot=stores.filter(function(d){return d.twt_ref_30_day!=null;}).sort(function(a,b){return(a.twt_ref_30_day||0)-(b.twt_ref_30_day||0);}).slice(0,10);
-    var botH='<table style="width:100%;border-collapse:collapse;font-size:11px;border-radius:8px;overflow:hidden;"><thead><tr style="'+S.hdr+'">';
-    botH+='<th style="'+th()+'">Store</th><th style="'+th()+'">Banner</th><th style="'+th()+'">RM</th>';
-    botH+='<th style="'+th()+'">Ref 30d</th><th style="'+th()+'">HVAC 30d</th>';
-    botH+='<th style="'+th()+'">Loss</th><th style="'+th()+'">Cases OOT</th></tr></thead><tbody>';
-    bot.forEach(function(s,i){
-        var bg=i%2===0?'#f8fafc':'#fff';
-        var bn=isSams(s)?"Sam's":isWalmart(s)?'WM':(s.banner_desc||'').substring(0,10);
-        botH+='<tr style="background:'+bg+';">';
-        botH+='<td style="'+td()+'font-weight:600;">'+s.store_number+'</td>';
-        botH+='<td style="'+td()+'font-size:10px;">'+bn+'</td>';
-        botH+='<td style="'+td()+'">'+(s.fm_regional_manager_name||'-')+'</td>';
-        botH+='<td style="'+td()+scoreColor(s.twt_ref_30_day)+'">'+pct(s.twt_ref_30_day)+'</td>';
-        botH+='<td style="'+td()+scoreColor(s.twt_hvac_30_day)+'">'+pct(s.twt_hvac_30_day)+'</td>';
-        botH+='<td style="'+td()+'color:#dc2626;">$'+((s.total_loss||0)/1e3).toFixed(0)+'K</td>';
-        botH+='<td style="'+td()+'">'+((s.cases_out_of_target||0)).toLocaleString()+'</td></tr>';
-    });
-    botH+='</tbody></table>';
-    h+=sectionBlock('\u26a0\ufe0f','Bottom 10 Stores (Ref 30-Day)',botH);
+    h+=buildBottom10Table(stores);
 
     // FS Manager Table
     h+=sectionBlock('\ud83d\udc64','FS Manager Performance',buildFsManagerTable(stores));
@@ -336,7 +343,7 @@ function buildWtwPdf(stores,level,person,isAll) {
         {label:'Phase 1 ('+p1d+'/'+p1.length+')',value:p1p,color:p1p>=50?'#16a34a':'#d97706'},
         {label:'Phase 2 ('+p2d+'/'+p2.length+')',value:p2p,color:p2p>=50?'#16a34a':p2p>=20?'#d97706':'#dc2626'},
         {label:'Phase 3 ('+p3d+'/'+p3.length+')',value:p3p,color:p3p>=50?'#16a34a':p3p>=20?'#d97706':'#dc2626'}
-    ],{width:520,labelWidth:150,max:100,suffix:'%',barHeight:28});
+    ],{width:480,labelWidth:150,max:100,suffix:'%',barHeight:28});
     h+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0;">';
     h+=kpiBox('\u2713 Ready to Close',rdy,'','#16a34a');
     h+=kpiBox('\ud83d\udd0d Review Needed',rev,'','#d97706');
@@ -358,7 +365,7 @@ function buildWtwPdf(stores,level,person,isAll) {
     var gl=Object.entries(gm).map(function(e){var n=e[0],d=e[1];return{name:n,total:d.t,done:d.d,pct:d.t>0?d.d/d.t*100:0,pmAvg:d.pn>0?d.ps/d.pn:0};}).sort(function(a,b){return b.pct-a.pct;});
     if(gl.length>1) {
         var gbd=gl.slice(0,15).map(function(g){return{label:g.name.substring(0,22),value:g.pct,color:g.pct>=50?'#16a34a':g.pct>=20?'#d97706':'#dc2626'};});
-        h+=svgBarChart('Completion by '+cLbl,gbd,{width:540,labelWidth:160,max:100,suffix:'%'});
+        h+=svgBarChart('Completion by '+cLbl,gbd,{width:480,labelWidth:160,max:100,suffix:'%'});
         h+=sectionTitle('\ud83d\udcca','WTW by '+cLbl);
         h+='<table style="width:100%;border-collapse:collapse;font-size:11px;border-radius:8px;overflow:hidden;"><thead><tr style="'+S.hdr+'">';
         h+='<th style="'+th()+'">'+cLbl+'</th><th style="'+th()+'">Total</th><th style="'+th()+'">Done</th><th style="'+th()+'">Completion</th><th style="'+th()+'">Avg PM</th></tr></thead><tbody>';
@@ -412,7 +419,7 @@ function buildLeakPdf(stores,level,person,isAll) {
     var gls=Object.entries(gm).map(function(e){var n=e[0],d=e[1];return{name:n,stores:d.n,charge:d.c,qty:d.q,leaks:d.l,over:d.o,rate:d.c>0?d.q/d.c*100:0};}).sort(function(a,b){return a.rate-b.rate;});
     if(gls.length>1) {
         var lbd=gls.slice(0,15).map(function(g){return{label:g.name.substring(0,22),value:g.rate,color:g.rate>LKT?'#dc2626':'#16a34a'};});
-        h+=svgBarChart('Leak Rate by '+gl2,lbd,{width:540,labelWidth:160,suffix:'%'});
+        h+=svgBarChart('Leak Rate by '+gl2,lbd,{width:480,labelWidth:160,suffix:'%'});
         h+=sectionTitle('\ud83d\udcca','Leak Rate by '+gl2);
         h+='<table style="width:100%;border-collapse:collapse;font-size:11px;border-radius:8px;overflow:hidden;"><thead><tr style="'+S.hdr+'">';
         h+='<th style="'+th()+'">'+gl2+'</th><th style="'+th()+'">Stores</th><th style="'+th()+'">Charge</th><th style="'+th()+'">Leaked</th><th style="'+th()+'">Rate</th><th style="'+th()+'">Over '+LKT+'%</th></tr></thead><tbody>';
@@ -464,7 +471,10 @@ function buildCombinedPdf(stores,level,person,isAll) {
     var grps=isAll?groupStores(stores,gBy):groupStores(stores,cBy);
     var gLbl=isAll?(level==='sr_director'?'Sr. Director':'Director'):(level==='sr_director'?'Director':'Regional Manager');
     var gcd=grps.slice(0,10).map(function(g){return{label:g.name.substring(0,22),value:g.avgRef30,color:g.avgRef30>=95?'#15803d':g.avgRef30>=90?'#16a34a':g.avgRef30>=85?'#65a30d':g.avgRef30>=80?'#d97706':'#dc2626'};});
-    h+=svgBarChart('Ref 30-Day by '+gLbl,gcd,{width:540,labelWidth:160,max:100,suffix:'%'});
+    h+=svgBarChart('Ref 30-Day by '+gLbl,gcd,{width:480,labelWidth:160,max:100,suffix:'%'});
+
+    // Bottom 10 stores in exec summary
+    h+=buildBottom10Table(stores);
 
     // FS Manager table in exec summary
     h+=sectionBlock('\ud83d\udc64','FS Manager Performance',buildFsManagerTable(stores));

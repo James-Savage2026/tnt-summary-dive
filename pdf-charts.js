@@ -6,9 +6,10 @@
 function svgTrendChart(title, series, opts) {
     /* series: [{label, color, data:[{d:'2025-01-01',v:92.3},...]},...] */
     var o = opts || {};
-    var W = o.width || 540, H = o.height || 180;
-    var padL = 50, padR = 16, padT = 32, padB = 40;
+    var W = o.width || 500, H = o.height || 200;
+    var padL = 50, padR = 16, padT = 32, padB = 52;
     var cW = W - padL - padR, cH = H - padT - padB;
+    var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     /* Compute global min/max */
     var allV = [];
     series.forEach(function(s) { s.data.forEach(function(p) { allV.push(p.v); }); });
@@ -26,7 +27,7 @@ function svgTrendChart(title, series, opts) {
     dates.forEach(function(d, i) { dateIdx[d] = i; });
     function xPos(d) { return padL + (dateIdx[d] / (nDates - 1)) * cW; }
     function yPos(v) { return padT + cH - ((v - vMin) / range) * cH; }
-    var svg = '<svg width="'+W+'" height="'+H+'" xmlns="http://www.w3.org/2000/svg" style="">';
+    var svg = '<svg width="'+W+'" height="'+H+'" xmlns="http://www.w3.org/2000/svg" style="max-width:100%;">';
     /* Title */
     svg += '<text x="'+padL+'" y="18" font-size="13" font-weight="700" fill="#1e293b">'+title+'</text>';
     /* Grid lines + Y labels */
@@ -43,19 +44,45 @@ function svgTrendChart(title, series, opts) {
         svg += '<line x1="'+padL+'" y1="'+ty+'" x2="'+(W-padR)+'" y2="'+ty+'" stroke="#dc2626" stroke-width="1" stroke-dasharray="4,3" opacity="0.6"/>';
         svg += '<text x="'+(W-padR-2)+'" y="'+(ty-4)+'" text-anchor="end" font-size="9" fill="#dc2626" opacity="0.7">90% target</text>';
     }
-    /* X-axis labels (show ~6 dates) */
-    var step = Math.max(1, Math.floor(nDates / 6));
-    for (var xi = 0; xi < nDates; xi += step) {
-        var xp = xPos(dates[xi]);
-        var lbl = dates[xi].substring(5); /* MM-DD */
-        svg += '<text x="'+xp+'" y="'+(H-6)+'" text-anchor="middle" font-size="9" fill="#94a3b8">'+lbl+'</text>';
+    /* Vertical gridlines at month boundaries + X-axis labels */
+    var prevMonth = -1;
+    var labelDates = []; /* indices that get a month label */
+    for (var mi = 0; mi < nDates; mi++) {
+        var dp = dates[mi].split('-');
+        var mo = parseInt(dp[1], 10);
+        if (mo !== prevMonth) {
+            var mx = xPos(dates[mi]);
+            /* Vertical gridline at month boundary */
+            if (prevMonth >= 0) {
+                svg += '<line x1="'+mx+'" y1="'+padT+'" x2="'+mx+'" y2="'+(H-padB)+'" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="3,3" opacity="0.5"/>';
+            }
+            /* Month name label */
+            svg += '<text x="'+mx+'" y="'+(H-24)+'" text-anchor="middle" font-size="10" font-weight="600" fill="#475569">'+MONTHS[mo-1]+'</text>';
+            labelDates.push(mi);
+            prevMonth = mo;
+        }
     }
-    /* Draw lines */
+    /* Weekly tick marks + day labels between months */
+    var weekStep = 7;
+    for (var wi = 0; wi < nDates; wi += weekStep) {
+        if (labelDates.indexOf(wi) >= 0) continue; /* skip month-boundary dates */
+        var wx = xPos(dates[wi]);
+        svg += '<line x1="'+wx+'" y1="'+(H-padB)+'" x2="'+wx+'" y2="'+(H-padB+4)+'" stroke="#94a3b8" stroke-width="1"/>';
+        var dParts = dates[wi].split('-');
+        svg += '<text x="'+wx+'" y="'+(H-6)+'" text-anchor="middle" font-size="8" fill="#94a3b8">'+parseInt(dParts[2],10)+'</text>';
+    }
+    /* Draw lines + data point dots */
     series.forEach(function(s) {
         if (s.data.length < 2) return;
         var sorted = s.data.slice().sort(function(a,b) { return a.d < b.d ? -1 : 1; });
         var pts = sorted.map(function(p) { return xPos(p.d)+','+yPos(p.v); });
         svg += '<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+s.color+'" stroke-width="2" stroke-linejoin="round"/>';
+        /* Data point dots — show every 7th point + first + last */
+        sorted.forEach(function(p, pi) {
+            if (pi === 0 || pi === sorted.length - 1 || pi % 7 === 0) {
+                svg += '<circle cx="'+xPos(p.d)+'" cy="'+yPos(p.v)+'" r="2.5" fill="'+s.color+'" stroke="#fff" stroke-width="1"/>';
+            }
+        });
     });
     /* Legend */
     var lx = padL + 10;
@@ -65,7 +92,7 @@ function svgTrendChart(title, series, opts) {
         svg += '<text x="'+(lx+16)+'" y="'+ly+'" font-size="10" fill="#475569">'+s.label+'</text>';
     });
     svg += '</svg>';
-    return '<div class="no-break" style="margin:12px 0;">'+svg+'</div>';
+    return '<div class="no-break" style="margin:12px 0;max-width:100%;overflow:hidden;">'+svg+'</div>';
 }
 
 /* Build 90-day trend for a set of stores */
@@ -168,7 +195,7 @@ function divider() {
 /* ══════════ SVG CHART HELPERS ══════════ */
 function svgBarChart(title,data,opts) {
     opts=opts||{};
-    var W=opts.width||520,barH=opts.barHeight||24,gap=5,labelW=opts.labelWidth||140;
+    var W=opts.width||480,barH=opts.barHeight||24,gap=5,labelW=opts.labelWidth||140;
     var maxVal=opts.max||Math.max.apply(null,data.map(function(d){return d.value;}))||1;
     var chartW=W-labelW-65;
     var H=data.length*(barH+gap)+32;
@@ -189,7 +216,7 @@ function svgBarChart(title,data,opts) {
         svg+='<text x="'+tx+'" y="'+(y+barH/2+4)+'" font-size="10" font-weight="600" fill="'+tc+'" text-anchor="'+ta+'">'+valStr+'</text>';
     });
     svg+='</svg>';
-    return '<div style="margin:8px 0;">'+svg+'</div>';
+    return '<div style="margin:8px 0;max-width:100%;overflow:hidden;">'+svg+'</div>';
 }
 function svgDonutChart(title,data,opts) {
     opts=opts||{};
@@ -220,7 +247,7 @@ function svgDonutChart(title,data,opts) {
         svg+='<text x="'+(lx+20)+'" y="'+(y+16)+'" font-size="9" fill="#64748b">'+d.value.toLocaleString()+' ('+(d.value/total*100).toFixed(1)+'%)</text>';
     });
     svg+='</svg>';
-    return '<div style="margin:4px 0;">'+svg+'</div>';
+    return '<div style="margin:4px 0;max-width:100%;overflow:hidden;">'+svg+'</div>';
 }
 function svgGauge(label,value,opts) {
     opts=opts||{};
@@ -242,7 +269,7 @@ function svgGauge(label,value,opts) {
 }
 function chartRow() {
     var charts=Array.prototype.slice.call(arguments);
-    return '<div class="no-break" style="display:flex;gap:20px;margin:14px 0;align-items:flex-start;flex-wrap:wrap;">'+charts.join('')+'</div>';
+    return '<div class="no-break" style="display:flex;gap:16px;margin:14px 0;align-items:flex-start;flex-wrap:wrap;max-width:100%;overflow:hidden;">'+charts.join('')+'</div>';
 }
 
 /* ══════════ GROUP STORES (descending — best on top) ══════════ */
