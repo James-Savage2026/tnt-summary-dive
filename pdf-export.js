@@ -9,8 +9,8 @@ var pdfExportTab = 'tnt';
 /* ── helpers ── */
 function getPeopleForLevel(level) {
     if (level === 'sr_director')
-        return [].concat(new Set(storeData.map(function(d){return d.fm_sr_director_name;}).filter(Boolean))).sort();
-    return [].concat(new Set(storeData.map(function(d){return d.fm_director_name;}).filter(Boolean))).sort();
+        return Array.from(new Set(storeData.map(function(d){return d.fm_sr_director_name;}).filter(Boolean))).sort();
+    return Array.from(new Set(storeData.map(function(d){return d.fm_director_name;}).filter(Boolean))).sort();
 }
 function getStoresForPerson(level, person) {
     if (level === 'sr_director') return storeData.filter(function(d){return d.fm_sr_director_name===person;});
@@ -37,12 +37,12 @@ function updatePdfPersonList() {
 
 /* ══════════ STYLE HELPERS (polished) ══════════ */
 var S = {
-    th: 'padding:8px 10px;text-align:left;font-size:11px;font-weight:600;letter-spacing:0.3px;',
-    td: 'padding:7px 10px;border-bottom:1px solid #edf2f7;',
-    hdr: 'background:linear-gradient(135deg,#0053e2,#003da5);color:#fff;',
-    card: 'border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;text-align:center;background:linear-gradient(180deg,#fff,#f8fafc);',
-    section: 'font-size:14px;font-weight:700;margin:24px 0 10px;color:#0053e2;padding-bottom:6px;border-bottom:2px solid #e2e8f0;',
-    page: 'width:1100px;padding:36px 40px;font-family:"Segoe UI",system-ui,-apple-system,sans-serif;background:#fff;color:#1e293b;line-height:1.5;'
+    th: 'padding:10px 12px;text-align:left;font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;',
+    td: 'padding:9px 12px;border-bottom:1px solid #e2e8f0;font-size:11px;',
+    hdr: 'background:linear-gradient(135deg,#0053e2 0%,#003da5 100%);color:#fff;',
+    card: 'border:1px solid #e2e8f0;border-radius:12px;padding:16px 18px;text-align:center;background:linear-gradient(180deg,#fff 0%,#f8fafc 100%);box-shadow:0 1px 3px rgba(0,0,0,0.06);',
+    section: 'font-size:15px;font-weight:800;margin:28px 0 12px;color:#0053e2;padding-bottom:8px;border-bottom:3px solid #0053e2;display:flex;align-items:center;gap:8px;',
+    page: 'width:1100px;padding:40px 44px;font-family:"Segoe UI",system-ui,-apple-system,sans-serif;background:#fff;color:#1e293b;line-height:1.6;'
 };
 function th(){return S.th;} function td(){return S.td;}
 function pct(v){return v!=null?parseFloat(v).toFixed(1)+'%':'N/A';}
@@ -55,25 +55,26 @@ function scoreColor(v) {
 function kpiBox(label, value, suffix, color) {
     var c = color || (parseFloat(value)>=90?'#16a34a':parseFloat(value)>=80?'#d97706':'#dc2626');
     var dv = typeof value==='number' ? (Number.isInteger(value)||value>999?value.toLocaleString():value.toFixed(1)) : value;
-    return '<div style="'+S.card+'"><div style="font-size:22px;font-weight:800;color:'+c+';line-height:1.2;">'+dv+(suffix||'')+'</div>'
-        +'<div style="font-size:10px;color:#64748b;margin-top:6px;text-transform:uppercase;letter-spacing:0.5px;">'+label+'</div></div>';
+    return '<div style="'+S.card+'">'
+        +'<div style="font-size:26px;font-weight:800;color:'+c+';line-height:1.1;letter-spacing:-0.5px;">'+dv+(suffix||'')+'</div>'
+        +'<div style="font-size:10px;color:#64748b;margin-top:8px;text-transform:uppercase;letter-spacing:0.8px;font-weight:600;">'+label+'</div></div>';
 }
 function safeAvg(data,field) {
     var v=data.filter(function(d){return d[field]!=null&&!isNaN(d[field]);});
     return v.length?v.reduce(function(s,d){return s+parseFloat(d[field]);},0)/v.length:0;
 }
 function insightBox(items) {
-    return '<div style="background:linear-gradient(135deg,#eff6ff,#f0f9ff);border:1px solid #93c5fd;border-radius:10px;padding:18px 20px;margin:18px 0;">'
-        +'<div style="font-size:13px;font-weight:700;color:#1d4ed8;margin-bottom:10px;">💡 Key Insights & Action Items</div>'
-        +'<ul style="margin:0;padding-left:20px;font-size:11px;color:#1e40af;line-height:1.8;">'
+    return '<div style="background:linear-gradient(135deg,#eff6ff 0%,#f0f9ff 100%);border:1px solid #93c5fd;border-left:4px solid #0053e2;border-radius:10px;padding:20px 22px;margin:20px 0;">'
+        +'<div style="font-size:13px;font-weight:800;color:#0053e2;margin-bottom:12px;display:flex;align-items:center;gap:6px;">💡 Key Insights & Action Items</div>'
+        +'<ul style="margin:0;padding-left:20px;font-size:11.5px;color:#1e40af;line-height:2;">'
         +items.map(function(i){return '<li style="margin-bottom:2px;">'+i+'</li>';}).join('')
         +'</ul></div>';
 }
 function sectionTitle(icon,text) {
-    return '<h3 style="'+S.section+'">'+icon+' '+text+'</h3>';
+    return '<h3 style="'+S.section+'"><span style="font-size:18px;">'+icon+'</span> '+text+'</h3>';
 }
 function divider() {
-    return '<div style="border-top:3px solid #0053e2;margin:28px 0 20px;opacity:0.3;"></div>';
+    return '<div style="border-top:3px solid #0053e2;margin:32px 0 24px;opacity:0.15;"></div>';
 }
 
 /* ══════════ SVG CHART HELPERS ══════════ */
@@ -200,18 +201,20 @@ function buildPdfContent(tab,level,person) {
     var tabNames={tnt:'\ud83d\udcca Time in Target Report',wtw:'\u2744\ufe0f Win the Winter Report',leak:'\ud83e\uddca Leak Management Report',all:'\ud83d\udcca Executive Summary Report'};
     var tabName=tabNames[tab]||tab;
     // Header
-    container.innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:20px;padding-bottom:14px;border-bottom:3px solid #0053e2;">'
-        +'<div><h1 style="font-size:24px;font-weight:800;color:#0053e2;margin:0;letter-spacing:-0.5px;">'+tabName+'</h1>'
-        +'<p style="font-size:12px;color:#64748b;margin:6px 0 0;">'+levelLabel+' Report: <strong style="color:#1e293b;">'+personLabel+'</strong></p></div>'
-        +'<div style="text-align:right;"><p style="font-size:11px;color:#64748b;margin:0;">Generated '+dateStr+'</p>'
-        +'<p style="font-size:11px;color:#64748b;margin:2px 0 0;">'+stores.length.toLocaleString()+' stores</p></div></div>';
+    container.innerHTML='<div style="background:linear-gradient(135deg,#0053e2 0%,#003da5 100%);border-radius:12px;padding:24px 28px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;">'
+        +'<div><h1 style="font-size:22px;font-weight:800;color:#fff;margin:0;letter-spacing:-0.5px;">'+tabName+'</h1>'
+        +'<p style="font-size:12px;color:rgba(255,255,255,0.8);margin:6px 0 0;">'+levelLabel+' Report: <strong style="color:#ffc220;">'+personLabel+'</strong></p></div>'
+        +'<div style="text-align:right;"><div style="font-size:20px;color:#ffc220;font-weight:800;letter-spacing:1px;">&#x2726;</div>'
+        +'<p style="font-size:10px;color:rgba(255,255,255,0.7);margin:4px 0 0;">Generated '+dateStr+'</p>'
+        +'<p style="font-size:10px;color:rgba(255,255,255,0.7);margin:2px 0 0;">'+stores.length.toLocaleString()+' stores</p></div></div>';
     if (tab==='tnt') container.innerHTML+=buildTntPdf(stores,level,person,isAll);
     else if (tab==='wtw') container.innerHTML+=buildWtwPdf(stores,level,person,isAll);
     else if (tab==='leak') container.innerHTML+=buildLeakPdf(stores,level,person,isAll);
     else if (tab==='all') container.innerHTML+=buildCombinedPdf(stores,level,person,isAll);
     // Footer
-    container.innerHTML+='<div style="margin-top:28px;padding-top:10px;border-top:2px solid #e2e8f0;font-size:9px;color:#94a3b8;display:flex;justify-content:space-between;">'
-        +'<span>HVAC/R TnT Dashboard \u2022 '+dateStr+'</span>'
+    container.innerHTML+='<div style="margin-top:32px;padding-top:12px;border-top:2px solid #e2e8f0;font-size:9px;color:#94a3b8;display:flex;justify-content:space-between;align-items:center;">'
+        +'<span>North BU HVAC/R Report Hub \u2022 '+dateStr+'</span>'
+        +'<span style="color:#0053e2;font-weight:600;">\u2726 Walmart</span>'
         +'<span>'+levelLabel+': '+personLabel+' \u2022 '+stores.length.toLocaleString()+' stores</span></div>';
     return container;
 }
