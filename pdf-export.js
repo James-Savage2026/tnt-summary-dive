@@ -5,6 +5,31 @@
 
 /* ── state ── */
 var pdfExportTab = 'tnt';
+var pdfBanner = 'all';
+
+/* ── banner toggle ── */
+function setPdfBanner(val) {
+    pdfBanner = val;
+    var btns = document.querySelectorAll('.pdf-banner-btn');
+    btns.forEach(function(b) {
+        if (b.getAttribute('data-val') === val) {
+            b.className = 'pdf-banner-btn flex-1 px-3 py-2 text-sm font-semibold bg-walmart-blue text-white';
+        } else {
+            b.className = 'pdf-banner-btn flex-1 px-3 py-2 text-sm font-semibold bg-white text-gray-600 border-l border-gray-300 hover:bg-gray-50';
+        }
+    });
+}
+function filterByBanner(data) {
+    if (pdfBanner === 'all') return data;
+    if (pdfBanner === 'walmart') return data.filter(function(d) {
+        var b = (d.banner_desc || d.bn || '').toLowerCase();
+        return b.indexOf('walmart') >= 0 && b.indexOf('sam') < 0;
+    });
+    return data.filter(function(d) {
+        var b = (d.banner_desc || d.bn || '').toLowerCase();
+        return b.indexOf('sam') >= 0;
+    });
+}
 
 /* ── helpers ── */
 function getPeopleForLevel(level) {
@@ -20,10 +45,12 @@ function getStoresForPerson(level, person) {
 /* ── modal (updated for combined report) ── */
 function openPdfModal(tab) {
     pdfExportTab = tab;
+    pdfBanner = 'all';
     document.getElementById('pdfExportModal').classList.remove('hidden');
     var labels = {tnt:'TnT Dashboard', wtw:'Win the Winter', leak:'Leak Management', all:'Executive Summary (All Tabs)'};
     document.getElementById('pdfTabLabel').textContent = labels[tab] || tab;
     document.getElementById('pdfViewLevel').value = 'sr_director';
+    setPdfBanner('all');
     updatePdfPersonList();
 }
 function closePdfModal() { document.getElementById('pdfExportModal').classList.add('hidden'); }
@@ -48,12 +75,16 @@ function th(){return S.th;} function td(){return S.td;}
 function pct(v){return v!=null?parseFloat(v).toFixed(1)+'%':'N/A';}
 function scoreColor(v) {
     if (v==null) return 'color:#94a3b8;';
-    if (v>=90) return 'color:#16a34a;font-weight:700;';
-    if (v>=80) return 'color:#d97706;font-weight:600;';
-    return 'color:#dc2626;font-weight:700;';
+    if (v>=95) return 'color:#15803d;font-weight:700;';  /* dark green — excellent */
+    if (v>=90) return 'color:#16a34a;font-weight:700;';  /* green — target met */
+    if (v>=85) return 'color:#65a30d;font-weight:600;';  /* lime/light green — close */
+    if (v>=80) return 'color:#d97706;font-weight:600;';  /* amber — needs attention */
+    if (v>=70) return 'color:#ea580c;font-weight:600;';  /* orange — concerning */
+    return 'color:#dc2626;font-weight:700;';              /* red — critical */
 }
 function kpiBox(label, value, suffix, color) {
-    var c = color || (parseFloat(value)>=90?'#16a34a':parseFloat(value)>=80?'#d97706':'#dc2626');
+    var pv=parseFloat(value);
+    var c = color || (pv>=95?'#15803d':pv>=90?'#16a34a':pv>=85?'#65a30d':pv>=80?'#d97706':pv>=70?'#ea580c':'#dc2626');
     var dv = typeof value==='number' ? (Number.isInteger(value)||value>999?value.toLocaleString():value.toFixed(1)) : value;
     return '<div style="'+S.card+'">'
         +'<div style="font-size:26px;font-weight:800;color:'+c+';line-height:1.1;letter-spacing:-0.5px;">'+dv+(suffix||'')+'</div>'
@@ -138,7 +169,7 @@ function svgGauge(label,value,opts) {
     opts=opts||{};
     var size=opts.size||130,stroke=18;
     var r=size*0.35,cx=size/2,cy=size*0.55;
-    var color=value>=90?'#16a34a':value>=80?'#d97706':'#dc2626';
+    var color=value>=95?'#15803d':value>=90?'#16a34a':value>=85?'#65a30d':value>=80?'#d97706':'#dc2626';
     var angle=Math.min(180,value/100*180);
     var sR=Math.PI,eR=Math.PI-(angle*Math.PI/180);
     var x1=cx+r*Math.cos(sR),y1=cy+r*Math.sin(sR);
@@ -192,6 +223,8 @@ function buildGroupTable(groups,label) {
 function buildPdfContent(tab,level,person) {
     var isAll=person==='__all__';
     var stores=isAll?storeData:getStoresForPerson(level,person);
+    stores=filterByBanner(stores);
+    var bannerLabel=pdfBanner==='all'?'All Banners':pdfBanner==='walmart'?'Walmart':'Sam\'s Club';
     var levelLabel=level==='sr_director'?'Sr. Director':'FM Director';
     var personLabel=isAll?'All Regions':person;
     var now=new Date();
@@ -203,7 +236,8 @@ function buildPdfContent(tab,level,person) {
     // Header
     container.innerHTML='<div style="background:linear-gradient(135deg,#0053e2 0%,#003da5 100%);border-radius:12px;padding:24px 28px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;">'
         +'<div><h1 style="font-size:22px;font-weight:800;color:#fff;margin:0;letter-spacing:-0.5px;">'+tabName+'</h1>'
-        +'<p style="font-size:12px;color:rgba(255,255,255,0.8);margin:6px 0 0;">'+levelLabel+' Report: <strong style="color:#ffc220;">'+personLabel+'</strong></p></div>'
+        +'<p style="font-size:12px;color:rgba(255,255,255,0.8);margin:6px 0 0;">'+levelLabel+': <strong style="color:#ffc220;">'+personLabel+'</strong>'
+        +' \u2022 <span style="color:#ffc220;">'+bannerLabel+'</span></p></div>'
         +'<div style="text-align:right;"><div style="font-size:20px;color:#ffc220;font-weight:800;letter-spacing:1px;">&#x2726;</div>'
         +'<p style="font-size:10px;color:rgba(255,255,255,0.7);margin:4px 0 0;">Generated '+dateStr+'</p>'
         +'<p style="font-size:10px;color:rgba(255,255,255,0.7);margin:2px 0 0;">'+stores.length.toLocaleString()+' stores</p></div></div>';
@@ -215,7 +249,7 @@ function buildPdfContent(tab,level,person) {
     container.innerHTML+='<div style="margin-top:32px;padding-top:12px;border-top:2px solid #e2e8f0;font-size:9px;color:#94a3b8;display:flex;justify-content:space-between;align-items:center;">'
         +'<span>North BU HVAC/R Report Hub \u2022 '+dateStr+'</span>'
         +'<span style="color:#0053e2;font-weight:600;">\u2726 Walmart</span>'
-        +'<span>'+levelLabel+': '+personLabel+' \u2022 '+stores.length.toLocaleString()+' stores</span></div>';
+        +'<span>'+levelLabel+': '+personLabel+' \u2022 '+bannerLabel+' \u2022 '+stores.length.toLocaleString()+' stores</span></div>';
     return container;
 }
 
@@ -267,7 +301,7 @@ function buildTntPdf(stores,level,person,isAll) {
     var grpLabel=isAll?(level==='sr_director'?'Sr. Director':'Director'):cLbl;
     // Bar chart (best on top = already descending)
     var gcd=grps.slice(0,15).map(function(g){
-        return {label:g.name.substring(0,22),value:g.avgRef30,color:g.avgRef30>=90?'#16a34a':g.avgRef30>=80?'#d97706':'#dc2626'};
+        return {label:g.name.substring(0,22),value:g.avgRef30,color:g.avgRef30>=95?'#15803d':g.avgRef30>=90?'#16a34a':g.avgRef30>=85?'#65a30d':g.avgRef30>=80?'#d97706':'#dc2626'};
     });
     h+=svgBarChart('Ref 30-Day by '+grpLabel,gcd,{width:540,labelWidth:160,max:100,suffix:'%'});
     h+=buildGroupTable(grps,grpLabel);
@@ -440,7 +474,7 @@ function buildCombinedPdf(stores,level,person,isAll) {
     var cBy=level==='sr_director'?'fm_director_name':'fm_regional_manager_name';
     var grps=isAll?groupStores(stores,gBy):groupStores(stores,cBy);
     var gLbl=isAll?(level==='sr_director'?'Sr. Director':'Director'):(level==='sr_director'?'Director':'Regional Manager');
-    var gcd=grps.slice(0,10).map(function(g){return{label:g.name.substring(0,22),value:g.avgRef30,color:g.avgRef30>=90?'#16a34a':g.avgRef30>=80?'#d97706':'#dc2626'};});
+    var gcd=grps.slice(0,10).map(function(g){return{label:g.name.substring(0,22),value:g.avgRef30,color:g.avgRef30>=95?'#15803d':g.avgRef30>=90?'#16a34a':g.avgRef30>=85?'#65a30d':g.avgRef30>=80?'#d97706':'#dc2626'};});
     h+=svgBarChart('Ref 30-Day by '+gLbl,gcd,{width:540,labelWidth:160,max:100,suffix:'%'});
 
     h+=divider();
@@ -521,9 +555,10 @@ async function generatePdf() {
         if(!htmlStr||htmlStr.length<50){alert('No data to export.');return;}
         var ls2=level==='sr_director'?'SrDir':'Dir';
         var ps=person==='__all__'?'All':person.replace(/[^a-zA-Z0-9]/g,'_').substring(0,20);
+        var bn=pdfBanner==='all'?'All':pdfBanner==='walmart'?'WM':'Sams';
         var ts=pdfExportTab.toUpperCase();
         var ds=new Date().toISOString().slice(0,10);
-        var fn=ts+'_'+ls2+'_'+ps+'_'+ds+'.pdf';
+        var fn=ts+'_'+ls2+'_'+ps+'_'+bn+'_'+ds+'.pdf';
         var iframe=document.createElement('iframe');
         iframe.style.cssText='position:fixed;left:0;top:0;width:1200px;height:900px;opacity:0.01;z-index:-1;border:none;';
         document.body.appendChild(iframe);
