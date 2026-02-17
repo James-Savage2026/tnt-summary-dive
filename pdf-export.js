@@ -1,668 +1,545 @@
 /**
  * PDF Export Module — TnT/WTW/Leak Dashboard
- * Executive-level PDF reports with insights and action items.
+ * Executive-level PDF reports with charts, insights, and action items.
  */
 
 /* ── state ── */
-let pdfExportTab = 'tnt';
+var pdfExportTab = 'tnt';
 
 /* ── helpers ── */
 function getPeopleForLevel(level) {
     if (level === 'sr_director')
-        return [...new Set(storeData.map(d => d.fm_sr_director_name).filter(Boolean))].sort();
-    return [...new Set(storeData.map(d => d.fm_director_name).filter(Boolean))].sort();
+        return [].concat(new Set(storeData.map(function(d){return d.fm_sr_director_name;}).filter(Boolean))).sort();
+    return [].concat(new Set(storeData.map(function(d){return d.fm_director_name;}).filter(Boolean))).sort();
 }
-
 function getStoresForPerson(level, person) {
-    if (level === 'sr_director')
-        return storeData.filter(d => d.fm_sr_director_name === person);
-    return storeData.filter(d => d.fm_director_name === person);
+    if (level === 'sr_director') return storeData.filter(function(d){return d.fm_sr_director_name===person;});
+    return storeData.filter(function(d){return d.fm_director_name===person;});
 }
 
-/* ── modal ── */
+/* ── modal (updated for combined report) ── */
 function openPdfModal(tab) {
     pdfExportTab = tab;
     document.getElementById('pdfExportModal').classList.remove('hidden');
-    document.getElementById('pdfTabLabel').textContent =
-        tab === 'tnt' ? 'TnT Dashboard' : tab === 'wtw' ? 'Win the Winter' : 'Leak Management';
+    var labels = {tnt:'TnT Dashboard', wtw:'Win the Winter', leak:'Leak Management', all:'Executive Summary (All Tabs)'};
+    document.getElementById('pdfTabLabel').textContent = labels[tab] || tab;
     document.getElementById('pdfViewLevel').value = 'sr_director';
     updatePdfPersonList();
 }
-
-function closePdfModal() {
-    document.getElementById('pdfExportModal').classList.add('hidden');
-}
-
+function closePdfModal() { document.getElementById('pdfExportModal').classList.add('hidden'); }
 function updatePdfPersonList() {
     var level = document.getElementById('pdfViewLevel').value;
     var sel = document.getElementById('pdfPersonSelect');
     var people = getPeopleForLevel(level);
     sel.innerHTML = '<option value="__all__">All (Full Report)</option>' +
-        people.map(function(p) { return '<option value="' + p + '">' + p + '</option>'; }).join('');
+        people.map(function(p){return '<option value="'+p+'">'+p+'</option>';}).join('');
 }
 
-/* ── shared style helpers ── */
-function th() { return 'padding:6px 8px; text-align:left; font-size:11px; font-weight:600;'; }
-function td() { return 'padding:5px 8px; border-bottom:1px solid #e5e7eb;'; }
-function pct(v) { return v != null ? parseFloat(v).toFixed(1) + '%' : 'N/A'; }
-
+/* ══════════ STYLE HELPERS (polished) ══════════ */
+var S = {
+    th: 'padding:8px 10px;text-align:left;font-size:11px;font-weight:600;letter-spacing:0.3px;',
+    td: 'padding:7px 10px;border-bottom:1px solid #edf2f7;',
+    hdr: 'background:linear-gradient(135deg,#0053e2,#003da5);color:#fff;',
+    card: 'border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;text-align:center;background:linear-gradient(180deg,#fff,#f8fafc);',
+    section: 'font-size:14px;font-weight:700;margin:24px 0 10px;color:#0053e2;padding-bottom:6px;border-bottom:2px solid #e2e8f0;',
+    page: 'width:1100px;padding:36px 40px;font-family:"Segoe UI",system-ui,-apple-system,sans-serif;background:#fff;color:#1e293b;line-height:1.5;'
+};
+function th(){return S.th;} function td(){return S.td;}
+function pct(v){return v!=null?parseFloat(v).toFixed(1)+'%':'N/A';}
 function scoreColor(v) {
-    if (v == null) return 'color:#999;';
-    if (v >= 90) return 'color:#2a8703; font-weight:700;';
-    if (v >= 80) return 'color:#f59e0b; font-weight:600;';
-    return 'color:#ea1100; font-weight:700;';
+    if (v==null) return 'color:#94a3b8;';
+    if (v>=90) return 'color:#16a34a;font-weight:700;';
+    if (v>=80) return 'color:#d97706;font-weight:600;';
+    return 'color:#dc2626;font-weight:700;';
 }
-
 function kpiBox(label, value, suffix, color) {
-    var c = color || (parseFloat(value) >= 90 ? '#2a8703' : parseFloat(value) >= 80 ? '#f59e0b' : '#ea1100');
-    var dv;
-    if (typeof value === 'number') {
-        dv = (Number.isInteger(value) || value > 999) ? value.toLocaleString() : value.toFixed(1);
-    } else {
-        dv = value;
-    }
-    return '<div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;text-align:center;background:#fafafa;">'
-        + '<div style="font-size:20px;font-weight:800;color:' + c + ';">' + dv + (suffix || '') + '</div>'
-        + '<div style="font-size:10px;color:#666;margin-top:4px;">' + label + '</div></div>';
+    var c = color || (parseFloat(value)>=90?'#16a34a':parseFloat(value)>=80?'#d97706':'#dc2626');
+    var dv = typeof value==='number' ? (Number.isInteger(value)||value>999?value.toLocaleString():value.toFixed(1)) : value;
+    return '<div style="'+S.card+'"><div style="font-size:22px;font-weight:800;color:'+c+';line-height:1.2;">'+dv+(suffix||'')+'</div>'
+        +'<div style="font-size:10px;color:#64748b;margin-top:6px;text-transform:uppercase;letter-spacing:0.5px;">'+label+'</div></div>';
 }
-
-function safeAvg(data, field) {
-    var valid = data.filter(function(d) { return d[field] != null && !isNaN(d[field]); });
-    return valid.length ? valid.reduce(function(s, d) { return s + parseFloat(d[field]); }, 0) / valid.length : 0;
+function safeAvg(data,field) {
+    var v=data.filter(function(d){return d[field]!=null&&!isNaN(d[field]);});
+    return v.length?v.reduce(function(s,d){return s+parseFloat(d[field]);},0)/v.length:0;
 }
-
 function insightBox(items) {
-    var html = '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:16px;margin:16px 0;">';
-    html += '<div style="font-size:13px;font-weight:700;color:#0053e2;margin-bottom:8px;">💡 Key Insights & Action Items</div>';
-    html += '<ul style="margin:0;padding-left:20px;font-size:11px;color:#1e3a5f;line-height:1.7;">';
-    items.forEach(function(item) { html += '<li>' + item + '</li>'; });
-    html += '</ul></div>';
-    return html;
+    return '<div style="background:linear-gradient(135deg,#eff6ff,#f0f9ff);border:1px solid #93c5fd;border-radius:10px;padding:18px 20px;margin:18px 0;">'
+        +'<div style="font-size:13px;font-weight:700;color:#1d4ed8;margin-bottom:10px;">💡 Key Insights & Action Items</div>'
+        +'<ul style="margin:0;padding-left:20px;font-size:11px;color:#1e40af;line-height:1.8;">'
+        +items.map(function(i){return '<li style="margin-bottom:2px;">'+i+'</li>';}).join('')
+        +'</ul></div>';
+}
+function sectionTitle(icon,text) {
+    return '<h3 style="'+S.section+'">'+icon+' '+text+'</h3>';
+}
+function divider() {
+    return '<div style="border-top:3px solid #0053e2;margin:28px 0 20px;opacity:0.3;"></div>';
 }
 
-/* ══════════════════════════════════════════════════════════
- *  SVG CHART HELPERS (inline, no external library needed)
- * ══════════════════════════════════════════════════════════ */
-
-/** Horizontal bar chart — [{label, value, color?}], max auto-detected */
-function svgBarChart(title, data, opts) {
-    opts = opts || {};
-    var W = opts.width || 520, barH = opts.barHeight || 22, gap = 4, labelW = opts.labelWidth || 140;
-    var maxVal = opts.max || Math.max.apply(null, data.map(function(d) { return d.value; })) || 1;
-    var chartW = W - labelW - 60;
-    var H = data.length * (barH + gap) + 30;
-    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" style="font-family:system-ui,sans-serif;">';
-    if (title) svg += '<text x="0" y="14" font-size="12" font-weight="700" fill="#333">' + title + '</text>';
-    var y0 = title ? 26 : 6;
-    data.forEach(function(d, i) {
-        var y = y0 + i * (barH + gap);
-        var barW = Math.max(2, (d.value / maxVal) * chartW);
-        var c = d.color || '#0053e2';
-        var textColor = d.value >= maxVal * 0.3 ? '#fff' : '#333';
-        // Label
-        svg += '<text x="' + (labelW - 4) + '" y="' + (y + barH/2 + 4) + '" font-size="10" fill="#333" text-anchor="end">' + d.label + '</text>';
-        // Bar bg
-        svg += '<rect x="' + labelW + '" y="' + y + '" width="' + chartW + '" height="' + barH + '" rx="3" fill="#f3f4f6"/>';
-        // Bar fill
-        svg += '<rect x="' + labelW + '" y="' + y + '" width="' + barW + '" height="' + barH + '" rx="3" fill="' + c + '"/>';
-        // Value text
-        var valStr = opts.suffix === '%' ? d.value.toFixed(1) + '%' : d.value.toLocaleString();
-        var tx = barW > 50 ? (labelW + barW - 4) : (labelW + barW + 4);
-        var ta = barW > 50 ? 'end' : 'start';
-        var tc = barW > 50 ? textColor : '#333';
-        svg += '<text x="' + tx + '" y="' + (y + barH/2 + 4) + '" font-size="10" font-weight="600" fill="' + tc + '" text-anchor="' + ta + '">' + valStr + '</text>';
+/* ══════════ SVG CHART HELPERS ══════════ */
+function svgBarChart(title,data,opts) {
+    opts=opts||{};
+    var W=opts.width||520,barH=opts.barHeight||24,gap=5,labelW=opts.labelWidth||140;
+    var maxVal=opts.max||Math.max.apply(null,data.map(function(d){return d.value;}))||1;
+    var chartW=W-labelW-65;
+    var H=data.length*(barH+gap)+32;
+    var svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" style="font-family:Segoe UI,system-ui,sans-serif;">';
+    if (title) svg+='<text x="0" y="15" font-size="12" font-weight="700" fill="#334155">'+title+'</text>';
+    var y0=title?28:6;
+    data.forEach(function(d,i) {
+        var y=y0+i*(barH+gap);
+        var barW=Math.max(3,(d.value/maxVal)*chartW);
+        var c=d.color||'#0053e2';
+        svg+='<text x="'+(labelW-6)+'" y="'+(y+barH/2+4)+'" font-size="10" fill="#475569" text-anchor="end">'+d.label+'</text>';
+        svg+='<rect x="'+labelW+'" y="'+y+'" width="'+chartW+'" height="'+barH+'" rx="4" fill="#f1f5f9"/>';
+        svg+='<rect x="'+labelW+'" y="'+y+'" width="'+barW+'" height="'+barH+'" rx="4" fill="'+c+'"/>';
+        var valStr=opts.suffix==='%'?d.value.toFixed(1)+'%':d.value.toLocaleString();
+        var tx=barW>55?(labelW+barW-6):(labelW+barW+6);
+        var ta=barW>55?'end':'start';
+        var tc=barW>55?'#fff':'#334155';
+        svg+='<text x="'+tx+'" y="'+(y+barH/2+4)+'" font-size="10" font-weight="600" fill="'+tc+'" text-anchor="'+ta+'">'+valStr+'</text>';
     });
-    svg += '</svg>';
-    return svg;
+    svg+='</svg>';
+    return '<div style="margin:8px 0;">'+svg+'</div>';
 }
-
-/** Donut/ring chart — [{label, value, color}] */
-function svgDonutChart(title, data, opts) {
-    opts = opts || {};
-    var size = opts.size || 160, r = size * 0.35, stroke = opts.stroke || 24;
-    var cx = size / 2, cy = size / 2;
-    var total = data.reduce(function(s, d) { return s + d.value; }, 0) || 1;
-    var W = size + 200; // chart + legend
-    var H = Math.max(size, data.length * 22 + 30);
-    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" style="font-family:system-ui,sans-serif;">';
-    if (title) svg += '<text x="0" y="14" font-size="12" font-weight="700" fill="#333">' + title + '</text>';
-    var offy = title ? 20 : 0;
-    // Center text
-    svg += '<text x="' + cx + '" y="' + (cy + offy - 4) + '" font-size="18" font-weight="800" fill="#333" text-anchor="middle">' + total.toLocaleString() + '</text>';
-    svg += '<text x="' + cx + '" y="' + (cy + offy + 12) + '" font-size="9" fill="#666" text-anchor="middle">Total</text>';
-    // Arcs
-    var cumAngle = -90;
+function svgDonutChart(title,data,opts) {
+    opts=opts||{};
+    var size=opts.size||150,r=size*0.35,stroke=opts.stroke||22;
+    var cx=size/2,cy=size/2;
+    var total=data.reduce(function(s,d){return s+d.value;},0)||1;
+    var W=size+210,H=Math.max(size,data.length*24+30);
+    var svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" style="font-family:Segoe UI,system-ui,sans-serif;">';
+    if (title) svg+='<text x="0" y="14" font-size="12" font-weight="700" fill="#334155">'+title+'</text>';
+    var offy=title?20:0;
+    svg+='<text x="'+cx+'" y="'+(cy+offy-4)+'" font-size="20" font-weight="800" fill="#1e293b" text-anchor="middle">'+total.toLocaleString()+'</text>';
+    svg+='<text x="'+cx+'" y="'+(cy+offy+12)+'" font-size="9" fill="#94a3b8" text-anchor="middle">Total</text>';
+    var cumAngle=-90;
     data.forEach(function(d) {
-        var angle = (d.value / total) * 360;
-        if (angle < 0.5) { cumAngle += angle; return; }
-        var startRad = cumAngle * Math.PI / 180;
-        var endRad = (cumAngle + angle) * Math.PI / 180;
-        var x1 = cx + r * Math.cos(startRad), y1 = (cy + offy) + r * Math.sin(startRad);
-        var x2 = cx + r * Math.cos(endRad), y2 = (cy + offy) + r * Math.sin(endRad);
-        var large = angle > 180 ? 1 : 0;
-        svg += '<path d="M ' + x1 + ' ' + y1 + ' A ' + r + ' ' + r + ' 0 ' + large + ' 1 ' + x2 + ' ' + y2 + '" fill="none" stroke="' + d.color + '" stroke-width="' + stroke + '"/>';
-        cumAngle += angle;
+        var angle=(d.value/total)*360;
+        if (angle<0.5){cumAngle+=angle;return;}
+        var s1=cumAngle*Math.PI/180,s2=(cumAngle+angle)*Math.PI/180;
+        var x1=cx+r*Math.cos(s1),y1=(cy+offy)+r*Math.sin(s1);
+        var x2=cx+r*Math.cos(s2),y2=(cy+offy)+r*Math.sin(s2);
+        svg+='<path d="M '+x1+' '+y1+' A '+r+' '+r+' 0 '+(angle>180?1:0)+' 1 '+x2+' '+y2+'" fill="none" stroke="'+d.color+'" stroke-width="'+stroke+'"/>';
+        cumAngle+=angle;
     });
-    // Legend
-    var lx = size + 12, ly = offy + 10;
-    data.forEach(function(d, i) {
-        var y = ly + i * 22;
-        svg += '<rect x="' + lx + '" y="' + (y - 8) + '" width="12" height="12" rx="2" fill="' + d.color + '"/>';
-        svg += '<text x="' + (lx + 18) + '" y="' + (y + 2) + '" font-size="10" fill="#333">' + d.label + '</text>';
-        svg += '<text x="' + (lx + 18) + '" y="' + (y + 14) + '" font-size="9" font-weight="600" fill="#666">' + d.value.toLocaleString() + ' (' + (d.value/total*100).toFixed(1) + '%)</text>';
+    var lx=size+16,ly=offy+12;
+    data.forEach(function(d,i) {
+        var y=ly+i*24;
+        svg+='<rect x="'+lx+'" y="'+(y-8)+'" width="14" height="14" rx="3" fill="'+d.color+'"/>';
+        svg+='<text x="'+(lx+20)+'" y="'+(y+3)+'" font-size="10" font-weight="600" fill="#334155">'+d.label+'</text>';
+        svg+='<text x="'+(lx+20)+'" y="'+(y+16)+'" font-size="9" fill="#64748b">'+d.value.toLocaleString()+' ('+(d.value/total*100).toFixed(1)+'%)</text>';
     });
-    svg += '</svg>';
+    svg+='</svg>';
+    return '<div style="margin:4px 0;">'+svg+'</div>';
+}
+function svgGauge(label,value,opts) {
+    opts=opts||{};
+    var size=opts.size||130,stroke=18;
+    var r=size*0.35,cx=size/2,cy=size*0.55;
+    var color=value>=90?'#16a34a':value>=80?'#d97706':'#dc2626';
+    var angle=Math.min(180,value/100*180);
+    var sR=Math.PI,eR=Math.PI-(angle*Math.PI/180);
+    var x1=cx+r*Math.cos(sR),y1=cy+r*Math.sin(sR);
+    var x2=cx+r*Math.cos(eR),y2=cy+r*Math.sin(eR);
+    var svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+size+'" height="'+(size*0.72)+'" style="font-family:Segoe UI,system-ui,sans-serif;">';
+    svg+='<path d="M '+(cx-r)+' '+cy+' A '+r+' '+r+' 0 0 1 '+(cx+r)+' '+cy+'" fill="none" stroke="#e2e8f0" stroke-width="'+stroke+'" stroke-linecap="round"/>';
+    if (angle>0.5)
+        svg+='<path d="M '+x1+' '+y1+' A '+r+' '+r+' 0 '+(angle>90?1:0)+' 1 '+x2+' '+y2+'" fill="none" stroke="'+color+'" stroke-width="'+stroke+'" stroke-linecap="round"/>';
+    svg+='<text x="'+cx+'" y="'+(cy-2)+'" font-size="20" font-weight="800" fill="'+color+'" text-anchor="middle">'+value.toFixed(1)+'%</text>';
+    svg+='<text x="'+cx+'" y="'+(cy+14)+'" font-size="9" fill="#64748b" text-anchor="middle">'+label+'</text>';
+    svg+='</svg>';
     return svg;
 }
-
-/** Gauge chart — single value 0-100 */
-function svgGauge(label, value, opts) {
-    opts = opts || {};
-    var size = opts.size || 120, stroke = 16;
-    var r = size * 0.35, cx = size / 2, cy = size * 0.55;
-    var color = value >= 90 ? '#2a8703' : value >= 80 ? '#f59e0b' : '#ea1100';
-    // Semi-circle from 180 to 0 degrees
-    var angle = Math.min(180, value / 100 * 180);
-    var startRad = Math.PI; // 180deg
-    var endRad = Math.PI - (angle * Math.PI / 180);
-    var x1 = cx + r * Math.cos(startRad), y1 = cy + r * Math.sin(startRad);
-    var x2 = cx + r * Math.cos(endRad), y2 = cy + r * Math.sin(endRad);
-    var large = angle > 90 ? 1 : 0;
-    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + (size * 0.7) + '" style="font-family:system-ui,sans-serif;">';
-    // Background arc
-    svg += '<path d="M ' + (cx - r) + ' ' + cy + ' A ' + r + ' ' + r + ' 0 0 1 ' + (cx + r) + ' ' + cy + '" fill="none" stroke="#e5e7eb" stroke-width="' + stroke + '" stroke-linecap="round"/>';
-    // Value arc
-    if (angle > 0.5)
-        svg += '<path d="M ' + x1 + ' ' + y1 + ' A ' + r + ' ' + r + ' 0 ' + large + ' 1 ' + x2 + ' ' + y2 + '" fill="none" stroke="' + color + '" stroke-width="' + stroke + '" stroke-linecap="round"/>';
-    // Value text
-    svg += '<text x="' + cx + '" y="' + (cy - 2) + '" font-size="18" font-weight="800" fill="' + color + '" text-anchor="middle">' + value.toFixed(1) + '%</text>';
-    svg += '<text x="' + cx + '" y="' + (cy + 14) + '" font-size="9" fill="#666" text-anchor="middle">' + label + '</text>';
-    svg += '</svg>';
-    return svg;
-}
-
-/** Chart wrapper for side-by-side layout */
 function chartRow() {
-    var charts = Array.prototype.slice.call(arguments);
-    return '<div style="display:flex;gap:16px;margin:12px 0;align-items:flex-start;flex-wrap:wrap;">' + charts.join('') + '</div>';
+    var charts=Array.prototype.slice.call(arguments);
+    return '<div style="display:flex;gap:20px;margin:14px 0;align-items:flex-start;flex-wrap:wrap;">'+charts.join('')+'</div>';
 }
 
-function sectionTitle(icon, text) {
-    return '<h3 style="font-size:14px;font-weight:700;margin:20px 0 8px;color:#0053e2;border-bottom:1px solid #e5e7eb;padding-bottom:4px;">' + icon + ' ' + text + '</h3>';
+/* ══════════ GROUP STORES (descending — best on top) ══════════ */
+function groupStores(stores,groupBy) {
+    var map={};
+    stores.forEach(function(s){var k=s[groupBy]||'Unknown';if(!map[k])map[k]=[];map[k].push(s);});
+    return Object.entries(map).map(function(e){
+        var name=e[0],ss=e[1];
+        return {name:name,count:ss.length,avgRef30:safeAvg(ss,'twt_ref_30_day'),avgHvac30:safeAvg(ss,'twt_hvac_30_day'),
+            totalLoss:ss.reduce(function(s,d){return s+(d.total_loss||0);},0),
+            casesOOT:ss.reduce(function(s,d){return s+(d.cases_out_of_target||0);},0)};
+    }).sort(function(a,b){return b.avgRef30-a.avgRef30;});
 }
-
-/* ── group stores by field ── */
-function groupStores(stores, groupBy) {
-    var map = {};
-    stores.forEach(function(s) {
-        var key = s[groupBy] || 'Unknown';
-        if (!map[key]) map[key] = [];
-        map[key].push(s);
+function buildGroupTable(groups,label) {
+    var html=sectionTitle('\ud83d\udcca','Performance by '+label);
+    html+='<table style="width:100%;border-collapse:collapse;font-size:11px;border-radius:8px;overflow:hidden;"><thead><tr style="'+S.hdr+'">';
+    html+='<th style="'+th()+'">'+label+'</th><th style="'+th()+'">Stores</th>';
+    html+='<th style="'+th()+'">Ref 30d</th><th style="'+th()+'">HVAC 30d</th>';
+    html+='<th style="'+th()+'">Total Loss</th><th style="'+th()+'">Cases OOT</th></tr></thead><tbody>';
+    groups.forEach(function(g,i) {
+        var bg=i%2===0?'#f8fafc':'#fff';
+        html+='<tr style="background:'+bg+';">';
+        html+='<td style="'+td()+'font-weight:600;">'+g.name+'</td>';
+        html+='<td style="'+td()+'">'+g.count+'</td>';
+        html+='<td style="'+td()+scoreColor(g.avgRef30)+'">'+g.avgRef30.toFixed(1)+'%</td>';
+        html+='<td style="'+td()+scoreColor(g.avgHvac30)+'">'+g.avgHvac30.toFixed(1)+'%</td>';
+        html+='<td style="'+td()+'color:#dc2626;">$'+g.totalLoss.toLocaleString(undefined,{maximumFractionDigits:0})+'</td>';
+        html+='<td style="'+td()+'">'+g.casesOOT.toLocaleString()+'</td></tr>';
     });
-    return Object.entries(map)
-        .map(function(entry) {
-            var name = entry[0], ss = entry[1];
-            return {
-                name: name, count: ss.length,
-                avgRef30: safeAvg(ss, 'twt_ref_30_day'),
-                avgHvac30: safeAvg(ss, 'twt_hvac_30_day'),
-                totalLoss: ss.reduce(function(s, d) { return s + (d.total_loss || 0); }, 0),
-                casesOOT: ss.reduce(function(s, d) { return s + (d.cases_out_of_target || 0); }, 0)
-            };
-        })
-        .sort(function(a, b) { return a.avgRef30 - b.avgRef30; });
-}
-
-function buildGroupTable(groups, label) {
-    var html = sectionTitle('📊', 'Performance by ' + label);
-    html += '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="background:#0053e2;color:#fff;">';
-    html += '<th style="' + th() + '">' + label + '</th><th style="' + th() + '">Stores</th>';
-    html += '<th style="' + th() + '">Ref 30d</th><th style="' + th() + '">HVAC 30d</th>';
-    html += '<th style="' + th() + '">Total Loss</th><th style="' + th() + '">Cases OOT</th>';
-    html += '</tr></thead><tbody>';
-    groups.forEach(function(g, i) {
-        var bg = i % 2 === 0 ? '#f9fafb' : '#fff';
-        html += '<tr style="background:' + bg + ';">';
-        html += '<td style="' + td() + 'font-weight:600;">' + g.name + '</td>';
-        html += '<td style="' + td() + '">' + g.count + '</td>';
-        html += '<td style="' + td() + scoreColor(g.avgRef30) + '">' + g.avgRef30.toFixed(1) + '%</td>';
-        html += '<td style="' + td() + scoreColor(g.avgHvac30) + '">' + g.avgHvac30.toFixed(1) + '%</td>';
-        html += '<td style="' + td() + 'color:#ea1100;">$' + g.totalLoss.toLocaleString(undefined,{maximumFractionDigits:0}) + '</td>';
-        html += '<td style="' + td() + '">' + g.casesOOT.toLocaleString() + '</td>';
-        html += '</tr>';
-    });
-    html += '</tbody></table>';
+    html+='</tbody></table>';
     return html;
 }
 
-/* ═══════════════════════════════════════════════════════════
- *  BUILD PDF CONTENT
- * ═══════════════════════════════════════════════════════════ */
-function buildPdfContent(tab, level, person) {
-    var isAll = person === '__all__';
-    var stores = isAll ? storeData : getStoresForPerson(level, person);
-    var levelLabel = level === 'sr_director' ? 'Sr. Director' : 'FM Director';
-    var personLabel = isAll ? 'All Regions' : person;
-    var now = new Date();
-    var dateStr = (now.getMonth()+1) + '/' + now.getDate() + '/' + now.getFullYear();
-
-    var container = document.createElement('div');
-    container.style.cssText = 'width:1100px;padding:32px;font-family:system-ui,sans-serif;background:#fff;color:#1a1a1a;';
-
-    var tabName = tab === 'tnt' ? '📊 Time in Target Report' : tab === 'wtw' ? '❄️ Win the Winter Report' : '🧊 Leak Management Report';
-
+/* ══════════ BUILD PDF CONTENT ══════════ */
+function buildPdfContent(tab,level,person) {
+    var isAll=person==='__all__';
+    var stores=isAll?storeData:getStoresForPerson(level,person);
+    var levelLabel=level==='sr_director'?'Sr. Director':'FM Director';
+    var personLabel=isAll?'All Regions':person;
+    var now=new Date();
+    var dateStr=(now.getMonth()+1)+'/'+now.getDate()+'/'+now.getFullYear();
+    var container=document.createElement('div');
+    container.style.cssText=S.page;
+    var tabNames={tnt:'\ud83d\udcca Time in Target Report',wtw:'\u2744\ufe0f Win the Winter Report',leak:'\ud83e\uddca Leak Management Report',all:'\ud83d\udcca Executive Summary Report'};
+    var tabName=tabNames[tab]||tab;
     // Header
-    container.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:3px solid #0053e2;">'
-        + '<div><h1 style="font-size:22px;font-weight:800;color:#0053e2;margin:0;">' + tabName + '</h1>'
-        + '<p style="font-size:13px;color:#666;margin:4px 0 0;">' + levelLabel + ' Report: ' + personLabel + '</p></div>'
-        + '<div style="text-align:right;"><p style="font-size:12px;color:#666;margin:0;">Generated ' + dateStr + '</p>'
-        + '<p style="font-size:12px;color:#666;margin:2px 0 0;">' + stores.length.toLocaleString() + ' stores</p></div></div>';
-
-    if (tab === 'tnt')  container.innerHTML += buildTntPdf(stores, level, person, isAll);
-    if (tab === 'wtw')  container.innerHTML += buildWtwPdf(stores, level, person, isAll);
-    if (tab === 'leak') container.innerHTML += buildLeakPdf(stores, level, person, isAll);
-
+    container.innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:20px;padding-bottom:14px;border-bottom:3px solid #0053e2;">'
+        +'<div><h1 style="font-size:24px;font-weight:800;color:#0053e2;margin:0;letter-spacing:-0.5px;">'+tabName+'</h1>'
+        +'<p style="font-size:12px;color:#64748b;margin:6px 0 0;">'+levelLabel+' Report: <strong style="color:#1e293b;">'+personLabel+'</strong></p></div>'
+        +'<div style="text-align:right;"><p style="font-size:11px;color:#64748b;margin:0;">Generated '+dateStr+'</p>'
+        +'<p style="font-size:11px;color:#64748b;margin:2px 0 0;">'+stores.length.toLocaleString()+' stores</p></div></div>';
+    if (tab==='tnt') container.innerHTML+=buildTntPdf(stores,level,person,isAll);
+    else if (tab==='wtw') container.innerHTML+=buildWtwPdf(stores,level,person,isAll);
+    else if (tab==='leak') container.innerHTML+=buildLeakPdf(stores,level,person,isAll);
+    else if (tab==='all') container.innerHTML+=buildCombinedPdf(stores,level,person,isAll);
     // Footer
-    container.innerHTML += '<div style="margin-top:24px;padding-top:12px;border-top:2px solid #0053e2;font-size:10px;color:#999;display:flex;justify-content:space-between;">'
-        + '<span>Generated by HVAC/R TnT Dashboard • ' + dateStr + '</span>'
-        + '<span>' + levelLabel + ': ' + personLabel + ' • ' + stores.length + ' stores</span></div>';
-
+    container.innerHTML+='<div style="margin-top:28px;padding-top:10px;border-top:2px solid #e2e8f0;font-size:9px;color:#94a3b8;display:flex;justify-content:space-between;">'
+        +'<span>HVAC/R TnT Dashboard \u2022 '+dateStr+'</span>'
+        +'<span>'+levelLabel+': '+personLabel+' \u2022 '+stores.length.toLocaleString()+' stores</span></div>';
     return container;
 }
 
-/* ═══════════════════════════════════════════════════════════
- *  TnT PDF — Executive Summary
- * ═══════════════════════════════════════════════════════════ */
-function buildTntPdf(stores, level, person, isAll) {
-    var avg30d = safeAvg(stores, 'twt_ref_30_day');
-    var avg7d = safeAvg(stores, 'twt_ref_7_day');
-    var avg90d = safeAvg(stores, 'twt_ref_90_day');
-    var avgHvac = safeAvg(stores, 'twt_hvac_30_day');
-    var totalLoss = stores.reduce(function(s, d) { return s + (d.total_loss || 0); }, 0);
-    var casesOOT = stores.reduce(function(s, d) { return s + (d.cases_out_of_target || 0); }, 0);
-    var below80 = stores.filter(function(s) { return s.twt_ref_30_day != null && s.twt_ref_30_day < 80; }).length;
-    var below90 = stores.filter(function(s) { return s.twt_ref_30_day != null && s.twt_ref_30_day < 90; }).length;
-    var above90 = stores.filter(function(s) { return s.twt_ref_30_day != null && s.twt_ref_30_day >= 90; }).length;
-    var trendDir = avg7d > avg30d ? '📈 Trending Up' : avg7d < avg30d - 1 ? '📉 Trending Down' : '➡️ Stable';
-
-    var html = '';
-
-    // KPI Grid
-    html += '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:12px;">';
-    html += kpiBox('Ref 7-Day', avg7d, '%');
-    html += kpiBox('Ref 30-Day', avg30d, '%');
-    html += kpiBox('Ref 90-Day', avg90d, '%');
-    html += kpiBox('HVAC 30-Day', avgHvac, '%');
-    html += kpiBox('7d Trend', trendDir, '', avg7d >= avg30d ? '#2a8703' : '#ea1100');
-    html += '</div>';
-    html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;">';
-    html += kpiBox('Total Stores', stores.length, '', '#333');
-    html += kpiBox('Total Loss', '$' + (totalLoss/1000000).toFixed(1) + 'M', '', '#ea1100');
-    html += kpiBox('Cases OOT', casesOOT.toLocaleString(), '', '#ea1100');
-    html += kpiBox('Stores <90%', below90, '', below90 > 0 ? '#ea1100' : '#2a8703');
-    html += '</div>';
-
-    // Executive Insights
-    var insights = [];
-    if (avg7d > avg30d + 0.5) insights.push('<strong>Positive momentum:</strong> 7-day avg (' + avg7d.toFixed(1) + '%) is above 30-day (' + avg30d.toFixed(1) + '%), indicating recent improvement.');
-    if (avg7d < avg30d - 0.5) insights.push('<strong>Declining trend:</strong> 7-day avg (' + avg7d.toFixed(1) + '%) is below 30-day (' + avg30d.toFixed(1) + '%). Investigate recent changes.');
-    if (below80 > 0) insights.push('<strong>' + below80 + ' stores below 80% (critical):</strong> These stores need immediate review — likely equipment failures or sensor issues.');
-    if (below90 > 0) insights.push(below90 + ' of ' + stores.length + ' stores (' + (below90/stores.length*100).toFixed(0) + '%) are below 90% target. ' + above90 + ' stores (' + (above90/stores.length*100).toFixed(0) + '%) are meeting target.');
-    insights.push('Total estimated product loss: <strong>$' + (totalLoss/1000000).toFixed(1) + 'M</strong> with ' + casesOOT.toLocaleString() + ' cases out of target.');
-    if (avgHvac >= 93) insights.push('HVAC performance is strong at ' + avgHvac.toFixed(1) + '% — well above target.');
-    else insights.push('HVAC at ' + avgHvac.toFixed(1) + '% — room for improvement vs 93% benchmark.');
-
-    html += insightBox(insights);
-
-    // CHARTS: Gauges + Distribution Bar
-    html += chartRow(
-        svgGauge('Ref 7-Day', avg7d),
-        svgGauge('Ref 30-Day', avg30d),
-        svgGauge('Ref 90-Day', avg90d),
-        svgGauge('HVAC 30-Day', avgHvac)
-    );
-
-    var dist = [
-        { label: '≥95%', value: stores.filter(function(s) { return s.twt_ref_30_day != null && s.twt_ref_30_day >= 95; }).length, color: '#166534' },
-        { label: '90-95%', value: stores.filter(function(s) { return s.twt_ref_30_day != null && s.twt_ref_30_day >= 90 && s.twt_ref_30_day < 95; }).length, color: '#2a8703' },
-        { label: '80-90%', value: stores.filter(function(s) { return s.twt_ref_30_day != null && s.twt_ref_30_day >= 80 && s.twt_ref_30_day < 90; }).length, color: '#f59e0b' },
-        { label: '70-80%', value: stores.filter(function(s) { return s.twt_ref_30_day != null && s.twt_ref_30_day >= 70 && s.twt_ref_30_day < 80; }).length, color: '#ea1100' },
-        { label: '<70%', value: stores.filter(function(s) { return s.twt_ref_30_day != null && s.twt_ref_30_day < 70; }).length, color: '#991b1b' },
-        { label: 'No Data', value: stores.filter(function(s) { return s.twt_ref_30_day == null; }).length, color: '#9ca3af' }
+/* ══════════ TnT PDF ══════════ */
+function buildTntPdf(stores,level,person,isAll) {
+    var a30=safeAvg(stores,'twt_ref_30_day'),a7=safeAvg(stores,'twt_ref_7_day');
+    var a90=safeAvg(stores,'twt_ref_90_day'),aH=safeAvg(stores,'twt_hvac_30_day');
+    var loss=stores.reduce(function(s,d){return s+(d.total_loss||0);},0);
+    var oot=stores.reduce(function(s,d){return s+(d.cases_out_of_target||0);},0);
+    var b80=stores.filter(function(s){return s.twt_ref_30_day!=null&&s.twt_ref_30_day<80;}).length;
+    var b90=stores.filter(function(s){return s.twt_ref_30_day!=null&&s.twt_ref_30_day<90;}).length;
+    var a90c=stores.filter(function(s){return s.twt_ref_30_day!=null&&s.twt_ref_30_day>=90;}).length;
+    var trend=a7>a30?'\ud83d\udcc8 Up':a7<a30-1?'\ud83d\udcc9 Down':'\u27a1\ufe0f Stable';
+    var h='';
+    // KPIs
+    h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px;">';
+    h+=kpiBox('Ref 7-Day',a7,'%')+kpiBox('Ref 30-Day',a30,'%')+kpiBox('Ref 90-Day',a90,'%');
+    h+=kpiBox('HVAC 30-Day',aH,'%')+kpiBox('7d Trend',trend,'',a7>=a30?'#16a34a':'#dc2626');
+    h+='</div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;">';
+    h+=kpiBox('Stores',stores.length,'','#334155')+kpiBox('Total Loss','$'+(loss/1e6).toFixed(1)+'M','','#dc2626');
+    h+=kpiBox('Cases OOT',oot.toLocaleString(),'','#dc2626')+kpiBox('Stores <90%',b90,'',b90>0?'#dc2626':'#16a34a');
+    h+='</div>';
+    // Gauges
+    h+=chartRow(svgGauge('Ref 7-Day',a7),svgGauge('Ref 30-Day',a30),svgGauge('Ref 90-Day',a90),svgGauge('HVAC 30-Day',aH));
+    // Insights
+    var ins=[];
+    if (a7>a30+0.5) ins.push('<strong>Positive momentum:</strong> 7-day ('+a7.toFixed(1)+'%) is above 30-day ('+a30.toFixed(1)+'%).');
+    if (a7<a30-0.5) ins.push('<strong>Declining trend:</strong> 7-day ('+a7.toFixed(1)+'%) is below 30-day ('+a30.toFixed(1)+'%).');
+    if (b80>0) ins.push('<strong>'+b80+' stores below 80%</strong> \u2014 likely equipment failures or sensor issues.');
+    ins.push(b90+' of '+stores.length+' stores ('+(b90/stores.length*100).toFixed(0)+'%) below 90%. '+a90c+' ('+(a90c/stores.length*100).toFixed(0)+'%) meeting target.');
+    ins.push('Product loss: <strong>$'+(loss/1e6).toFixed(1)+'M</strong> with '+oot.toLocaleString()+' cases OOT.');
+    ins.push('HVAC '+(aH>=93?'strong':'needs attention')+' at '+aH.toFixed(1)+'%.');
+    h+=insightBox(ins);
+    // Distribution bar
+    var dist=[
+        {label:'\u226595%',value:stores.filter(function(s){return s.twt_ref_30_day!=null&&s.twt_ref_30_day>=95;}).length,color:'#15803d'},
+        {label:'90-95%',value:stores.filter(function(s){return s.twt_ref_30_day!=null&&s.twt_ref_30_day>=90&&s.twt_ref_30_day<95;}).length,color:'#16a34a'},
+        {label:'80-90%',value:stores.filter(function(s){return s.twt_ref_30_day!=null&&s.twt_ref_30_day>=80&&s.twt_ref_30_day<90;}).length,color:'#d97706'},
+        {label:'70-80%',value:stores.filter(function(s){return s.twt_ref_30_day!=null&&s.twt_ref_30_day>=70&&s.twt_ref_30_day<80;}).length,color:'#dc2626'},
+        {label:'<70%',value:stores.filter(function(s){return s.twt_ref_30_day!=null&&s.twt_ref_30_day<70;}).length,color:'#991b1b'},
+        {label:'No Data',value:stores.filter(function(s){return s.twt_ref_30_day==null;}).length,color:'#94a3b8'}
     ];
-    html += svgBarChart('Store Distribution (Ref 30-Day TnT)', dist, { width: 520, labelWidth: 80 });
-
-    // Group breakdown
-    var groupBy = level === 'sr_director' ? 'fm_sr_director_name' : 'fm_director_name';
-    var childGroupBy = level === 'sr_director' ? 'fm_director_name' : 'fm_regional_manager_name';
-    var childLabel = level === 'sr_director' ? 'Director' : 'Regional Manager';
-    var groups = isAll ? groupStores(stores, groupBy) : groupStores(stores, childGroupBy);
-
-    // CHART: Performance bar chart by group
-    var grpChartData = groups.slice(0, 15).map(function(g) {
-        return { label: g.name.substring(0, 20), value: g.avgRef30, color: g.avgRef30 >= 90 ? '#2a8703' : g.avgRef30 >= 80 ? '#f59e0b' : '#ea1100' };
+    h+=svgBarChart('Store Distribution (Ref 30-Day)',dist,{width:520,labelWidth:80});
+    // Group breakdown (descending)
+    var gBy=level==='sr_director'?'fm_sr_director_name':'fm_director_name';
+    var cBy=level==='sr_director'?'fm_director_name':'fm_regional_manager_name';
+    var cLbl=level==='sr_director'?'Director':'Regional Manager';
+    var grps=isAll?groupStores(stores,gBy):groupStores(stores,cBy);
+    var grpLabel=isAll?(level==='sr_director'?'Sr. Director':'Director'):cLbl;
+    // Bar chart (best on top = already descending)
+    var gcd=grps.slice(0,15).map(function(g){
+        return {label:g.name.substring(0,22),value:g.avgRef30,color:g.avgRef30>=90?'#16a34a':g.avgRef30>=80?'#d97706':'#dc2626'};
     });
-    html += svgBarChart('Ref 30-Day TnT by ' + (isAll ? (level === 'sr_director' ? 'Sr. Director' : 'Director') : childLabel), grpChartData, { width: 540, labelWidth: 150, max: 100, suffix: '%' });
-
-    html += buildGroupTable(groups, isAll ? (level === 'sr_director' ? 'Sr. Director' : 'Director') : childLabel);
-
+    h+=svgBarChart('Ref 30-Day by '+grpLabel,gcd,{width:540,labelWidth:160,max:100,suffix:'%'});
+    h+=buildGroupTable(grps,grpLabel);
     // Bottom 10
-    var bottom10 = stores.filter(function(d) { return d.twt_ref_30_day != null; })
-        .sort(function(a, b) { return (a.twt_ref_30_day || 0) - (b.twt_ref_30_day || 0); }).slice(0, 10);
-    html += sectionTitle('⚠️', 'Bottom 10 Stores (Ref 30-Day)');
-    html += '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="background:#0053e2;color:#fff;">';
-    html += '<th style="' + th() + '">Store</th><th style="' + th() + '">City</th><th style="' + th() + '">RM</th>';
-    html += '<th style="' + th() + '">Ref 30d</th><th style="' + th() + '">HVAC 30d</th>';
-    html += '<th style="' + th() + '">Loss</th><th style="' + th() + '">Cases OOT</th>';
-    html += '</tr></thead><tbody>';
-    bottom10.forEach(function(s, i) {
-        var bg = i % 2 === 0 ? '#f9fafb' : '#fff';
-        html += '<tr style="background:' + bg + ';">';
-        html += '<td style="' + td() + 'font-weight:600;">' + s.store_number + '</td>';
-        html += '<td style="' + td() + '">' + (s.store_city || '') + ', ' + (s.store_state || '') + '</td>';
-        html += '<td style="' + td() + '">' + (s.fm_regional_manager_name || '-') + '</td>';
-        html += '<td style="' + td() + scoreColor(s.twt_ref_30_day) + '">' + pct(s.twt_ref_30_day) + '</td>';
-        html += '<td style="' + td() + scoreColor(s.twt_hvac_30_day) + '">' + pct(s.twt_hvac_30_day) + '</td>';
-        html += '<td style="' + td() + 'color:#ea1100;">$' + ((s.total_loss||0)/1000).toFixed(0) + 'K</td>';
-        html += '<td style="' + td() + '">' + (s.cases_out_of_target||0).toLocaleString() + '</td></tr>';
+    var bot=stores.filter(function(d){return d.twt_ref_30_day!=null;}).sort(function(a,b){return(a.twt_ref_30_day||0)-(b.twt_ref_30_day||0);}).slice(0,10);
+    h+=sectionTitle('\u26a0\ufe0f','Bottom 10 Stores (Ref 30-Day)');
+    h+='<table style="width:100%;border-collapse:collapse;font-size:11px;border-radius:8px;overflow:hidden;"><thead><tr style="'+S.hdr+'">';
+    h+='<th style="'+th()+'">Store</th><th style="'+th()+'">City</th><th style="'+th()+'">RM</th>';
+    h+='<th style="'+th()+'">Ref 30d</th><th style="'+th()+'">HVAC 30d</th>';
+    h+='<th style="'+th()+'">Loss</th><th style="'+th()+'">Cases OOT</th></tr></thead><tbody>';
+    bot.forEach(function(s,i){
+        var bg=i%2===0?'#f8fafc':'#fff';
+        h+='<tr style="background:'+bg+';">';
+        h+='<td style="'+td()+'font-weight:600;">'+s.store_number+'</td>';
+        h+='<td style="'+td()+'">'+(s.store_city||'')+', '+(s.store_state||'')+'</td>';
+        h+='<td style="'+td()+'">'+(s.fm_regional_manager_name||'-')+'</td>';
+        h+='<td style="'+td()+scoreColor(s.twt_ref_30_day)+'">'+pct(s.twt_ref_30_day)+'</td>';
+        h+='<td style="'+td()+scoreColor(s.twt_hvac_30_day)+'">'+pct(s.twt_hvac_30_day)+'</td>';
+        h+='<td style="'+td()+'color:#dc2626;">$'+((s.total_loss||0)/1e3).toFixed(0)+'K</td>';
+        h+='<td style="'+td()+'">'+((s.cases_out_of_target||0)).toLocaleString()+'</td></tr>';
     });
-    html += '</tbody></table>';
-    return html;
+    h+='</tbody></table>';
+    return h;
 }
 
-/* ═══════════════════════════════════════════════════════════
- *  WTW PDF — Executive Summary
- * ═══════════════════════════════════════════════════════════ */
-function buildWtwPdf(stores, level, person, isAll) {
-    if (typeof WTW_DATA === 'undefined') return '<p style="color:#999;">No WTW data loaded.</p>';
-
-    var storeNums = new Set(stores.map(function(s) { return String(s.store_number); }));
-    var wos = WTW_DATA.filter(function(w) { return storeNums.has(String(w.s)); });
-    var completed = wos.filter(function(w) { return w.st === 'COMPLETED'; });
-    var open = wos.length - completed.length;
-    var compPct = wos.length > 0 ? (completed.length / wos.length * 100) : 0;
-    var pmValid = wos.filter(function(w) { return w.pm != null && !isNaN(parseFloat(w.pm)); });
-    var pmAvg = pmValid.length > 0 ? pmValid.reduce(function(s, w) { return s + parseFloat(w.pm); }, 0) / pmValid.length : 0;
-    if (isNaN(pmAvg)) pmAvg = 0;
-    var pmBelow90 = pmValid.filter(function(w) { return parseFloat(w.pm) < 90; }).length;
-
-    var p1 = wos.filter(function(w) { return w.ph === 'PH1'; });
-    var p2 = wos.filter(function(w) { return w.ph === 'PH2'; });
-    var p3 = wos.filter(function(w) { return w.ph === 'PH3'; });
-    var p1done = p1.filter(function(w) { return w.st === 'COMPLETED'; }).length;
-    var p2done = p2.filter(function(w) { return w.st === 'COMPLETED'; }).length;
-    var p3done = p3.filter(function(w) { return w.st === 'COMPLETED'; }).length;
-    var p1pct = p1.length > 0 ? (p1done/p1.length*100) : 0;
-    var p2pct = p2.length > 0 ? (p2done/p2.length*100) : 0;
-    var p3pct = p3.length > 0 ? (p3done/p3.length*100) : 0;
-
-    // Readiness
-    var ready = wos.filter(function(w) { return w.st !== 'COMPLETED' && w.pm != null && parseFloat(w.pm) >= 90; }).length;
-    var reviewNeeded = wos.filter(function(w) { return w.st === 'COMPLETED' && w.pm != null && parseFloat(w.pm) >= 90; }).length;
-    var critical = wos.filter(function(w) { return w.st === 'COMPLETED' && w.pm != null && parseFloat(w.pm) < 90; }).length;
-
-    var html = '';
-
-    // KPIs
-    html += '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:12px;">';
-    html += kpiBox('Total WOs', wos.length, '', '#333');
-    html += kpiBox('Completed', completed.length, '', '#2a8703');
-    html += kpiBox('Open', open, '', open > 0 ? '#ea1100' : '#2a8703');
-    html += kpiBox('Completion', compPct.toFixed(1), '%');
-    html += kpiBox('Avg PM Score', pmAvg > 0 ? pmAvg.toFixed(1) : 'N/A', pmAvg > 0 ? '%' : '', pmAvg >= 90 ? '#2a8703' : pmAvg > 0 ? '#ea1100' : '#999');
-    html += '</div>';
-
-    // CHARTS: Donut for status + bar for phases
-    html += chartRow(
-        svgDonutChart('WO Status', [
-            { label: 'Completed', value: completed.length, color: '#2a8703' },
-            { label: 'Open', value: open, color: '#ea1100' }
-        ]),
-        svgDonutChart('PM Readiness', [
-            { label: 'Ready to Close', value: ready, color: '#2a8703' },
-            { label: 'Review Needed', value: reviewNeeded, color: '#f59e0b' },
-            { label: 'Critical Reopen', value: critical, color: '#ea1100' }
-        ])
+/* ══════════ WTW PDF ══════════ */
+function buildWtwPdf(stores,level,person,isAll) {
+    if (typeof WTW_DATA==='undefined') return '<p style="color:#94a3b8;">No WTW data loaded.</p>';
+    var nums=new Set(stores.map(function(s){return String(s.store_number);}));
+    var wos=WTW_DATA.filter(function(w){return nums.has(String(w.s));});
+    var done=wos.filter(function(w){return w.st==='COMPLETED';});
+    var opn=wos.length-done.length;
+    var cpct=wos.length>0?(done.length/wos.length*100):0;
+    var pmV=wos.filter(function(w){return w.pm!=null&&!isNaN(parseFloat(w.pm));});
+    var pmA=pmV.length>0?pmV.reduce(function(s,w){return s+parseFloat(w.pm);},0)/pmV.length:0;
+    if(isNaN(pmA))pmA=0;
+    var pmB90=pmV.filter(function(w){return parseFloat(w.pm)<90;}).length;
+    var p1=wos.filter(function(w){return w.ph==='PH1';}),p2=wos.filter(function(w){return w.ph==='PH2';}),p3=wos.filter(function(w){return w.ph==='PH3';});
+    var p1d=p1.filter(function(w){return w.st==='COMPLETED';}).length;
+    var p2d=p2.filter(function(w){return w.st==='COMPLETED';}).length;
+    var p3d=p3.filter(function(w){return w.st==='COMPLETED';}).length;
+    var p1p=p1.length>0?p1d/p1.length*100:0,p2p=p2.length>0?p2d/p2.length*100:0,p3p=p3.length>0?p3d/p3.length*100:0;
+    var rdy=wos.filter(function(w){return w.st!=='COMPLETED'&&w.pm!=null&&parseFloat(w.pm)>=90;}).length;
+    var rev=wos.filter(function(w){return w.st==='COMPLETED'&&w.pm!=null&&parseFloat(w.pm)>=90;}).length;
+    var crit=wos.filter(function(w){return w.st==='COMPLETED'&&w.pm!=null&&parseFloat(w.pm)<90;}).length;
+    var h='';
+    h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px;">';
+    h+=kpiBox('Total WOs',wos.length,'','#334155')+kpiBox('Completed',done.length,'','#16a34a');
+    h+=kpiBox('Open',opn,'',opn>0?'#dc2626':'#16a34a')+kpiBox('Completion',cpct.toFixed(1),'%');
+    h+=kpiBox('Avg PM',pmA>0?pmA.toFixed(1):'N/A',pmA>0?'%':'',pmA>=90?'#16a34a':pmA>0?'#dc2626':'#94a3b8');
+    h+='</div>';
+    h+=chartRow(
+        svgDonutChart('WO Status',[{label:'Completed',value:done.length,color:'#16a34a'},{label:'Open',value:opn,color:'#dc2626'}]),
+        svgDonutChart('PM Readiness',[{label:'Ready to Close',value:rdy,color:'#16a34a'},{label:'Review Needed',value:rev,color:'#d97706'},{label:'Critical Reopen',value:crit,color:'#dc2626'}])
     );
+    h+=svgBarChart('Phase Completion',[
+        {label:'Phase 1 ('+p1d+'/'+p1.length+')',value:p1p,color:p1p>=50?'#16a34a':'#d97706'},
+        {label:'Phase 2 ('+p2d+'/'+p2.length+')',value:p2p,color:p2p>=50?'#16a34a':p2p>=20?'#d97706':'#dc2626'},
+        {label:'Phase 3 ('+p3d+'/'+p3.length+')',value:p3p,color:p3p>=50?'#16a34a':p3p>=20?'#d97706':'#dc2626'}
+    ],{width:520,labelWidth:150,max:100,suffix:'%',barHeight:28});
+    h+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0;">';
+    h+=kpiBox('\u2713 Ready to Close',rdy,'','#16a34a');
+    h+=kpiBox('\ud83d\udd0d Review Needed',rev,'','#d97706');
+    h+=kpiBox('\u26a0 Critical Reopen',crit,'',crit>0?'#dc2626':'#16a34a');
+    h+='</div>';
+    var ins=[];
+    ins.push('Overall completion at <strong>'+cpct.toFixed(1)+'%</strong> \u2014 '+opn+' work orders still open.');
+    if(p1p>50&&p2p<20) ins.push('<strong>Phase 2 lagging:</strong> '+p2p.toFixed(0)+'% vs Phase 1 at '+p1p.toFixed(0)+'%.');
+    if(p3p<15) ins.push('<strong>Phase 3 needs attention:</strong> Only '+p3p.toFixed(0)+'% complete.');
+    if(pmB90>0) ins.push('<strong>'+pmB90+' WOs have PM <90%</strong> \u2014 may need reopening.');
+    if(crit>0) ins.push('<strong>'+crit+' critical reopens</strong> \u2014 completed WOs with PM <90%.');
+    if(rdy>0) ins.push(rdy+' open WOs are <strong>ready to close</strong> (PM \u226590%).');
+    if(pmV.length>0) ins.push('Average PM Score: <strong>'+pmA.toFixed(1)+'%</strong> across '+pmV.length+' scored WOs.');
+    h+=insightBox(ins);
+    // Group breakdown (descending by completion)
+    var cKey=level==='sr_director'?'fm':'rm',cLbl=level==='sr_director'?'Director':'Regional Manager';
+    var gm={};
+    wos.forEach(function(w){var g=w[cKey]||'Unknown';if(!gm[g])gm[g]={t:0,d:0,ps:0,pn:0};gm[g].t++;if(w.st==='COMPLETED')gm[g].d++;if(w.pm!=null&&!isNaN(parseFloat(w.pm))){gm[g].ps+=parseFloat(w.pm);gm[g].pn++;}});
+    var gl=Object.entries(gm).map(function(e){var n=e[0],d=e[1];return{name:n,total:d.t,done:d.d,pct:d.t>0?d.d/d.t*100:0,pmAvg:d.pn>0?d.ps/d.pn:0};}).sort(function(a,b){return b.pct-a.pct;});
+    if(gl.length>1) {
+        var gbd=gl.slice(0,15).map(function(g){return{label:g.name.substring(0,22),value:g.pct,color:g.pct>=50?'#16a34a':g.pct>=20?'#d97706':'#dc2626'};});
+        h+=svgBarChart('Completion by '+cLbl,gbd,{width:540,labelWidth:160,max:100,suffix:'%'});
+        h+=sectionTitle('\ud83d\udcca','WTW by '+cLbl);
+        h+='<table style="width:100%;border-collapse:collapse;font-size:11px;border-radius:8px;overflow:hidden;"><thead><tr style="'+S.hdr+'">';
+        h+='<th style="'+th()+'">'+cLbl+'</th><th style="'+th()+'">Total</th><th style="'+th()+'">Done</th><th style="'+th()+'">Completion</th><th style="'+th()+'">Avg PM</th></tr></thead><tbody>';
+        gl.forEach(function(g,i){var bg=i%2===0?'#f8fafc':'#fff';h+='<tr style="background:'+bg+';">';h+='<td style="'+td()+'font-weight:600;">'+g.name+'</td>';h+='<td style="'+td()+'">'+g.total+'</td>';h+='<td style="'+td()+'">'+g.done+'</td>';h+='<td style="'+td()+scoreColor(g.pct)+'">'+g.pct.toFixed(1)+'%</td>';h+='<td style="'+td()+scoreColor(g.pmAvg)+'">'+g.pmAvg.toFixed(1)+'%</td></tr>';});
+        h+='</tbody></table>';
+    }
+    return h;
+}
 
-    html += svgBarChart('Phase Completion', [
-        { label: 'Phase 1 (' + p1done + '/' + p1.length + ')', value: p1pct, color: p1pct >= 50 ? '#2a8703' : '#f59e0b' },
-        { label: 'Phase 2 (' + p2done + '/' + p2.length + ')', value: p2pct, color: p2pct >= 50 ? '#2a8703' : p2pct >= 20 ? '#f59e0b' : '#ea1100' },
-        { label: 'Phase 3 (' + p3done + '/' + p3.length + ')', value: p3pct, color: p3pct >= 50 ? '#2a8703' : p3pct >= 20 ? '#f59e0b' : '#ea1100' }
-    ], { width: 520, labelWidth: 150, max: 100, suffix: '%', barHeight: 28 });
+/* ══════════ LEAK PDF ══════════ */
+function buildLeakPdf(stores,level,person,isAll) {
+    if (typeof LK_STORES==='undefined') return '<p style="color:#94a3b8;">No leak data loaded.</p>';
+    var nums=new Set(stores.map(function(s){return String(s.store_number);}));
+    var ls=LK_STORES.filter(function(s){return nums.has(String(s.s));});
+    var LKT=typeof LK_T!=='undefined'?LK_T:20;
+    var tc=ls.reduce(function(s,d){return s+(d.sc||0);},0);
+    var tq=ls.reduce(function(s,d){return s+(d.cytq||0);},0);
+    var tl=ls.reduce(function(s,d){return s+(d.cyl||0);},0);
+    var ar=tc>0?(tq/tc*100):0;
+    var ov=ls.filter(function(s){return(s.cylr||0)>LKT;}).length;
+    var cr=ls.filter(function(s){return(s.cylr||0)>LKT*1.5;}).length;
+    var h='';
+    h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px;">';
+    h+=kpiBox('Stores',ls.length,'','#334155')+kpiBox('System Charge',(tc/1e6).toFixed(1)+'M lbs','','#334155');
+    h+=kpiBox('Qty Leaked',(tq/1e3).toFixed(0)+'K lbs','','#dc2626');
+    h+=kpiBox('Leak Rate',ar.toFixed(1),'%',ar>LKT?'#dc2626':'#16a34a');
+    h+=kpiBox('Over '+LKT+'%',ov,'',ov>0?'#dc2626':'#16a34a');
+    h+='</div>';
+    var und=ls.length-ov;
+    h+=chartRow(svgGauge('Fleet Leak Rate',ar,{size:140}),
+        svgDonutChart('Threshold Compliance',[{label:'Under '+LKT+'%',value:und,color:'#16a34a'},{label:'Over '+LKT+'%',value:ov,color:'#dc2626'},{label:'Critical (>'+(LKT*1.5).toFixed(0)+'%)',value:cr,color:'#991b1b'}])
+    );
+    var ins=[];
+    ins.push('Fleet leak rate: <strong>'+ar.toFixed(1)+'%</strong> across '+ls.length+' stores ('+(tc/1e6).toFixed(1)+'M lbs charge).');
+    if(ar<=LKT) ins.push('Fleet is <strong>within threshold</strong> ('+LKT+'%).');else ins.push('<strong>Fleet exceeds '+LKT+'%</strong> \u2014 systemic issues.');
+    if(ov>0) ins.push('<strong>'+ov+' stores over '+LKT+'%</strong> \u2014 prioritize repairs.');
+    if(cr>0) ins.push('<strong>'+cr+' critically high</strong> (>'+(LKT*1.5).toFixed(0)+'%).');
+    ins.push('<strong>'+tl.toLocaleString()+' leak events</strong>, '+(tq/1e3).toFixed(0)+'K lbs lost.');
+    h+=insightBox(ins);
+    // Top leakers
+    var t15=ls.sort(function(a,b){return(b.cylr||0)-(a.cylr||0);}).slice(0,15);
+    h+=sectionTitle('\ud83d\udea8','Top Leaking Stores');
+    h+='<table style="width:100%;border-collapse:collapse;font-size:11px;border-radius:8px;overflow:hidden;"><thead><tr style="'+S.hdr+'">';
+    h+='<th style="'+th()+'">Store</th><th style="'+th()+'">Location</th><th style="'+th()+'">Charge</th><th style="'+th()+'">Leaked</th><th style="'+th()+'">Rate</th><th style="'+th()+'">Events</th></tr></thead><tbody>';
+    t15.forEach(function(s,i){var bg=i%2===0?'#f8fafc':'#fff';var rc=(s.cylr||0)>LKT?'color:#dc2626;font-weight:700;':'color:#16a34a;';h+='<tr style="background:'+bg+';">';h+='<td style="'+td()+'font-weight:600;">'+s.s+'</td>';h+='<td style="'+td()+'">'+(s.city||'')+', '+(s.st||'')+'</td>';h+='<td style="'+td()+'">'+Math.round(s.sc).toLocaleString()+'</td>';h+='<td style="'+td()+'color:#dc2626;">'+Math.round(s.cytq).toLocaleString()+'</td>';h+='<td style="'+td()+rc+'">'+(s.cylr||0).toFixed(1)+'%</td>';h+='<td style="'+td()+'">'+(s.cyl||0)+'</td></tr>';});
+    h+='</tbody></table>';
+    // Group
+    var gk=level==='sr_director'?'fm':'rm',gl2=level==='sr_director'?'Director':'Regional Manager';
+    var gm={};
+    ls.forEach(function(x){var g=x[gk]||'Unknown';if(!gm[g])gm[g]={c:0,q:0,l:0,n:0,o:0};gm[g].c+=x.sc||0;gm[g].q+=x.cytq||0;gm[g].l+=x.cyl||0;gm[g].n++;if((x.cylr||0)>LKT)gm[g].o++;});
+    var gls=Object.entries(gm).map(function(e){var n=e[0],d=e[1];return{name:n,stores:d.n,charge:d.c,qty:d.q,leaks:d.l,over:d.o,rate:d.c>0?d.q/d.c*100:0};}).sort(function(a,b){return a.rate-b.rate;});
+    if(gls.length>1) {
+        var lbd=gls.slice(0,15).map(function(g){return{label:g.name.substring(0,22),value:g.rate,color:g.rate>LKT?'#dc2626':'#16a34a'};});
+        h+=svgBarChart('Leak Rate by '+gl2,lbd,{width:540,labelWidth:160,suffix:'%'});
+        h+=sectionTitle('\ud83d\udcca','Leak Rate by '+gl2);
+        h+='<table style="width:100%;border-collapse:collapse;font-size:11px;border-radius:8px;overflow:hidden;"><thead><tr style="'+S.hdr+'">';
+        h+='<th style="'+th()+'">'+gl2+'</th><th style="'+th()+'">Stores</th><th style="'+th()+'">Charge</th><th style="'+th()+'">Leaked</th><th style="'+th()+'">Rate</th><th style="'+th()+'">Over '+LKT+'%</th></tr></thead><tbody>';
+        gls.forEach(function(g,i){var bg=i%2===0?'#f8fafc':'#fff';var rc=g.rate>LKT?'color:#dc2626;font-weight:700;':'color:#16a34a;';h+='<tr style="background:'+bg+';">';h+='<td style="'+td()+'font-weight:600;">'+g.name+'</td>';h+='<td style="'+td()+'">'+g.stores+'</td>';h+='<td style="'+td()+'">'+Math.round(g.charge).toLocaleString()+'</td>';h+='<td style="'+td()+'">'+Math.round(g.qty).toLocaleString()+'</td>';h+='<td style="'+td()+rc+'">'+g.rate.toFixed(1)+'%</td>';h+='<td style="'+td()+(g.over>0?'color:#dc2626;':'')+'">'+g.over+'</td></tr>';});
+        h+='</tbody></table>';
+    }
+    return h;
+}
 
-    // Readiness boxes
-    html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0;">';
-    html += kpiBox('✓ Ready to Close', ready, '', '#2a8703');
-    html += kpiBox('🔍 Review Needed', reviewNeeded, '', '#f59e0b');
-    html += kpiBox('⚠ Critical Reopen', critical, '', critical > 0 ? '#ea1100' : '#2a8703');
-    html += '</div>';
+/* ══════════ COMBINED EXECUTIVE SUMMARY ══════════ */
+function buildCombinedPdf(stores,level,person,isAll) {
+    var h='';
+    // ---- TnT Section (condensed) ----
+    var a30=safeAvg(stores,'twt_ref_30_day'),a7=safeAvg(stores,'twt_ref_7_day');
+    var a90=safeAvg(stores,'twt_ref_90_day'),aH=safeAvg(stores,'twt_hvac_30_day');
+    var loss=stores.reduce(function(s,d){return s+(d.total_loss||0);},0);
+    var oot=stores.reduce(function(s,d){return s+(d.cases_out_of_target||0);},0);
+    var b90=stores.filter(function(s){return s.twt_ref_30_day!=null&&s.twt_ref_30_day<90;}).length;
+    var a90c=stores.filter(function(s){return s.twt_ref_30_day!=null&&s.twt_ref_30_day>=90;}).length;
+    h+=sectionTitle('\ud83d\udcca','Refrigeration & HVAC Time in Target');
+    h+='<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:14px;">';
+    h+=kpiBox('Ref 7d',a7,'%')+kpiBox('Ref 30d',a30,'%')+kpiBox('Ref 90d',a90,'%');
+    h+=kpiBox('HVAC 30d',aH,'%')+kpiBox('Loss','$'+(loss/1e6).toFixed(1)+'M','','#dc2626');
+    h+=kpiBox('<90%',b90,'',b90>0?'#dc2626':'#16a34a');
+    h+='</div>';
+    h+=chartRow(svgGauge('Ref 7-Day',a7),svgGauge('Ref 30-Day',a30),svgGauge('HVAC 30-Day',aH));
+    var tIns=[];
+    var trend=a7>a30?'trending up':'trending down';
+    tIns.push('Refrigeration '+trend+' (7d: '+a7.toFixed(1)+'% vs 30d: '+a30.toFixed(1)+'%). HVAC at '+aH.toFixed(1)+'%.');
+    tIns.push(a90c+' of '+stores.length+' stores ('+(a90c/stores.length*100).toFixed(0)+'%) meeting 90% target. $'+(loss/1e6).toFixed(1)+'M estimated loss.');
+    h+=insightBox(tIns);
+    // Top/bottom performers bar
+    var gBy=level==='sr_director'?'fm_sr_director_name':'fm_director_name';
+    var cBy=level==='sr_director'?'fm_director_name':'fm_regional_manager_name';
+    var grps=isAll?groupStores(stores,gBy):groupStores(stores,cBy);
+    var gLbl=isAll?(level==='sr_director'?'Sr. Director':'Director'):(level==='sr_director'?'Director':'Regional Manager');
+    var gcd=grps.slice(0,10).map(function(g){return{label:g.name.substring(0,22),value:g.avgRef30,color:g.avgRef30>=90?'#16a34a':g.avgRef30>=80?'#d97706':'#dc2626'};});
+    h+=svgBarChart('Ref 30-Day by '+gLbl,gcd,{width:540,labelWidth:160,max:100,suffix:'%'});
 
-    // Insights
-    var insights = [];
-    insights.push('Overall completion at <strong>' + compPct.toFixed(1) + '%</strong> — ' + open + ' work orders still open.');
-    if (p1pct > 50 && p2pct < 20) insights.push('<strong>Phase 2 is lagging:</strong> Only ' + p2pct.toFixed(0) + '% complete vs Phase 1 at ' + p1pct.toFixed(0) + '%. This phase needs immediate focus.');
-    if (p3pct < 15) insights.push('<strong>Phase 3 needs attention:</strong> Only ' + p3pct.toFixed(0) + '% complete. Accelerate scheduling to avoid winter readiness gaps.');
-    if (pmBelow90 > 0) insights.push('<strong>' + pmBelow90 + ' work orders have PM Score below 90%</strong> — these may need to be reopened for additional work.');
-    if (critical > 0) insights.push('<strong>' + critical + ' critical reopens needed:</strong> Completed WOs with PM <90% should be reopened and reworked.');
-    if (ready > 0) insights.push(ready + ' open WOs are <strong>ready to close</strong> (PM ≥90%, all criteria passing).');
-    if (pmValid.length > 0) insights.push('Average PM Score: <strong>' + pmAvg.toFixed(1) + '%</strong> across ' + pmValid.length + ' scored work orders.');
-    html += insightBox(insights);
+    h+=divider();
 
-    // Group breakdown
-    var childKey = level === 'sr_director' ? 'fm' : 'rm';
-    var childLabel = level === 'sr_director' ? 'Director' : 'Regional Manager';
-    var grpMap = {};
-    wos.forEach(function(w) {
-        var grp = w[childKey] || 'Unknown';
-        if (!grpMap[grp]) grpMap[grp] = { total: 0, done: 0, pmSum: 0, pmN: 0 };
-        grpMap[grp].total++;
-        if (w.st === 'COMPLETED') grpMap[grp].done++;
-        if (w.pm != null) { grpMap[grp].pmSum += parseFloat(w.pm); grpMap[grp].pmN++; }
-    });
-    var grpList = Object.entries(grpMap)
-        .map(function(e) { var n=e[0],d=e[1]; return {name:n,total:d.total,done:d.done,pct:d.total>0?d.done/d.total*100:0,pmAvg:d.pmN>0?d.pmSum/d.pmN:0}; })
-        .sort(function(a,b) { return a.pct - b.pct; });
-
-    if (grpList.length > 1) {
-        // CHART: Completion by group
-        var grpBarData = grpList.slice(0, 15).map(function(g) {
-            return { label: g.name.substring(0, 20), value: g.pct, color: g.pct >= 50 ? '#2a8703' : g.pct >= 20 ? '#f59e0b' : '#ea1100' };
-        });
-        html += svgBarChart('Completion % by ' + childLabel, grpBarData, { width: 540, labelWidth: 150, max: 100, suffix: '%' });
-
-        html += sectionTitle('📊', 'WTW Completion by ' + childLabel);
-        html += '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="background:#0053e2;color:#fff;">';
-        html += '<th style="' + th() + '">' + childLabel + '</th><th style="' + th() + '">Total</th>';
-        html += '<th style="' + th() + '">Done</th><th style="' + th() + '">Completion</th><th style="' + th() + '">Avg PM</th></tr></thead><tbody>';
-        grpList.forEach(function(g, i) {
-            var bg = i % 2 === 0 ? '#f9fafb' : '#fff';
-            html += '<tr style="background:' + bg + ';">';
-            html += '<td style="' + td() + 'font-weight:600;">' + g.name + '</td>';
-            html += '<td style="' + td() + '">' + g.total + '</td>';
-            html += '<td style="' + td() + '">' + g.done + '</td>';
-            html += '<td style="' + td() + scoreColor(g.pct) + '">' + g.pct.toFixed(1) + '%</td>';
-            html += '<td style="' + td() + scoreColor(g.pmAvg) + '">' + g.pmAvg.toFixed(1) + '%</td></tr>';
-        });
-        html += '</tbody></table>';
+    // ---- WTW Section (condensed) ----
+    if (typeof WTW_DATA!=='undefined') {
+        var nums=new Set(stores.map(function(s){return String(s.store_number);}));
+        var wos=WTW_DATA.filter(function(w){return nums.has(String(w.s));});
+        var done=wos.filter(function(w){return w.st==='COMPLETED';});
+        var opn=wos.length-done.length;
+        var cpct=wos.length>0?(done.length/wos.length*100):0;
+        var pmV=wos.filter(function(w){return w.pm!=null&&!isNaN(parseFloat(w.pm));});
+        var pmA=pmV.length>0?pmV.reduce(function(s,w){return s+parseFloat(w.pm);},0)/pmV.length:0;
+        if(isNaN(pmA))pmA=0;
+        var p1=wos.filter(function(w){return w.ph==='PH1';}),p2=wos.filter(function(w){return w.ph==='PH2';}),p3=wos.filter(function(w){return w.ph==='PH3';});
+        var p1d=p1.filter(function(w){return w.st==='COMPLETED';}).length;
+        var p2d=p2.filter(function(w){return w.st==='COMPLETED';}).length;
+        var p3d=p3.filter(function(w){return w.st==='COMPLETED';}).length;
+        var rdy=wos.filter(function(w){return w.st!=='COMPLETED'&&w.pm!=null&&parseFloat(w.pm)>=90;}).length;
+        var crit=wos.filter(function(w){return w.st==='COMPLETED'&&w.pm!=null&&parseFloat(w.pm)<90;}).length;
+        h+=sectionTitle('\u2744\ufe0f','Win the Winter FY26');
+        h+='<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:14px;">';
+        h+=kpiBox('WOs',wos.length,'','#334155')+kpiBox('Done',done.length,'','#16a34a');
+        h+=kpiBox('Open',opn,'',opn>0?'#dc2626':'#16a34a')+kpiBox('Completion',cpct.toFixed(1),'%');
+        h+=kpiBox('Ready',rdy,'','#16a34a')+kpiBox('Reopen',crit,'',crit>0?'#dc2626':'#16a34a');
+        h+='</div>';
+        h+=chartRow(
+            svgDonutChart('Status',[{label:'Completed',value:done.length,color:'#16a34a'},{label:'Open',value:opn,color:'#dc2626'}],{size:120}),
+            svgBarChart('Phase Completion',[
+                {label:'PH1 ('+p1d+'/'+p1.length+')',value:p1.length>0?p1d/p1.length*100:0,color:p1d/p1.length>=0.5?'#16a34a':'#d97706'},
+                {label:'PH2 ('+p2d+'/'+p2.length+')',value:p2.length>0?p2d/p2.length*100:0,color:p2d/p2.length>=0.5?'#16a34a':'#dc2626'},
+                {label:'PH3 ('+p3d+'/'+p3.length+')',value:p3.length>0?p3d/p3.length*100:0,color:p3d/p3.length>=0.5?'#16a34a':'#dc2626'}
+            ],{width:380,labelWidth:130,max:100,suffix:'%',barHeight:26})
+        );
+        var wIns=[];
+        wIns.push('WTW at <strong>'+cpct.toFixed(1)+'%</strong> completion. '+opn+' WOs open, '+rdy+' ready to close.');
+        if(crit>0) wIns.push('<strong>'+crit+' critical reopens</strong> needed (completed with PM <90%).');
+        h+=insightBox(wIns);
     }
 
-    return html;
-}
+    h+=divider();
 
-/* ═══════════════════════════════════════════════════════════
- *  LEAK PDF — Executive Summary
- * ═══════════════════════════════════════════════════════════ */
-function buildLeakPdf(stores, level, person, isAll) {
-    if (typeof LK_STORES === 'undefined') return '<p style="color:#999;">No leak data loaded.</p>';
-
-    var storeNums = new Set(stores.map(function(s) { return String(s.store_number); }));
-    var leakStores = LK_STORES.filter(function(s) { return storeNums.has(String(s.s)); });
-    var LK_T_VAL = typeof LK_T !== 'undefined' ? LK_T : 20;
-    var tc = leakStores.reduce(function(s,d) { return s + (d.sc||0); }, 0);
-    var tq = leakStores.reduce(function(s,d) { return s + (d.cytq||0); }, 0);
-    var tl = leakStores.reduce(function(s,d) { return s + (d.cyl||0); }, 0);
-    var avgRate = tc > 0 ? (tq / tc * 100) : 0;
-    var over = leakStores.filter(function(s) { return (s.cylr||0) > LK_T_VAL; }).length;
-    var critical = leakStores.filter(function(s) { return (s.cylr||0) > LK_T_VAL * 1.5; }).length;
-
-    var html = '';
-
-    // KPIs
-    html += '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px;">';
-    html += kpiBox('Stores', leakStores.length, '', '#333');
-    html += kpiBox('System Charge', (tc/1000000).toFixed(1) + 'M lbs', '', '#333');
-    html += kpiBox('Qty Leaked', (tq/1000).toFixed(0) + 'K lbs', '', '#ea1100');
-    html += kpiBox('Leak Rate', avgRate.toFixed(1), '%', avgRate > LK_T_VAL ? '#ea1100' : '#2a8703');
-    html += kpiBox('Over ' + LK_T_VAL + '% Threshold', over, '', over > 0 ? '#ea1100' : '#2a8703');
-    html += '</div>';
-
-    // CHART: Gauge for leak rate + donut for threshold
-    var under = leakStores.length - over;
-    html += chartRow(
-        svgGauge('Fleet Leak Rate', avgRate, { size: 140 }),
-        svgDonutChart('Threshold Compliance', [
-            { label: 'Under ' + LK_T_VAL + '%', value: under, color: '#2a8703' },
-            { label: 'Over ' + LK_T_VAL + '%', value: over, color: '#ea1100' },
-            { label: 'Critical (>' + (LK_T_VAL*1.5).toFixed(0) + '%)', value: critical, color: '#991b1b' }
-        ])
-    );
-
-    // Insights
-    var insights = [];
-    insights.push('Overall fleet leak rate: <strong>' + avgRate.toFixed(1) + '%</strong> across ' + leakStores.length + ' stores (' + (tc/1000000).toFixed(1) + 'M lbs total charge).');
-    if (avgRate <= LK_T_VAL) insights.push('Fleet is <strong>within threshold</strong> (' + LK_T_VAL + '%). Good leak management practices overall.');
-    else insights.push('<strong>Fleet exceeds ' + LK_T_VAL + '% threshold</strong> — systemic leak issues to address.');
-    if (over > 0) insights.push('<strong>' + over + ' stores exceed ' + LK_T_VAL + '% leak rate</strong> — prioritize for repair/maintenance.');
-    if (critical > 0) insights.push('<strong>' + critical + ' stores are critically high</strong> (>' + (LK_T_VAL*1.5).toFixed(0) + '%) — immediate intervention recommended.');
-    insights.push('Total of <strong>' + tl.toLocaleString() + ' leak events</strong> recorded, with ' + (tq/1000).toFixed(0) + 'K lbs lost.');
-    html += insightBox(insights);
-
-    // Top leaking stores
-    var top15 = leakStores.sort(function(a,b) { return (b.cylr||0) - (a.cylr||0); }).slice(0, 15);
-    html += sectionTitle('🚨', 'Top Leaking Stores');
-    html += '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="background:#0053e2;color:#fff;">';
-    html += '<th style="' + th() + '">Store</th><th style="' + th() + '">Location</th>';
-    html += '<th style="' + th() + '">Charge</th><th style="' + th() + '">Leaked</th>';
-    html += '<th style="' + th() + '">Rate</th><th style="' + th() + '">Events</th></tr></thead><tbody>';
-    top15.forEach(function(s, i) {
-        var bg = i % 2 === 0 ? '#f9fafb' : '#fff';
-        var rc = (s.cylr||0) > LK_T_VAL ? 'color:#ea1100;font-weight:700;' : 'color:#2a8703;';
-        html += '<tr style="background:' + bg + ';">';
-        html += '<td style="' + td() + 'font-weight:600;">' + s.s + '</td>';
-        html += '<td style="' + td() + '">' + (s.city||'') + ', ' + (s.st||'') + '</td>';
-        html += '<td style="' + td() + '">' + Math.round(s.sc).toLocaleString() + '</td>';
-        html += '<td style="' + td() + 'color:#ea1100;">' + Math.round(s.cytq).toLocaleString() + '</td>';
-        html += '<td style="' + td() + rc + '">' + (s.cylr||0).toFixed(1) + '%</td>';
-        html += '<td style="' + td() + '">' + (s.cyl||0) + '</td></tr>';
-    });
-    html += '</tbody></table>';
-
-    // Group summary
-    var grpKey = level === 'sr_director' ? 'fm' : 'rm';
-    var grpLabel = level === 'sr_director' ? 'Director' : 'Regional Manager';
-    var grpMap = {};
-    leakStores.forEach(function(ls) {
-        var grp = ls[grpKey] || 'Unknown';
-        if (!grpMap[grp]) grpMap[grp] = { charge:0, qty:0, leaks:0, stores:0, over:0 };
-        grpMap[grp].charge += ls.sc || 0;
-        grpMap[grp].qty += ls.cytq || 0;
-        grpMap[grp].leaks += ls.cyl || 0;
-        grpMap[grp].stores++;
-        if ((ls.cylr||0) > LK_T_VAL) grpMap[grp].over++;
-    });
-    var grpList = Object.entries(grpMap)
-        .map(function(e) { var n=e[0],d=e[1]; return {name:n,stores:d.stores,charge:d.charge,qty:d.qty,leaks:d.leaks,over:d.over,rate:d.charge>0?d.qty/d.charge*100:0}; })
-        .sort(function(a,b) { return b.rate - a.rate; });
-
-    if (grpList.length > 1) {
-        // CHART: Leak rate by group
-        var leakBarData = grpList.slice(0, 15).map(function(g) {
-            return { label: g.name.substring(0, 20), value: g.rate, color: g.rate > LK_T_VAL ? '#ea1100' : '#2a8703' };
-        });
-        html += svgBarChart('Leak Rate by ' + grpLabel, leakBarData, { width: 540, labelWidth: 150, suffix: '%' });
-
-        html += sectionTitle('📊', 'Leak Rate by ' + grpLabel);
-        html += '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="background:#0053e2;color:#fff;">';
-        html += '<th style="' + th() + '">' + grpLabel + '</th><th style="' + th() + '">Stores</th>';
-        html += '<th style="' + th() + '">Charge</th><th style="' + th() + '">Leaked</th>';
-        html += '<th style="' + th() + '">Rate</th><th style="' + th() + '">Over ' + LK_T_VAL + '%</th></tr></thead><tbody>';
-        grpList.forEach(function(g, i) {
-            var bg = i % 2 === 0 ? '#f9fafb' : '#fff';
-            var rc = g.rate > LK_T_VAL ? 'color:#ea1100;font-weight:700;' : 'color:#2a8703;';
-            html += '<tr style="background:' + bg + ';">';
-            html += '<td style="' + td() + 'font-weight:600;">' + g.name + '</td>';
-            html += '<td style="' + td() + '">' + g.stores + '</td>';
-            html += '<td style="' + td() + '">' + Math.round(g.charge).toLocaleString() + '</td>';
-            html += '<td style="' + td() + '">' + Math.round(g.qty).toLocaleString() + '</td>';
-            html += '<td style="' + td() + rc + '">' + g.rate.toFixed(1) + '%</td>';
-            html += '<td style="' + td() + (g.over > 0 ? 'color:#ea1100;' : '') + '">' + g.over + '</td></tr>';
-        });
-        html += '</tbody></table>';
+    // ---- Leak Section (condensed) ----
+    if (typeof LK_STORES!=='undefined') {
+        var nums2=new Set(stores.map(function(s){return String(s.store_number);}));
+        var lks=LK_STORES.filter(function(s){return nums2.has(String(s.s));});
+        var LKT=typeof LK_T!=='undefined'?LK_T:20;
+        var tc2=lks.reduce(function(s,d){return s+(d.sc||0);},0);
+        var tq2=lks.reduce(function(s,d){return s+(d.cytq||0);},0);
+        var ar2=tc2>0?(tq2/tc2*100):0;
+        var ov2=lks.filter(function(s){return(s.cylr||0)>LKT;}).length;
+        h+=sectionTitle('\ud83e\uddca','Leak Management');
+        h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px;">';
+        h+=kpiBox('Stores',lks.length,'','#334155')+kpiBox('Charge',(tc2/1e6).toFixed(1)+'M lbs','','#334155');
+        h+=kpiBox('Leaked',(tq2/1e3).toFixed(0)+'K lbs','','#dc2626');
+        h+=kpiBox('Rate',ar2.toFixed(1),'%',ar2>LKT?'#dc2626':'#16a34a');
+        h+=kpiBox('Over '+LKT+'%',ov2,'',ov2>0?'#dc2626':'#16a34a');
+        h+='</div>';
+        h+=chartRow(svgGauge('Leak Rate',ar2,{size:130}),
+            svgDonutChart('Compliance',[{label:'Under '+LKT+'%',value:lks.length-ov2,color:'#16a34a'},{label:'Over '+LKT+'%',value:ov2,color:'#dc2626'}],{size:120}));
+        var lIns=[];
+        lIns.push('Fleet leak rate: <strong>'+ar2.toFixed(1)+'%</strong>'+(ar2<=LKT?' (within threshold).':' \u2014 exceeds '+LKT+'% threshold.'));
+        if(ov2>0) lIns.push(ov2+' stores over threshold need priority repair.');
+        h+=insightBox(lIns);
     }
-
-    return html;
+    return h;
 }
 
-/* ═══════════════════════════════════════════════════════════
- *  GENERATE PDF
- * ═══════════════════════════════════════════════════════════ */
+/* ══════════ GENERATE PDF ══════════ */
 async function generatePdf() {
-    var level = document.getElementById('pdfViewLevel').value;
-    var person = document.getElementById('pdfPersonSelect').value;
-    var btn = document.getElementById('pdfGenerateBtn');
-
-    btn.disabled = true;
-    btn.textContent = '⏳ Generating...';
-
+    var level=document.getElementById('pdfViewLevel').value;
+    var person=document.getElementById('pdfPersonSelect').value;
+    var btn=document.getElementById('pdfGenerateBtn');
+    btn.disabled=true;btn.textContent='\u23f3 Generating...';
     try {
-        var content = buildPdfContent(pdfExportTab, level, person);
-        var htmlStr = content.innerHTML;
-
-        if (!htmlStr || htmlStr.length < 50) {
-            alert('No data to export. Check your filters.');
-            return;
-        }
-
-        var levelSlug = level === 'sr_director' ? 'SrDir' : 'Dir';
-        var personSlug = person === '__all__' ? 'All' : person.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 20);
-        var tabSlug = pdfExportTab.toUpperCase();
-        var dateSlug = new Date().toISOString().slice(0, 10);
-        var filename = tabSlug + '_' + levelSlug + '_' + personSlug + '_' + dateSlug + '.pdf';
-
-        // Create iframe for html2canvas capture
-        var iframe = document.createElement('iframe');
-        iframe.style.cssText = 'position:fixed;left:0;top:0;width:1200px;height:900px;opacity:0.01;z-index:-1;border:none;';
+        var content=buildPdfContent(pdfExportTab,level,person);
+        var htmlStr=content.innerHTML;
+        if(!htmlStr||htmlStr.length<50){alert('No data to export.');return;}
+        var ls2=level==='sr_director'?'SrDir':'Dir';
+        var ps=person==='__all__'?'All':person.replace(/[^a-zA-Z0-9]/g,'_').substring(0,20);
+        var ts=pdfExportTab.toUpperCase();
+        var ds=new Date().toISOString().slice(0,10);
+        var fn=ts+'_'+ls2+'_'+ps+'_'+ds+'.pdf';
+        var iframe=document.createElement('iframe');
+        iframe.style.cssText='position:fixed;left:0;top:0;width:1200px;height:900px;opacity:0.01;z-index:-1;border:none;';
         document.body.appendChild(iframe);
-
-        var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-        iframeDoc.open();
-        iframeDoc.write('<!DOCTYPE html><html><head><style>'
-            + '* { margin:0; padding:0; box-sizing:border-box; }'
-            + 'body { font-family:system-ui,-apple-system,sans-serif; background:#fff; color:#1a1a1a; padding:32px; width:1100px; }'
-            + 'table { border-collapse:collapse; width:100%; }'
-            + '</style></head><body>' + htmlStr + '</body></html>');
-        iframeDoc.close();
-
-        await new Promise(function(r) { setTimeout(r, 500); });
-
-        var opt = {
-            margin: [0.3, 0.3, 0.3, 0.3],
-            filename: filename,
-            image: { type: 'jpeg', quality: 0.95 },
-            html2canvas: { scale: 2, useCORS: true, logging: false },
-            jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' },
-            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-        };
-
-        await html2pdf().set(opt).from(iframeDoc.body).save();
+        var idoc=iframe.contentDocument||iframe.contentWindow.document;
+        idoc.open();
+        idoc.write('<!DOCTYPE html><html><head><style>'
+            +'*{margin:0;padding:0;box-sizing:border-box;}'
+            +'body{font-family:"Segoe UI",system-ui,-apple-system,sans-serif;background:#fff;color:#1e293b;padding:36px 40px;width:1100px;line-height:1.5;}'
+            +'table{border-collapse:collapse;width:100%;}'
+            +'</style></head><body>'+htmlStr+'</body></html>');
+        idoc.close();
+        await new Promise(function(r){setTimeout(r,600);});
+        var opt={margin:[0.3,0.3,0.3,0.3],filename:fn,image:{type:'jpeg',quality:0.95},
+            html2canvas:{scale:2,useCORS:true,logging:false},
+            jsPDF:{unit:'in',format:'letter',orientation:'landscape'},
+            pagebreak:{mode:['avoid-all','css','legacy']}};
+        await html2pdf().set(opt).from(idoc.body).save();
         document.body.removeChild(iframe);
         closePdfModal();
-    } catch (err) {
-        console.error('PDF generation failed:', err);
-        alert('PDF generation failed: ' + err.message);
-    } finally {
-        btn.disabled = false;
-        btn.textContent = '📄 Generate PDF';
-    }
+    }catch(err){console.error('PDF failed:',err);alert('PDF generation failed: '+err.message);}
+    finally{btn.disabled=false;btn.textContent='\ud83d\udcc4 Generate PDF';}
 }
