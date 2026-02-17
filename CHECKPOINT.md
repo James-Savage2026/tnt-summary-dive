@@ -1,123 +1,139 @@
 # HVAC TnT Dashboard — Session Checkpoint
 
-**Last Updated:** 2026-02-16 ~8:38 PM  
-**Last Commit:** `7692dea` — "Explicit page breaks + FS Manager in exec summary"  
-**Session Crashed:** 413 Payload Too Large (context exceeded ~132K tokens after 323 messages)
+**Last Updated:** 2026-02-16 ~10:30 PM  
+**Last Commit:** `5c6eee5` — "share.sh --laura: personalized pre-filtered ZIPs for Laura Moore + 5 directors"  
+**Branch:** `main` — clean, up to date with both remotes  
+**Session:** Stable — no crashes
 
 ---
 
-## 🔥 IMMEDIATE TODO (Pick Up Here)
+## ✅ What Got Done This Session
 
-The user reported 3 issues right before the session crashed:
+### 1. Email Screenshot Fix
+- Right-edge clipping on email screenshot resolved
+- Capture buffer: **40px → 120px**
+- Scale: **2x → 1.8x** (slight zoom out for wider viewport)
+- Commits: `29bd95b`, `9d67a56`, `95f0390`, `1df22dd`, `4cb9d3a`
 
-### 1. ⚠️ Bottom 10 Stores table is MISSING from PDF
-- It was there before but disappeared during refactoring
-- Likely cause: the `sectionBlock()` call or `page-break` div disrupted the rendering
-- Check `buildTntPdf()` in `pdf-export.js` around line 280-300 — the Bottom 10 table IS in the code but may not be rendering
-- Also check `buildCombinedPdf()` — it may never have had a Bottom 10
+### 2. README Overhaul
+- Updated with proper data source instructions referencing `DATA_SOURCES.md` and `~/Documents/Kodiak/TNT_Data_Sources_Reference.docx`
+- Documented the email button, PDF export features, and all recent additions
+- Added column type gotchas table, update instructions section, and key rules
+- Commit: `62a1f95`
 
-### 2. 📊 SVG visuals bleeding off right edge of PDF page
-- The SVG charts (gauges, bar charts, trend lines) extend past the printable area
-- Fix: reduce default widths or add `max-width:100%;overflow:hidden;` to chart containers  
-- Current SVG widths: `svgTrendChart` default W=540, `svgBarChart` W=520, gauges=130
-- The PDF page is `width:1100px` with `padding:40px 44px` = ~1012px usable
-- 4 gauges × 130px + gaps = 560px — should be fine
-- Check if the bar chart or trend chart is wider than expected
+### 3. Share Script (`share.sh`)
+- **`./share.sh`** — creates a single full-dashboard ZIP on Desktop (~2.1MB)
+- **`./share.sh --laura`** — creates 6 personalized pre-filtered ZIPs:
+  - Laura Moore (Sr. Director — all her stores)
+  - Brian Conover (277 stores)
+  - Donnie Chester (319 stores)
+  - Jack Grahek (178 stores)
+  - Josh Thaxton (153 stores)
+  - Sonya Webster (174 stores)
+- Each ZIP contains a self-contained HTML with auto-filter injection via URL hash
+- Includes `HOW-TO-VIEW.txt` with instructions for recipients
+- All ZIPs land in `~/Desktop/HVAC-Dashboard-{date}-Laura-Moore/`
+- Commits: `8e538e4`, `5c6eee5`
 
-### 3. 📈 90-Day TIT Trend Line chart needs better readability
-- User wants: better time indicators, easier to read date slots
-- Currently shows ~6 date labels as `MM-DD` format
-- Suggestions: show more date labels, use month names, add vertical gridlines at month boundaries
-- Consider: weekly tick marks, highlight current week, show data point dots
+### 4. Git Push (16 commits)
+- Pushed 16 commits that were stuck locally to both remotes:
+  - **origin:** https://github.com/James-Savage2026/tnt-summary-dive
+  - **ghe:** https://gecgithub01.walmart.com/j0s028j/north-bu-hvacr-report-hub
+- GHE Pages live: https://gecgithub01.walmart.com/pages/j0s028j/north-bu-hvacr-report-hub/
 
 ---
 
 ## 📁 Project Structure (Key Files)
 
-| File | Lines | Purpose |
-|------|-------|---------|
-| `pdf-export.js` | 581 | Main PDF builder — modal, content builders, page layout |
-| `pdf-charts.js` | 328 | SVG chart helpers — gauges, bars, donuts, trends, tables |
-| `refresh.py` | ~450 | BQ data pull + HTML embed + git push |
-| `index.html` | ~18MB | Self-contained dashboard (all data + JS embedded inline) |
-| `store_data.json` | 3.3MB | Current store data with `realty_ops_region` |
-| `hist_tit.json` | 173K | 90-day daily TIT by director + banner (2610 rows) |
-| `hist_ror.json` | 203K | 90-day daily TIT by director + realty_ops_region (3060 rows) |
-
-## 🔧 Architecture Notes
-
-### PDF Generation Flow
-1. User clicks "Export PDF" → opens modal (`openPdfModal()`)
-2. User selects tab (TnT/WTW/Leak/All), level (Sr Dir/Dir), person
-3. `generatePdf()` → `buildPdfContent(tab, level, person)`
-4. Content injected into hidden iframe with CSS classes
-5. `html2pdf()` renders iframe to PDF with page break rules
-
-### JS Injection Pattern
-- `pdf-charts.js` + `pdf-export.js` are concatenated and injected into `index.html`
-- Marker start: `/**\n * PDF Chart Helpers`
-- Marker end: `\n\n // Wire PDF export button`
-- Injection script (run manually or via `embed_data_in_html()` in refresh.py):
-```python
-with open('pdf-charts.js') as f: charts_js = f.read()
-with open('pdf-export.js') as f: export_js = f.read()
-combined_js = charts_js + '\n\n' + export_js
-# Replace between markers in index.html
-```
-
-### Page Break Strategy
-- `class="no-break"` → keeps content together within a page
-- `class="page-break"` → forces a new page before the element
-- html2pdf config: `pagebreak: {mode: ['css'], before: '.page-break', avoid: '.no-break'}`
-- CSS in iframe: `.no-break{break-inside:avoid;page-break-inside:avoid;}` and `.page-break{break-before:page;page-break-before:always;}`
-
-### Data Sources
-| BQ Table | Dataset | Purpose |
-|----------|---------|---------|
-| `store_tabular_view` | `re-crystal-mdm-prod.crystal` | Current store metrics (TIT, HVAC, loss) |
-| `isp_fm_realty_alignment` | `re-ods-prod.us_re_ods_prod_pub` | `realty_ops_region` mapping |
-| `store_score` | `re-ods-prod.us_re_ods_prod_pub` | Historical daily TIT (since 2021) |
-
-### Key Field Names
-- `realty_ops_region` — the correct ops realty region (NOT `ops_region`)
-- `fm_sr_director_name`, `fm_director_name`, `fm_regional_manager_name`
-- `fs_manager_name`, `fs_market` — FS manager hierarchy
-- `banner_desc` — "WM Supercenter", "Neighborhood Market", "Sam's Club", etc.
-- `twt_ref_30_day`, `twt_hvac_30_day`, `total_loss`, `cases_out_of_target`
-
-### Director → Realty Ops Region Mapping
-| Director | Realty Regions |
-|----------|----------------|
-| Brian Conover | 19 (146 stores), 53 (131 stores) |
-| Donnie Chester | 25 (161 stores), 21 (158 stores) |
+| File | Size | Purpose |
+|------|------|---------|
+| `index.html` | 18MB | Self-contained dashboard (all data + JS embedded) |
+| `refresh.py` | 24KB | BQ data pull + HTML embed + git push |
+| `share.sh` | 8KB | One-command ZIP packaging (full or --laura) |
+| `pdf-export.js` | 48KB | PDF builder — modal, content builders, page layout |
+| `pdf-charts.js` | 36KB | SVG chart helpers — gauges, bars, donuts, trends |
+| `README.md` | 12KB | Full docs with update instructions |
+| `DATA_SOURCES.md` | 12KB | Single source of truth for data & business rules |
+| `store_data.json` | 3.3MB | Current store data (6,469 stores) |
+| `add_wtw_tab.py` | 78KB | WTW tab HTML/JS generator |
+| `add_leak_tab.py` | 6.7KB | Leak tab HTML/JS generator |
+| `leak_tab_js.py` | 21KB | Leak tab JS logic |
+| `leak_tab_html.py` | 15KB | Leak tab HTML structure |
+| `store_detail_js.py` | 13KB | Shared store detail panel |
+| `store_assets.py` | 2.6KB | Store asset data loader |
+| `sc_reopen_helper.py` | 11KB | Service Channel critical reopen logic |
 
 ---
 
-## ✅ Completed Features (This Session)
+## 📊 Dashboard Current State
 
-1. **Banner breakout** — Combined/Walmart/Sam's comparison cards on every PDF page
-2. **Ops Realty Region breakout** — shows significant regions (≥10 stores) with metrics
-3. **90-day historical TIT trend charts** — SVG polyline charts from `store_score` table
-4. **FS Manager condensed table** — at bottom of TnT and Exec Summary PDFs
-5. **Page break system** — explicit `.page-break` class + `.no-break` class
-6. **RM breakout table** — Regional Manager metrics including WM/Sam's columns
-7. **Banner filter removed from modal** — all banners shown automatically
-8. **Softer color scale** — 85-89% = lime green instead of harsh yellow
-9. **refresh.py updated** — new BQ queries for hist data + embed_data_in_html()
-10. **Code split** — pdf-export.js (581 lines) + pdf-charts.js (328 lines)
+- **6,469 stores** across 6 Sr. Directors, 30 Directors
+- **3 tabs:** TnT Dashboard, Win-the-Winter, Leak Management
+- **Filters:** Sr. Director → Director → RM → FSM → Market (cascading)
+- **Banner filter:** All / Walmart / Sam's Club
+- **Store detail panel** with Ref/HVAC assets, work orders, email button
+- **PDF export** with multi-tab, per-person, banner breakout views
+- **Email report** captures screenshot to clipboard + opens mailto
+- **URL hash state** — shareable links with pre-set filters
 
-## 📋 Git History (Recent)
+---
+
+## 🔗 Remotes & Live Links
+
+| What | URL |
+|------|-----|
+| GHE Pages (live) | https://gecgithub01.walmart.com/pages/j0s028j/north-bu-hvacr-report-hub/ |
+| GitHub Pages (live) | https://james-savage2026.github.io/tnt-summary-dive/ |
+| GHE Repo | https://gecgithub01.walmart.com/j0s028j/north-bu-hvacr-report-hub |
+| GitHub Repo | https://github.com/James-Savage2026/tnt-summary-dive |
+
+---
+
+## 🔄 Repeatable Workflows
+
+### Daily Refresh + Share
+```bash
+cd ~/Documents/Projects/hvac-tnt-dashboard
+python3 refresh.py       # Pull BQ data + rebuild + push
+./share.sh --laura       # 6 personalized ZIPs on Desktop
 ```
-7692dea Explicit page breaks + FS Manager in exec summary
-d737619 Fix page breaks with CSS classes + verify FS Manager table
-2ac335d Add FS Manager table + fix page break splitting
-e38c33a Use realty_ops_region + 90-day historical TIT trend charts
-e760253 Rename to Ops Realty Region + fix PDF page breaks
-02aa3a4 Add ops_region breakout to PDF exports
-4a4cb1a Auto banner breakout (Combined/Walmart/Sam's) + RM ops region table
-8770347 Softer color scale + banner breakout (Walmart/Sam's/Both)
-7d114c5 Fix PDF export: Sr Director vs Director bug + aesthetics
+
+### Quick Local Rebuild (no BQ)
+```bash
+python3 refresh.py --local
 ```
+
+### Full Unfiltered ZIP
+```bash
+./share.sh
+```
+
+---
+
+## 📋 Data Source Reference
+
+> Full spec: `DATA_SOURCES.md` + `~/Documents/Kodiak/TNT_Data_Sources_Reference.docx`
+
+| Table | Project | Purpose |
+|-------|---------|--------|
+| `crystal.sc_workorder` | `re-crystal-mdm-prod` | Work orders |
+| `crystal.store_tabular_view` | `re-crystal-mdm-prod` | Store metrics, TnT, dewpoint |
+| `us_re_ods_prod_pub.dip_rack_scorecard` | `re-ods-prod` | Rack scores |
+| `us_re_ods_prod_pub.sc_walmart_workorder_labor_performed` | `re-ods-prod` | Labor hours |
+| `crystal.ahu_hvac_time_in_target_score` | `re-crystal-mdm-prod` | AHU unit counts |
+| `crystal.rtu_hvac_time_in_target_score` | `re-crystal-mdm-prod` | RTU unit counts |
+
+**🚫 BANNED:** `rack_comprehensive_performance_data` — stale, DO NOT USE.
+
+---
+
+## 🐾 Known Issues / Future Ideas
+
+- PDF Bottom 10 table may still have rendering edge cases
+- SVG charts can bleed on very narrow PDF pages (~1012px usable)
+- 90-day trend chart date labels could use more month-boundary markers
+- `share.sh` currently hardcodes Laura's org — could be made dynamic for other Sr. Directors
+- The old `HVAC-TnT-Dashboard-2026-02-16.zip` from the first `share.sh` run is still on Desktop (can delete)
 
 ---
 
@@ -125,4 +141,4 @@ e760253 Rename to Ops Realty Region + fix PDF page breaks
 
 Paste this to Code Puppy:
 
-> I'm working on the HVAC TnT Dashboard PDF exports in `~/Documents/Projects/hvac-tnt-dashboard`. Read `CHECKPOINT.md` for full context. Pick up the 3 items in the IMMEDIATE TODO section: (1) Bottom 10 stores table missing from PDF, (2) SVG visuals bleeding off right edge, (3) 90-day trend chart needs better date labels/readability.
+> I'm working on the HVAC TnT Dashboard in `~/Documents/Projects/hvac-tnt-dashboard`. Read `CHECKPOINT.md` for full context. The dashboard is stable with 3 tabs, email report, PDF export, and `share.sh --laura` for personalized ZIPs. Pick up from the Known Issues section or ask me what to work on next.
