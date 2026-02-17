@@ -5,30 +5,23 @@
 
 /* ── state ── */
 var pdfExportTab = 'tnt';
-var pdfBanner = 'all';
 
-/* ── banner toggle ── */
-function setPdfBanner(val) {
-    pdfBanner = val;
-    var btns = document.querySelectorAll('.pdf-banner-btn');
-    btns.forEach(function(b) {
-        if (b.getAttribute('data-val') === val) {
-            b.className = 'pdf-banner-btn flex-1 px-3 py-2 text-sm font-semibold bg-walmart-blue text-white';
-        } else {
-            b.className = 'pdf-banner-btn flex-1 px-3 py-2 text-sm font-semibold bg-white text-gray-600 border-l border-gray-300 hover:bg-gray-50';
-        }
-    });
+/* ── banner helpers ── */
+function isWalmart(d) {
+    var b = (d.banner_desc || d.bn || '').toLowerCase();
+    return (b.indexOf('walmart') >= 0 || b.indexOf('wal-mart') >= 0 || b.indexOf('supercenter') >= 0 ||
+            b.indexOf('neighborhood') >= 0) && b.indexOf('sam') < 0;
 }
-function filterByBanner(data) {
-    if (pdfBanner === 'all') return data;
-    if (pdfBanner === 'walmart') return data.filter(function(d) {
-        var b = (d.banner_desc || d.bn || '').toLowerCase();
-        return b.indexOf('walmart') >= 0 && b.indexOf('sam') < 0;
-    });
-    return data.filter(function(d) {
-        var b = (d.banner_desc || d.bn || '').toLowerCase();
-        return b.indexOf('sam') >= 0;
-    });
+function isSams(d) {
+    var b = (d.banner_desc || d.bn || '').toLowerCase();
+    return b.indexOf('sam') >= 0;
+}
+function splitByBanner(stores) {
+    return {
+        wm: stores.filter(isWalmart),
+        sams: stores.filter(isSams),
+        all: stores
+    };
 }
 
 /* ── helpers ── */
@@ -45,12 +38,10 @@ function getStoresForPerson(level, person) {
 /* ── modal (updated for combined report) ── */
 function openPdfModal(tab) {
     pdfExportTab = tab;
-    pdfBanner = 'all';
     document.getElementById('pdfExportModal').classList.remove('hidden');
     var labels = {tnt:'TnT Dashboard', wtw:'Win the Winter', leak:'Leak Management', all:'Executive Summary (All Tabs)'};
     document.getElementById('pdfTabLabel').textContent = labels[tab] || tab;
     document.getElementById('pdfViewLevel').value = 'sr_director';
-    setPdfBanner('all');
     updatePdfPersonList();
 }
 function closePdfModal() { document.getElementById('pdfExportModal').classList.add('hidden'); }
@@ -106,6 +97,77 @@ function sectionTitle(icon,text) {
 }
 function divider() {
     return '<div style="border-top:3px solid #0053e2;margin:32px 0 24px;opacity:0.15;"></div>';
+}
+
+/* ══════════ BANNER COMPARISON TABLE ══════════ */
+function bannerComparisonRow(stores) {
+    var sp = splitByBanner(stores);
+    var labels = [{key:'all',name:'Combined',icon:'🏢',stores:sp.all},
+                  {key:'wm',name:'Walmart',icon:'🟦',stores:sp.wm},
+                  {key:'sams',name:"Sam's Club",icon:'🟩',stores:sp.sams}];
+    var h = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0 20px;">';
+    labels.forEach(function(b) {
+        var s = b.stores;
+        var r30 = safeAvg(s,'twt_ref_30_day'), h30 = safeAvg(s,'twt_hvac_30_day');
+        var loss = s.reduce(function(a,d){return a+(d.total_loss||0);},0);
+        var b90 = s.filter(function(d){return d.twt_ref_30_day!=null&&d.twt_ref_30_day<90;}).length;
+        var borderC = b.key==='wm'?'#0053e2':b.key==='sams'?'#16a34a':'#334155';
+        h += '<div style="border:2px solid '+borderC+';border-radius:12px;padding:14px;background:#fff;">';
+        h += '<div style="font-size:13px;font-weight:800;color:'+borderC+';margin-bottom:10px;display:flex;align-items:center;gap:6px;">'+b.icon+' '+b.name;
+        h += '<span style="font-size:10px;font-weight:500;color:#94a3b8;margin-left:auto;">'+s.length+' stores</span></div>';
+        h += '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;">';
+        h += '<div style="text-align:center;"><div style="font-size:18px;font-weight:800;'+scoreColor(r30)+'">'+r30.toFixed(1)+'%</div><div style="font-size:9px;color:#64748b;text-transform:uppercase;">Ref 30d</div></div>';
+        h += '<div style="text-align:center;"><div style="font-size:18px;font-weight:800;'+scoreColor(h30)+'">'+h30.toFixed(1)+'%</div><div style="font-size:9px;color:#64748b;text-transform:uppercase;">HVAC 30d</div></div>';
+        h += '<div style="text-align:center;"><div style="font-size:14px;font-weight:700;color:#dc2626;">$'+(loss/1e6).toFixed(1)+'M</div><div style="font-size:9px;color:#64748b;text-transform:uppercase;">Loss</div></div>';
+        h += '<div style="text-align:center;"><div style="font-size:14px;font-weight:700;'+(b90>0?'color:#dc2626;':'color:#16a34a;')+'">'+b90+'</div><div style="font-size:9px;color:#64748b;text-transform:uppercase;">&lt;90%</div></div>';
+        h += '</div></div>';
+    });
+    h += '</div>';
+    return h;
+}
+
+/* ══════════ RM BREAKOUT TABLE ══════════ */
+function buildRmBreakout(stores, level) {
+    /* Show Regional Manager breakout if the selected person has >1 RM */
+    var rmMap = {};
+    stores.forEach(function(s) {
+        var rm = s.fm_regional_manager_name;
+        if (!rm) return;
+        if (!rmMap[rm]) rmMap[rm] = [];
+        rmMap[rm].push(s);
+    });
+    var rms = Object.entries(rmMap).map(function(e) {
+        var name = e[0], ss = e[1];
+        var sp = splitByBanner(ss);
+        return {
+            name: name, count: ss.length,
+            wmCount: sp.wm.length, samsCount: sp.sams.length,
+            avgRef30: safeAvg(ss,'twt_ref_30_day'), avgHvac30: safeAvg(ss,'twt_hvac_30_day'),
+            wmRef30: sp.wm.length > 0 ? safeAvg(sp.wm,'twt_ref_30_day') : null,
+            samsRef30: sp.sams.length > 0 ? safeAvg(sp.sams,'twt_ref_30_day') : null,
+            totalLoss: ss.reduce(function(a,d){return a+(d.total_loss||0);},0),
+            casesOOT: ss.reduce(function(a,d){return a+(d.cases_out_of_target||0);},0)
+        };
+    }).sort(function(a,b){return b.avgRef30-a.avgRef30;});
+    if (rms.length <= 1) return '';  /* Only show if >1 RM */
+    var h = sectionTitle('📍','Performance by Regional Manager');
+    h += '<table style="width:100%;border-collapse:collapse;font-size:11px;border-radius:8px;overflow:hidden;"><thead><tr style="'+S.hdr+'">';
+    h += '<th style="'+th()+'">Regional Manager</th><th style="'+th()+'">Stores</th>';
+    h += '<th style="'+th()+'">Ref 30d</th><th style="'+th()+'">WM Ref</th><th style="'+th()+'">Sam\'s Ref</th>';
+    h += '<th style="'+th()+'">HVAC 30d</th><th style="'+th()+'">Loss</th></tr></thead><tbody>';
+    rms.forEach(function(g,i) {
+        var bg = i%2===0?'#f8fafc':'#fff';
+        h += '<tr style="background:'+bg+';">';
+        h += '<td style="'+td()+'font-weight:600;">'+g.name+'</td>';
+        h += '<td style="'+td()+'">'+g.count+'</td>';
+        h += '<td style="'+td()+scoreColor(g.avgRef30)+'">'+g.avgRef30.toFixed(1)+'%</td>';
+        h += '<td style="'+td()+(g.wmRef30!=null?scoreColor(g.wmRef30):'')+'">'+( g.wmRef30!=null?g.wmRef30.toFixed(1)+'%':'—')+'</td>';
+        h += '<td style="'+td()+(g.samsRef30!=null?scoreColor(g.samsRef30):'')+'">'+( g.samsRef30!=null?g.samsRef30.toFixed(1)+'%':'—')+'</td>';
+        h += '<td style="'+td()+scoreColor(g.avgHvac30)+'">'+g.avgHvac30.toFixed(1)+'%</td>';
+        h += '<td style="'+td()+'color:#dc2626;">$'+g.totalLoss.toLocaleString(undefined,{maximumFractionDigits:0})+'</td></tr>';
+    });
+    h += '</tbody></table>';
+    return h;
 }
 
 /* ══════════ SVG CHART HELPERS ══════════ */
@@ -223,8 +285,6 @@ function buildGroupTable(groups,label) {
 function buildPdfContent(tab,level,person) {
     var isAll=person==='__all__';
     var stores=isAll?storeData:getStoresForPerson(level,person);
-    stores=filterByBanner(stores);
-    var bannerLabel=pdfBanner==='all'?'All Banners':pdfBanner==='walmart'?'Walmart':'Sam\'s Club';
     var levelLabel=level==='sr_director'?'Sr. Director':'FM Director';
     var personLabel=isAll?'All Regions':person;
     var now=new Date();
@@ -236,8 +296,7 @@ function buildPdfContent(tab,level,person) {
     // Header
     container.innerHTML='<div style="background:linear-gradient(135deg,#0053e2 0%,#003da5 100%);border-radius:12px;padding:24px 28px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;">'
         +'<div><h1 style="font-size:22px;font-weight:800;color:#fff;margin:0;letter-spacing:-0.5px;">'+tabName+'</h1>'
-        +'<p style="font-size:12px;color:rgba(255,255,255,0.8);margin:6px 0 0;">'+levelLabel+': <strong style="color:#ffc220;">'+personLabel+'</strong>'
-        +' \u2022 <span style="color:#ffc220;">'+bannerLabel+'</span></p></div>'
+        +'<p style="font-size:12px;color:rgba(255,255,255,0.8);margin:6px 0 0;">'+levelLabel+': <strong style="color:#ffc220;">'+personLabel+'</strong></p></div>'
         +'<div style="text-align:right;"><div style="font-size:20px;color:#ffc220;font-weight:800;letter-spacing:1px;">&#x2726;</div>'
         +'<p style="font-size:10px;color:rgba(255,255,255,0.7);margin:4px 0 0;">Generated '+dateStr+'</p>'
         +'<p style="font-size:10px;color:rgba(255,255,255,0.7);margin:2px 0 0;">'+stores.length.toLocaleString()+' stores</p></div></div>';
@@ -249,7 +308,7 @@ function buildPdfContent(tab,level,person) {
     container.innerHTML+='<div style="margin-top:32px;padding-top:12px;border-top:2px solid #e2e8f0;font-size:9px;color:#94a3b8;display:flex;justify-content:space-between;align-items:center;">'
         +'<span>North BU HVAC/R Report Hub \u2022 '+dateStr+'</span>'
         +'<span style="color:#0053e2;font-weight:600;">\u2726 Walmart</span>'
-        +'<span>'+levelLabel+': '+personLabel+' \u2022 '+bannerLabel+' \u2022 '+stores.length.toLocaleString()+' stores</span></div>';
+        +'<span>'+levelLabel+': '+personLabel+' \u2022 '+stores.length.toLocaleString()+' stores</span></div>';
     return container;
 }
 
@@ -268,55 +327,56 @@ function buildTntPdf(stores,level,person,isAll) {
     h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px;">';
     h+=kpiBox('Ref 7-Day',a7,'%')+kpiBox('Ref 30-Day',a30,'%')+kpiBox('Ref 90-Day',a90,'%');
     h+=kpiBox('HVAC 30-Day',aH,'%')+kpiBox('7d Trend',trend,'',a7>=a30?'#16a34a':'#dc2626');
-    h+='</div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;">';
-    h+=kpiBox('Stores',stores.length,'','#334155')+kpiBox('Total Loss','$'+(loss/1e6).toFixed(1)+'M','','#dc2626');
-    h+=kpiBox('Cases OOT',oot.toLocaleString(),'','#dc2626')+kpiBox('Stores <90%',b90,'',b90>0?'#dc2626':'#16a34a');
     h+='</div>';
     // Gauges
     h+=chartRow(svgGauge('Ref 7-Day',a7),svgGauge('Ref 30-Day',a30),svgGauge('Ref 90-Day',a90),svgGauge('HVAC 30-Day',aH));
+
+    // ---- Banner Comparison (Combined / Walmart / Sam's) ----
+    h+=sectionTitle('\ud83c\udfe2','Performance by Banner');
+    h+=bannerComparisonRow(stores);
+
     // Insights
     var ins=[];
+    var sp=splitByBanner(stores);
     if (a7>a30+0.5) ins.push('<strong>Positive momentum:</strong> 7-day ('+a7.toFixed(1)+'%) is above 30-day ('+a30.toFixed(1)+'%).');
     if (a7<a30-0.5) ins.push('<strong>Declining trend:</strong> 7-day ('+a7.toFixed(1)+'%) is below 30-day ('+a30.toFixed(1)+'%).');
+    if (sp.wm.length>0&&sp.sams.length>0) {
+        var wmR=safeAvg(sp.wm,'twt_ref_30_day'),saR=safeAvg(sp.sams,'twt_ref_30_day');
+        ins.push('Walmart Ref 30d: <strong>'+wmR.toFixed(1)+'%</strong> ('+sp.wm.length+' stores) vs Sam\'s: <strong>'+saR.toFixed(1)+'%</strong> ('+sp.sams.length+' stores).');
+    }
     if (b80>0) ins.push('<strong>'+b80+' stores below 80%</strong> \u2014 likely equipment failures or sensor issues.');
-    ins.push(b90+' of '+stores.length+' stores ('+(b90/stores.length*100).toFixed(0)+'%) below 90%. '+a90c+' ('+(a90c/stores.length*100).toFixed(0)+'%) meeting target.');
+    ins.push(a90c+' of '+stores.length+' stores ('+(a90c/stores.length*100).toFixed(0)+'%) meeting 90% target.');
     ins.push('Product loss: <strong>$'+(loss/1e6).toFixed(1)+'M</strong> with '+oot.toLocaleString()+' cases OOT.');
-    ins.push('HVAC '+(aH>=93?'strong':'needs attention')+' at '+aH.toFixed(1)+'%.');
     h+=insightBox(ins);
-    // Distribution bar
-    var dist=[
-        {label:'\u226595%',value:stores.filter(function(s){return s.twt_ref_30_day!=null&&s.twt_ref_30_day>=95;}).length,color:'#15803d'},
-        {label:'90-95%',value:stores.filter(function(s){return s.twt_ref_30_day!=null&&s.twt_ref_30_day>=90&&s.twt_ref_30_day<95;}).length,color:'#16a34a'},
-        {label:'80-90%',value:stores.filter(function(s){return s.twt_ref_30_day!=null&&s.twt_ref_30_day>=80&&s.twt_ref_30_day<90;}).length,color:'#d97706'},
-        {label:'70-80%',value:stores.filter(function(s){return s.twt_ref_30_day!=null&&s.twt_ref_30_day>=70&&s.twt_ref_30_day<80;}).length,color:'#dc2626'},
-        {label:'<70%',value:stores.filter(function(s){return s.twt_ref_30_day!=null&&s.twt_ref_30_day<70;}).length,color:'#991b1b'},
-        {label:'No Data',value:stores.filter(function(s){return s.twt_ref_30_day==null;}).length,color:'#94a3b8'}
-    ];
-    h+=svgBarChart('Store Distribution (Ref 30-Day)',dist,{width:520,labelWidth:80});
-    // Group breakdown (descending)
+
+    // ---- Regional Manager Breakout (if >1 RM) ----
+    h+=buildRmBreakout(stores,level);
+
+    // ---- Group breakdown (Directors or Sr Directors) ----
     var gBy=level==='sr_director'?'fm_sr_director_name':'fm_director_name';
     var cBy=level==='sr_director'?'fm_director_name':'fm_regional_manager_name';
     var cLbl=level==='sr_director'?'Director':'Regional Manager';
     var grps=isAll?groupStores(stores,gBy):groupStores(stores,cBy);
     var grpLabel=isAll?(level==='sr_director'?'Sr. Director':'Director'):cLbl;
-    // Bar chart (best on top = already descending)
     var gcd=grps.slice(0,15).map(function(g){
         return {label:g.name.substring(0,22),value:g.avgRef30,color:g.avgRef30>=95?'#15803d':g.avgRef30>=90?'#16a34a':g.avgRef30>=85?'#65a30d':g.avgRef30>=80?'#d97706':'#dc2626'};
     });
     h+=svgBarChart('Ref 30-Day by '+grpLabel,gcd,{width:540,labelWidth:160,max:100,suffix:'%'});
     h+=buildGroupTable(grps,grpLabel);
+
     // Bottom 10
     var bot=stores.filter(function(d){return d.twt_ref_30_day!=null;}).sort(function(a,b){return(a.twt_ref_30_day||0)-(b.twt_ref_30_day||0);}).slice(0,10);
     h+=sectionTitle('\u26a0\ufe0f','Bottom 10 Stores (Ref 30-Day)');
     h+='<table style="width:100%;border-collapse:collapse;font-size:11px;border-radius:8px;overflow:hidden;"><thead><tr style="'+S.hdr+'">';
-    h+='<th style="'+th()+'">Store</th><th style="'+th()+'">City</th><th style="'+th()+'">RM</th>';
+    h+='<th style="'+th()+'">Store</th><th style="'+th()+'">Banner</th><th style="'+th()+'">RM</th>';
     h+='<th style="'+th()+'">Ref 30d</th><th style="'+th()+'">HVAC 30d</th>';
     h+='<th style="'+th()+'">Loss</th><th style="'+th()+'">Cases OOT</th></tr></thead><tbody>';
     bot.forEach(function(s,i){
         var bg=i%2===0?'#f8fafc':'#fff';
+        var bn=isSams(s)?"Sam's":isWalmart(s)?'WM':(s.banner_desc||'').substring(0,10);
         h+='<tr style="background:'+bg+';">';
         h+='<td style="'+td()+'font-weight:600;">'+s.store_number+'</td>';
-        h+='<td style="'+td()+'">'+(s.store_city||'')+', '+(s.store_state||'')+'</td>';
+        h+='<td style="'+td()+'font-size:10px;">'+bn+'</td>';
         h+='<td style="'+td()+'">'+(s.fm_regional_manager_name||'-')+'</td>';
         h+='<td style="'+td()+scoreColor(s.twt_ref_30_day)+'">'+pct(s.twt_ref_30_day)+'</td>';
         h+='<td style="'+td()+scoreColor(s.twt_hvac_30_day)+'">'+pct(s.twt_hvac_30_day)+'</td>';
@@ -458,17 +518,24 @@ function buildCombinedPdf(stores,level,person,isAll) {
     var b90=stores.filter(function(s){return s.twt_ref_30_day!=null&&s.twt_ref_30_day<90;}).length;
     var a90c=stores.filter(function(s){return s.twt_ref_30_day!=null&&s.twt_ref_30_day>=90;}).length;
     h+=sectionTitle('\ud83d\udcca','Refrigeration & HVAC Time in Target');
-    h+='<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:14px;">';
+    h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px;">';
     h+=kpiBox('Ref 7d',a7,'%')+kpiBox('Ref 30d',a30,'%')+kpiBox('Ref 90d',a90,'%');
-    h+=kpiBox('HVAC 30d',aH,'%')+kpiBox('Loss','$'+(loss/1e6).toFixed(1)+'M','','#dc2626');
-    h+=kpiBox('<90%',b90,'',b90>0?'#dc2626':'#16a34a');
+    h+=kpiBox('HVAC 30d',aH,'%')+kpiBox('<90%',b90,'',b90>0?'#dc2626':'#16a34a');
     h+='</div>';
     h+=chartRow(svgGauge('Ref 7-Day',a7),svgGauge('Ref 30-Day',a30),svgGauge('HVAC 30-Day',aH));
+    // Banner comparison in exec summary
+    h+=bannerComparisonRow(stores);
     var tIns=[];
+    var sp=splitByBanner(stores);
     var trend=a7>a30?'trending up':'trending down';
     tIns.push('Refrigeration '+trend+' (7d: '+a7.toFixed(1)+'% vs 30d: '+a30.toFixed(1)+'%). HVAC at '+aH.toFixed(1)+'%.');
+    if (sp.wm.length>0&&sp.sams.length>0) {
+        tIns.push('WM Ref 30d: <strong>'+safeAvg(sp.wm,'twt_ref_30_day').toFixed(1)+'%</strong> ('+sp.wm.length+') vs Sam\'s: <strong>'+safeAvg(sp.sams,'twt_ref_30_day').toFixed(1)+'%</strong> ('+sp.sams.length+').');
+    }
     tIns.push(a90c+' of '+stores.length+' stores ('+(a90c/stores.length*100).toFixed(0)+'%) meeting 90% target. $'+(loss/1e6).toFixed(1)+'M estimated loss.');
     h+=insightBox(tIns);
+    // RM breakout in exec summary
+    h+=buildRmBreakout(stores,level);
     // Top/bottom performers bar
     var gBy=level==='sr_director'?'fm_sr_director_name':'fm_director_name';
     var cBy=level==='sr_director'?'fm_director_name':'fm_regional_manager_name';
@@ -555,10 +622,9 @@ async function generatePdf() {
         if(!htmlStr||htmlStr.length<50){alert('No data to export.');return;}
         var ls2=level==='sr_director'?'SrDir':'Dir';
         var ps=person==='__all__'?'All':person.replace(/[^a-zA-Z0-9]/g,'_').substring(0,20);
-        var bn=pdfBanner==='all'?'All':pdfBanner==='walmart'?'WM':'Sams';
         var ts=pdfExportTab.toUpperCase();
         var ds=new Date().toISOString().slice(0,10);
-        var fn=ts+'_'+ls2+'_'+ps+'_'+bn+'_'+ds+'.pdf';
+        var fn=ts+'_'+ls2+'_'+ps+'_'+ds+'.pdf';
         var iframe=document.createElement('iframe');
         iframe.style.cssText='position:fixed;left:0;top:0;width:1200px;height:900px;opacity:0.01;z-index:-1;border:none;';
         document.body.appendChild(iframe);
