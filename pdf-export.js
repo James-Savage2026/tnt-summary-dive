@@ -55,7 +55,12 @@ function scoreColor(v) {
 
 function kpiBox(label, value, suffix, color) {
     var c = color || (parseFloat(value) >= 90 ? '#2a8703' : parseFloat(value) >= 80 ? '#f59e0b' : '#ea1100');
-    var dv = typeof value === 'number' ? value.toFixed(1) : value;
+    var dv;
+    if (typeof value === 'number') {
+        dv = (Number.isInteger(value) || value > 999) ? value.toLocaleString() : value.toFixed(1);
+    } else {
+        dv = value;
+    }
     return '<div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;text-align:center;background:#fafafa;">'
         + '<div style="font-size:20px;font-weight:800;color:' + c + ';">' + dv + (suffix || '') + '</div>'
         + '<div style="font-size:10px;color:#666;margin-top:4px;">' + label + '</div></div>';
@@ -238,7 +243,8 @@ function buildPdfContent(tab, level, person) {
     var stores = isAll ? storeData : getStoresForPerson(level, person);
     var levelLabel = level === 'sr_director' ? 'Sr. Director' : 'FM Director';
     var personLabel = isAll ? 'All Regions' : person;
-    var dateStr = new Date().toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' });
+    var now = new Date();
+    var dateStr = (now.getMonth()+1) + '/' + now.getDate() + '/' + now.getFullYear();
 
     var container = document.createElement('div');
     container.style.cssText = 'width:1100px;padding:32px;font-family:system-ui,sans-serif;background:#fff;color:#1a1a1a;';
@@ -250,7 +256,7 @@ function buildPdfContent(tab, level, person) {
         + '<div><h1 style="font-size:22px;font-weight:800;color:#0053e2;margin:0;">' + tabName + '</h1>'
         + '<p style="font-size:13px;color:#666;margin:4px 0 0;">' + levelLabel + ' Report: ' + personLabel + '</p></div>'
         + '<div style="text-align:right;"><p style="font-size:12px;color:#666;margin:0;">Generated ' + dateStr + '</p>'
-        + '<p style="font-size:12px;color:#666;margin:2px 0 0;">' + stores.length + ' stores</p></div></div>';
+        + '<p style="font-size:12px;color:#666;margin:2px 0 0;">' + stores.length.toLocaleString() + ' stores</p></div></div>';
 
     if (tab === 'tnt')  container.innerHTML += buildTntPdf(stores, level, person, isAll);
     if (tab === 'wtw')  container.innerHTML += buildWtwPdf(stores, level, person, isAll);
@@ -375,8 +381,9 @@ function buildWtwPdf(stores, level, person, isAll) {
     var completed = wos.filter(function(w) { return w.st === 'COMPLETED'; });
     var open = wos.length - completed.length;
     var compPct = wos.length > 0 ? (completed.length / wos.length * 100) : 0;
-    var pmValid = wos.filter(function(w) { return w.pm != null; });
+    var pmValid = wos.filter(function(w) { return w.pm != null && !isNaN(parseFloat(w.pm)); });
     var pmAvg = pmValid.length > 0 ? pmValid.reduce(function(s, w) { return s + parseFloat(w.pm); }, 0) / pmValid.length : 0;
+    if (isNaN(pmAvg)) pmAvg = 0;
     var pmBelow90 = pmValid.filter(function(w) { return parseFloat(w.pm) < 90; }).length;
 
     var p1 = wos.filter(function(w) { return w.ph === 'PH1'; });
@@ -402,7 +409,7 @@ function buildWtwPdf(stores, level, person, isAll) {
     html += kpiBox('Completed', completed.length, '', '#2a8703');
     html += kpiBox('Open', open, '', open > 0 ? '#ea1100' : '#2a8703');
     html += kpiBox('Completion', compPct.toFixed(1), '%');
-    html += kpiBox('Avg PM Score', pmAvg.toFixed(1), '%');
+    html += kpiBox('Avg PM Score', pmAvg > 0 ? pmAvg.toFixed(1) : 'N/A', pmAvg > 0 ? '%' : '', pmAvg >= 90 ? '#2a8703' : pmAvg > 0 ? '#ea1100' : '#999');
     html += '</div>';
 
     // CHARTS: Donut for status + bar for phases
@@ -439,7 +446,7 @@ function buildWtwPdf(stores, level, person, isAll) {
     if (pmBelow90 > 0) insights.push('<strong>' + pmBelow90 + ' work orders have PM Score below 90%</strong> — these may need to be reopened for additional work.');
     if (critical > 0) insights.push('<strong>' + critical + ' critical reopens needed:</strong> Completed WOs with PM <90% should be reopened and reworked.');
     if (ready > 0) insights.push(ready + ' open WOs are <strong>ready to close</strong> (PM ≥90%, all criteria passing).');
-    insights.push('Average PM Score: <strong>' + pmAvg.toFixed(1) + '%</strong> across ' + pmValid.length + ' scored work orders.');
+    if (pmValid.length > 0) insights.push('Average PM Score: <strong>' + pmAvg.toFixed(1) + '%</strong> across ' + pmValid.length + ' scored work orders.');
     html += insightBox(insights);
 
     // Group breakdown
