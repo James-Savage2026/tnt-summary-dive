@@ -302,8 +302,8 @@ function buildTntPdf(stores,level,person,isAll) {
     // Bottom 10
     h+=buildBottom10Table(stores);
 
-    // FS Manager Table
-    h+=sectionBlock('\ud83d\udc64','FS Manager Performance',buildFsManagerTable(stores));
+    // Top 5 / Bottom 5 Regionals
+    h+=buildTopBottomRegionals(stores);
 
     return h;
 }
@@ -476,9 +476,9 @@ function buildCombinedPdf(stores,level,person,isAll) {
     var gcd=grps.slice(0,10).map(function(g){return{label:g.name.substring(0,22),value:g.avgRef30,color:g.avgRef30>=95?'#15803d':g.avgRef30>=90?'#16a34a':g.avgRef30>=85?'#65a30d':g.avgRef30>=80?'#d97706':'#dc2626'};});
     h+=svgBarChart('Ref 30-Day by '+gLbl,gcd,{width:480,labelWidth:160,max:100,suffix:'%'});
 
-    // Bottom 10 + FS Manager
+    // Bottom 10 + Top/Bottom Regionals
     h+=buildBottom10Table(stores);
-    h+=sectionBlock('\ud83d\udc64','FS Manager Performance',buildFsManagerTable(stores));
+    h+=buildTopBottomRegionals(stores);
 
     /* WTW and Leak sections */
 

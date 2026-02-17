@@ -536,52 +536,66 @@ function buildLeakManagerMatrix(leakStores, level) {
     return h;
 }
 
-/* ══════════ FS MANAGER TABLE (condensed) ══════════ */
-function buildFsManagerTable(stores) {
-    var fsMap = {};
+/* ══════════ TOP 5 / BOTTOM 5 REGIONALS ══════════ */
+function buildTopBottomRegionals(stores) {
+    var rmMap = {};
     stores.forEach(function(s) {
-        var fm = s.fs_manager_name;
-        if (!fm) return;
-        if (!fsMap[fm]) fsMap[fm] = { mkt: s.fs_market || '', stores: [] };
-        fsMap[fm].stores.push(s);
+        var rm = s.fm_regional_manager_name;
+        if (!rm) return;
+        if (!rmMap[rm]) rmMap[rm] = [];
+        rmMap[rm].push(s);
     });
-    var fsList = Object.entries(fsMap).map(function(e) {
-        var ss = e[1].stores;
+    var rmList = Object.entries(rmMap).map(function(e) {
+        var ss = e[1];
         return {
-            name: e[0], market: e[1].mkt, count: ss.length,
+            name: e[0], count: ss.length,
+            ref7: safeAvg(ss, 'twt_ref_7_day'),
             ref30: safeAvg(ss, 'twt_ref_30_day'),
+            ref90: safeAvg(ss, 'twt_ref_90_day'),
             hvac30: safeAvg(ss, 'twt_hvac_30_day'),
             loss: ss.reduce(function(a, d) { return a + (d.total_loss || 0); }, 0),
             oot: ss.reduce(function(a, d) { return a + (d.cases_out_of_target || 0); }, 0),
             b90: ss.filter(function(d) { return d.twt_ref_30_day != null && d.twt_ref_30_day < 90; }).length
         };
     }).sort(function(a, b) { return b.ref30 - a.ref30; });
-    if (fsList.length === 0) return '';
-    var h = '<table style="width:100%;border-collapse:collapse;font-size:10px;border-radius:8px;overflow:hidden;">';
-    h += '<thead><tr style="' + S.hdr + '">';
-    h += '<th style="' + th() + 'font-size:9px;">FS Manager</th>';
-    h += '<th style="' + th() + 'font-size:9px;">Mkt</th>';
-    h += '<th style="' + th() + 'font-size:9px;">Stores</th>';
-    h += '<th style="' + th() + 'font-size:9px;">Ref 30d</th>';
-    h += '<th style="' + th() + 'font-size:9px;">HVAC 30d</th>';
-    h += '<th style="' + th() + 'font-size:9px;">Loss</th>';
-    h += '<th style="' + th() + 'font-size:9px;">OOT</th>';
-    h += '<th style="' + th() + 'font-size:9px;">&lt;90%</th>';
-    h += '</tr></thead><tbody>';
-    fsList.forEach(function(f, i) {
-        var bg = i % 2 === 0 ? '#f8fafc' : '#fff';
-        h += '<tr style="background:' + bg + ';">';
-        h += '<td style="' + td() + 'font-weight:600;font-size:10px;padding:5px 8px;">' + f.name + '</td>';
-        h += '<td style="' + td() + 'padding:5px 8px;">' + f.market + '</td>';
-        h += '<td style="' + td() + 'padding:5px 8px;">' + f.count + '</td>';
-        h += '<td style="' + td() + 'padding:5px 8px;' + scoreColor(f.ref30) + '">' + f.ref30.toFixed(1) + '%</td>';
-        h += '<td style="' + td() + 'padding:5px 8px;' + scoreColor(f.hvac30) + '">' + f.hvac30.toFixed(1) + '%</td>';
-        h += '<td style="' + td() + 'padding:5px 8px;color:#dc2626;">$' + (f.loss / 1e3).toFixed(0) + 'K</td>';
-        h += '<td style="' + td() + 'padding:5px 8px;">' + f.oot.toLocaleString() + '</td>';
-        h += '<td style="' + td() + 'padding:5px 8px;' + (f.b90 > 0 ? 'color:#dc2626;font-weight:600;' : 'color:#16a34a;') + '">' + f.b90 + '</td>';
-        h += '</tr>';
-    });
-    h += '</tbody></table>';
+    if (rmList.length < 2) return '';
+    var top5 = rmList.slice(0, 5);
+    var bot5 = rmList.slice(-5).reverse();
+
+    function rmTable(rows, accent) {
+        var h = '<table style="width:100%;border-collapse:collapse;font-size:10px;border-radius:8px;overflow:hidden;">';
+        h += '<thead><tr style="' + S.hdr + '">';
+        h += '<th style="' + th() + 'font-size:9px;min-width:130px;">Regional Manager</th>';
+        h += '<th style="' + th() + 'font-size:9px;text-align:center;">Stores</th>';
+        h += '<th style="' + th() + 'font-size:9px;text-align:center;">Ref 7d</th>';
+        h += '<th style="' + th() + 'font-size:9px;text-align:center;">Ref 30d</th>';
+        h += '<th style="' + th() + 'font-size:9px;text-align:center;">Ref 90d</th>';
+        h += '<th style="' + th() + 'font-size:9px;text-align:center;">HVAC 30d</th>';
+        h += '<th style="' + th() + 'font-size:9px;text-align:center;">Loss</th>';
+        h += '<th style="' + th() + 'font-size:9px;text-align:center;">OOT</th>';
+        h += '<th style="' + th() + 'font-size:9px;text-align:center;">&lt;90%</th>';
+        h += '</tr></thead><tbody>';
+        rows.forEach(function(r, i) {
+            var bg = i % 2 === 0 ? '#fff' : '#f8fafc';
+            h += '<tr style="background:' + bg + ';">';
+            h += '<td style="' + td() + 'font-weight:600;padding:5px 8px;color:' + accent + ';">' + r.name + '</td>';
+            h += '<td style="' + td() + 'text-align:center;padding:5px 6px;">' + r.count + '</td>';
+            h += '<td style="' + td() + 'text-align:center;padding:5px 6px;' + scoreColor(r.ref7) + '">' + r.ref7.toFixed(1) + '%</td>';
+            h += '<td style="' + td() + 'text-align:center;padding:5px 6px;' + scoreColor(r.ref30) + '">' + r.ref30.toFixed(1) + '%</td>';
+            h += '<td style="' + td() + 'text-align:center;padding:5px 6px;' + scoreColor(r.ref90) + '">' + r.ref90.toFixed(1) + '%</td>';
+            h += '<td style="' + td() + 'text-align:center;padding:5px 6px;' + scoreColor(r.hvac30) + '">' + r.hvac30.toFixed(1) + '%</td>';
+            h += '<td style="' + td() + 'text-align:center;padding:5px 6px;color:#dc2626;">$' + (r.loss / 1e3).toFixed(0) + 'K</td>';
+            h += '<td style="' + td() + 'text-align:center;padding:5px 6px;">' + r.oot.toLocaleString() + '</td>';
+            h += '<td style="' + td() + 'text-align:center;padding:5px 6px;' + (r.b90 > 0 ? 'color:#dc2626;font-weight:600;' : 'color:#16a34a;') + '">' + r.b90 + '</td>';
+            h += '</tr>';
+        });
+        h += '</tbody></table>';
+        return h;
+    }
+    var h = sectionTitle('\ud83c\udfc6', 'Top 5 Regional Managers — Time in Target');
+    h += rmTable(top5, '#15803d');
+    h += sectionTitle('\u26a0\ufe0f', 'Bottom 5 Regional Managers — Time in Target');
+    h += rmTable(bot5, '#dc2626');
     return h;
 }
 
