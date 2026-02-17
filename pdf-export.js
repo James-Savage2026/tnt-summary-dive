@@ -431,17 +431,6 @@ function buildWtwPdf(stores, level, person, isAll) {
     html += kpiBox('⚠ Critical Reopen', critical, '', critical > 0 ? '#ea1100' : '#2a8703');
     html += '</div>';
 
-    // CHART: Gauge for leak rate + donut for threshold
-    var under = leakStores.length - over;
-    html += chartRow(
-        svgGauge('Fleet Leak Rate', avgRate, { size: 140 }),
-        svgDonutChart('Threshold Compliance', [
-            { label: 'Under ' + LK_T_VAL + '%', value: under, color: '#2a8703' },
-            { label: 'Over ' + LK_T_VAL + '%', value: over, color: '#ea1100' },
-            { label: 'Critical (>' + (LK_T_VAL*1.5).toFixed(0) + '%)', value: critical, color: '#991b1b' }
-        ])
-    );
-
     // Insights
     var insights = [];
     insights.push('Overall completion at <strong>' + compPct.toFixed(1) + '%</strong> — ' + open + ' work orders still open.');
