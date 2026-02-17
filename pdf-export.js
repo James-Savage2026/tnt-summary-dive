@@ -54,6 +54,7 @@ function updatePdfPersonList() {
 }
 
 /* ══════════ STYLE HELPERS (polished) ══════════ */
+
 /* ══════════ BANNER COMPARISON TABLE ══════════ */
 function bannerComparisonRow(stores) {
     var sp = splitByBanner(stores);
@@ -221,23 +222,25 @@ function buildTntPdf(stores,level,person,isAll) {
     var a90c=stores.filter(function(s){return s.twt_ref_30_day!=null&&s.twt_ref_30_day>=90;}).length;
     var trend=a7>a30?'\ud83d\udcc8 Up':a7<a30-1?'\ud83d\udcc9 Down':'\u27a1\ufe0f Stable';
     var h='';
-    // KPIs
-    h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px;break-inside:avoid;page-break-inside:avoid;">';
+    // KPIs + Gauges (keep together)
+    h+='<div style="break-inside:avoid;page-break-inside:avoid;">';
+    h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px;">';
     h+=kpiBox('Ref 7-Day',a7,'%')+kpiBox('Ref 30-Day',a30,'%')+kpiBox('Ref 90-Day',a90,'%');
     h+=kpiBox('HVAC 30-Day',aH,'%')+kpiBox('7d Trend',trend,'',a7>=a30?'#16a34a':'#dc2626');
     h+='</div>';
-    // Gauges
     h+=chartRow(svgGauge('Ref 7-Day',a7),svgGauge('Ref 30-Day',a30),svgGauge('Ref 90-Day',a90),svgGauge('HVAC 30-Day',aH));
+    h+='</div>';
 
-    // ---- Banner Comparison (Combined / Walmart / Sam's) ----
-    h+=sectionTitle('\ud83c\udfe2','Performance by Banner');
-    h+=bannerComparisonRow(stores);
+    // Banner Comparison
+    h+=sectionBlock('\ud83c\udfe2','Performance by Banner',bannerComparisonRow(stores));
 
-    // ---- Ops Region Breakout (if >1 significant region) ----
-    h+=buildOpsRegionBreakout(stores);
+    // Ops Region Breakout
+    var opsContent=buildOpsRegionBreakout(stores);
+    if(opsContent) h+='<div style="break-inside:avoid;page-break-inside:avoid;">'+opsContent+'</div>';
 
-    // ---- 90-Day Historical Trend ----
-    h+=buildHistTrend(stores, person);
+    // 90-Day Historical Trend
+    var histContent=buildHistTrend(stores, person);
+    if(histContent) h+='<div style="break-inside:avoid;page-break-inside:avoid;">'+histContent+'</div>';
 
     // Insights
     var ins=[];
@@ -253,10 +256,11 @@ function buildTntPdf(stores,level,person,isAll) {
     ins.push('Product loss: <strong>$'+(loss/1e6).toFixed(1)+'M</strong> with '+oot.toLocaleString()+' cases OOT.');
     h+=insightBox(ins);
 
-    // ---- Regional Manager Breakout (if >1 RM) ----
-    h+=buildRmBreakout(stores,level);
+    // Regional Manager Breakout
+    var rmContent=buildRmBreakout(stores,level);
+    if(rmContent) h+='<div style="break-inside:avoid;page-break-inside:avoid;">'+rmContent+'</div>';
 
-    // ---- Group breakdown (Directors or Sr Directors) ----
+    // Group breakdown bar chart + table
     var gBy=level==='sr_director'?'fm_sr_director_name':'fm_director_name';
     var cBy=level==='sr_director'?'fm_director_name':'fm_regional_manager_name';
     var cLbl=level==='sr_director'?'Director':'Regional Manager';
@@ -265,29 +269,35 @@ function buildTntPdf(stores,level,person,isAll) {
     var gcd=grps.slice(0,15).map(function(g){
         return {label:g.name.substring(0,22),value:g.avgRef30,color:g.avgRef30>=95?'#15803d':g.avgRef30>=90?'#16a34a':g.avgRef30>=85?'#65a30d':g.avgRef30>=80?'#d97706':'#dc2626'};
     });
+    h+='<div style="break-inside:avoid;page-break-inside:avoid;">';
     h+=svgBarChart('Ref 30-Day by '+grpLabel,gcd,{width:540,labelWidth:160,max:100,suffix:'%'});
+    h+='</div>';
     h+=buildGroupTable(grps,grpLabel);
 
     // Bottom 10
     var bot=stores.filter(function(d){return d.twt_ref_30_day!=null;}).sort(function(a,b){return(a.twt_ref_30_day||0)-(b.twt_ref_30_day||0);}).slice(0,10);
-    h+=sectionTitle('\u26a0\ufe0f','Bottom 10 Stores (Ref 30-Day)');
-    h+='<table style="width:100%;border-collapse:collapse;font-size:11px;border-radius:8px;overflow:hidden;"><thead><tr style="'+S.hdr+'">';
-    h+='<th style="'+th()+'">Store</th><th style="'+th()+'">Banner</th><th style="'+th()+'">RM</th>';
-    h+='<th style="'+th()+'">Ref 30d</th><th style="'+th()+'">HVAC 30d</th>';
-    h+='<th style="'+th()+'">Loss</th><th style="'+th()+'">Cases OOT</th></tr></thead><tbody>';
+    var botH='<table style="width:100%;border-collapse:collapse;font-size:11px;border-radius:8px;overflow:hidden;"><thead><tr style="'+S.hdr+'">';
+    botH+='<th style="'+th()+'">Store</th><th style="'+th()+'">Banner</th><th style="'+th()+'">RM</th>';
+    botH+='<th style="'+th()+'">Ref 30d</th><th style="'+th()+'">HVAC 30d</th>';
+    botH+='<th style="'+th()+'">Loss</th><th style="'+th()+'">Cases OOT</th></tr></thead><tbody>';
     bot.forEach(function(s,i){
         var bg=i%2===0?'#f8fafc':'#fff';
         var bn=isSams(s)?"Sam's":isWalmart(s)?'WM':(s.banner_desc||'').substring(0,10);
-        h+='<tr style="background:'+bg+';">';
-        h+='<td style="'+td()+'font-weight:600;">'+s.store_number+'</td>';
-        h+='<td style="'+td()+'font-size:10px;">'+bn+'</td>';
-        h+='<td style="'+td()+'">'+(s.fm_regional_manager_name||'-')+'</td>';
-        h+='<td style="'+td()+scoreColor(s.twt_ref_30_day)+'">'+pct(s.twt_ref_30_day)+'</td>';
-        h+='<td style="'+td()+scoreColor(s.twt_hvac_30_day)+'">'+pct(s.twt_hvac_30_day)+'</td>';
-        h+='<td style="'+td()+'color:#dc2626;">$'+((s.total_loss||0)/1e3).toFixed(0)+'K</td>';
-        h+='<td style="'+td()+'">'+((s.cases_out_of_target||0)).toLocaleString()+'</td></tr>';
+        botH+='<tr style="background:'+bg+';">';
+        botH+='<td style="'+td()+'font-weight:600;">'+s.store_number+'</td>';
+        botH+='<td style="'+td()+'font-size:10px;">'+bn+'</td>';
+        botH+='<td style="'+td()+'">'+(s.fm_regional_manager_name||'-')+'</td>';
+        botH+='<td style="'+td()+scoreColor(s.twt_ref_30_day)+'">'+pct(s.twt_ref_30_day)+'</td>';
+        botH+='<td style="'+td()+scoreColor(s.twt_hvac_30_day)+'">'+pct(s.twt_hvac_30_day)+'</td>';
+        botH+='<td style="'+td()+'color:#dc2626;">$'+((s.total_loss||0)/1e3).toFixed(0)+'K</td>';
+        botH+='<td style="'+td()+'">'+((s.cases_out_of_target||0)).toLocaleString()+'</td></tr>';
     });
-    h+='</tbody></table>';
+    botH+='</tbody></table>';
+    h+=sectionBlock('\u26a0\ufe0f','Bottom 10 Stores (Ref 30-Day)',botH);
+
+    // FS Manager Table
+    h+=sectionBlock('\ud83d\udc64','FS Manager Performance',buildFsManagerTable(stores));
+
     return h;
 }
 
@@ -422,11 +432,13 @@ function buildCombinedPdf(stores,level,person,isAll) {
     var b90=stores.filter(function(s){return s.twt_ref_30_day!=null&&s.twt_ref_30_day<90;}).length;
     var a90c=stores.filter(function(s){return s.twt_ref_30_day!=null&&s.twt_ref_30_day>=90;}).length;
     h+=sectionTitle('\ud83d\udcca','Refrigeration & HVAC Time in Target');
-    h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px;break-inside:avoid;page-break-inside:avoid;">';
+    h+='<div style="break-inside:avoid;page-break-inside:avoid;">';
+    h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px;">';
     h+=kpiBox('Ref 7d',a7,'%')+kpiBox('Ref 30d',a30,'%')+kpiBox('Ref 90d',a90,'%');
     h+=kpiBox('HVAC 30d',aH,'%')+kpiBox('<90%',b90,'',b90>0?'#dc2626':'#16a34a');
     h+='</div>';
     h+=chartRow(svgGauge('Ref 7-Day',a7),svgGauge('Ref 30-Day',a30),svgGauge('HVAC 30-Day',aH));
+    h+='</div>';
     // Banner comparison in exec summary
     h+=bannerComparisonRow(stores);
     // Ops region breakout in exec summary
@@ -471,7 +483,8 @@ function buildCombinedPdf(stores,level,person,isAll) {
         var rdy=wos.filter(function(w){return w.st!=='COMPLETED'&&w.pm!=null&&parseFloat(w.pm)>=90;}).length;
         var crit=wos.filter(function(w){return w.st==='COMPLETED'&&w.pm!=null&&parseFloat(w.pm)<90;}).length;
         h+=sectionTitle('\u2744\ufe0f','Win the Winter FY26');
-        h+='<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:14px;break-inside:avoid;page-break-inside:avoid;">';
+        h+='<div style="break-inside:avoid;page-break-inside:avoid;">';
+        h+='<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:14px;">';
         h+=kpiBox('WOs',wos.length,'','#334155')+kpiBox('Done',done.length,'','#16a34a');
         h+=kpiBox('Open',opn,'',opn>0?'#dc2626':'#16a34a')+kpiBox('Completion',cpct.toFixed(1),'%');
         h+=kpiBox('Ready',rdy,'','#16a34a')+kpiBox('Reopen',crit,'',crit>0?'#dc2626':'#16a34a');
@@ -488,6 +501,7 @@ function buildCombinedPdf(stores,level,person,isAll) {
         wIns.push('WTW at <strong>'+cpct.toFixed(1)+'%</strong> completion. '+opn+' WOs open, '+rdy+' ready to close.');
         if(crit>0) wIns.push('<strong>'+crit+' critical reopens</strong> needed (completed with PM <90%).');
         h+=insightBox(wIns);
+        h+='</div>'; /* close WTW break-inside wrapper */
     }
 
     h+=divider();
@@ -502,7 +516,8 @@ function buildCombinedPdf(stores,level,person,isAll) {
         var ar2=tc2>0?(tq2/tc2*100):0;
         var ov2=lks.filter(function(s){return(s.cylr||0)>LKT;}).length;
         h+=sectionTitle('\ud83e\uddca','Leak Management');
-        h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px;break-inside:avoid;page-break-inside:avoid;">';
+        h+='<div style="break-inside:avoid;page-break-inside:avoid;">';
+        h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px;">';
         h+=kpiBox('Stores',lks.length,'','#334155')+kpiBox('Charge',(tc2/1e6).toFixed(1)+'M lbs','','#334155');
         h+=kpiBox('Leaked',(tq2/1e3).toFixed(0)+'K lbs','','#dc2626');
         h+=kpiBox('Rate',ar2.toFixed(1),'%',ar2>LKT?'#dc2626':'#16a34a');
@@ -514,6 +529,7 @@ function buildCombinedPdf(stores,level,person,isAll) {
         lIns.push('Fleet leak rate: <strong>'+ar2.toFixed(1)+'%</strong>'+(ar2<=LKT?' (within threshold).':' \u2014 exceeds '+LKT+'% threshold.'));
         if(ov2>0) lIns.push(ov2+' stores over threshold need priority repair.');
         h+=insightBox(lIns);
+        h+='</div>'; /* close leak break-inside wrapper */
     }
     return h;
 }
