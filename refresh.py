@@ -116,7 +116,7 @@ QUERY_STORES = """
 SELECT
   store_number, banner_desc, city_name AS store_city, state_cd AS store_state,
   fm_sr_director_name, fm_director_name, fm_regional_manager_name,
-  fs_manager_name, fs_market,
+  fs_manager_name, fs_market, ops_region,
   twt_ref, twt_ref_7_day, twt_ref_30_day, twt_ref_90_day,
   twt_hvac, twt_hvac_7_day, twt_hvac_30_day, twt_hvac_90_day,
   case_count, cases_out_of_target, total_loss
