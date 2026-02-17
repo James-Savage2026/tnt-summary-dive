@@ -58,8 +58,8 @@ var S = {
     th: 'padding:10px 12px;text-align:left;font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;',
     td: 'padding:9px 12px;border-bottom:1px solid #e2e8f0;font-size:11px;',
     hdr: 'background:linear-gradient(135deg,#0053e2 0%,#003da5 100%);color:#fff;',
-    card: 'border:1px solid #e2e8f0;border-radius:12px;padding:16px 18px;text-align:center;background:linear-gradient(180deg,#fff 0%,#f8fafc 100%);box-shadow:0 1px 3px rgba(0,0,0,0.06);',
-    section: 'font-size:15px;font-weight:800;margin:28px 0 12px;color:#0053e2;padding-bottom:8px;border-bottom:3px solid #0053e2;display:flex;align-items:center;gap:8px;',
+    card: 'border:1px solid #e2e8f0;border-radius:12px;padding:16px 18px;text-align:center;background:linear-gradient(180deg,#fff 0%,#f8fafc 100%);box-shadow:0 1px 3px rgba(0,0,0,0.06);break-inside:avoid;page-break-inside:avoid;',
+    section: 'font-size:15px;font-weight:800;margin:28px 0 12px;color:#0053e2;padding-bottom:8px;border-bottom:3px solid #0053e2;display:flex;align-items:center;gap:8px;break-after:avoid;page-break-after:avoid;',
     page: 'width:1100px;padding:40px 44px;font-family:"Segoe UI",system-ui,-apple-system,sans-serif;background:#fff;color:#1e293b;line-height:1.6;'
 };
 function th(){return S.th;} function td(){return S.td;}
@@ -86,7 +86,7 @@ function safeAvg(data,field) {
     return v.length?v.reduce(function(s,d){return s+parseFloat(d[field]);},0)/v.length:0;
 }
 function insightBox(items) {
-    return '<div style="background:linear-gradient(135deg,#eff6ff 0%,#f0f9ff 100%);border:1px solid #93c5fd;border-left:4px solid #0053e2;border-radius:10px;padding:20px 22px;margin:20px 0;">'
+    return '<div style="background:linear-gradient(135deg,#eff6ff 0%,#f0f9ff 100%);border:1px solid #93c5fd;border-left:4px solid #0053e2;border-radius:10px;padding:20px 22px;margin:20px 0;break-inside:avoid;page-break-inside:avoid;">'
         +'<div style="font-size:13px;font-weight:800;color:#0053e2;margin-bottom:12px;display:flex;align-items:center;gap:6px;">💡 Key Insights & Action Items</div>'
         +'<ul style="margin:0;padding-left:20px;font-size:11.5px;color:#1e40af;line-height:2;">'
         +items.map(function(i){return '<li style="margin-bottom:2px;">'+i+'</li>';}).join('')
@@ -105,7 +105,7 @@ function bannerComparisonRow(stores) {
     var labels = [{key:'all',name:'Combined',icon:'🏢',stores:sp.all},
                   {key:'wm',name:'Walmart',icon:'🟦',stores:sp.wm},
                   {key:'sams',name:"Sam's Club",icon:'🟩',stores:sp.sams}];
-    var h = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0 20px;">';
+    var h = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0 20px;break-inside:avoid;page-break-inside:avoid;">';
     labels.forEach(function(b) {
         var s = b.stores;
         var r30 = safeAvg(s,'twt_ref_30_day'), h30 = safeAvg(s,'twt_hvac_30_day');
@@ -140,11 +140,11 @@ function buildOpsRegionBreakout(stores) {
         .map(function(e) { return { id: e[0], stores: e[1] }; })
         .filter(function(r) { return r.stores.length >= 10; })
         .sort(function(a, b) { return b.stores.length - a.stores.length; });
-    if (regions.length <= 1) return '';  /* Only show if >1 significant ops region */
-    var h = sectionTitle('\ud83d\uddfa\ufe0f', 'Performance by Ops Region');
+    if (regions.length <= 1) return '';  /* Only show if >1 significant ops realty region */
+    var h = sectionTitle('\ud83d\uddfa\ufe0f', 'Performance by Ops Realty Region');
     /* Cards layout — Combined first, then each region */
     var cols = Math.min(regions.length + 1, 4);  /* max 4 columns */
-    h += '<div style="display:grid;grid-template-columns:repeat('+cols+',1fr);gap:12px;margin:16px 0 20px;">';
+    h += '<div style="display:grid;grid-template-columns:repeat('+cols+',1fr);gap:12px;margin:16px 0 20px;break-inside:avoid;page-break-inside:avoid;">';
     /* Combined card */
     var r30All = safeAvg(stores,'twt_ref_30_day'), h30All = safeAvg(stores,'twt_hvac_30_day');
     var lossAll = stores.reduce(function(a,d){return a+(d.total_loss||0);},0);
@@ -167,7 +167,7 @@ function buildOpsRegionBreakout(stores) {
         var b90 = s.filter(function(d){return d.twt_ref_30_day!=null&&d.twt_ref_30_day<90;}).length;
         var borderC = regionColors[idx % regionColors.length];
         h += '<div style="border:2px solid '+borderC+';border-radius:12px;padding:14px;background:#fff;">';
-        h += '<div style="font-size:13px;font-weight:800;color:'+borderC+';margin-bottom:10px;display:flex;align-items:center;gap:6px;">\ud83d\uddfa\ufe0f Region '+reg.id;
+        h += '<div style="font-size:13px;font-weight:800;color:'+borderC+';margin-bottom:10px;display:flex;align-items:center;gap:6px;">\ud83d\uddfa\ufe0f Realty Region '+reg.id;
         h += '<span style="font-size:10px;font-weight:500;color:#94a3b8;margin-left:auto;">'+s.length+' stores</span></div>';
         h += '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;">';
         h += '<div style="text-align:center;"><div style="font-size:18px;font-weight:800;'+scoreColor(r30)+'">'+r30.toFixed(1)+'%</div><div style="font-size:9px;color:#64748b;text-transform:uppercase;">Ref 30d</div></div>';
@@ -301,7 +301,7 @@ function svgGauge(label,value,opts) {
 }
 function chartRow() {
     var charts=Array.prototype.slice.call(arguments);
-    return '<div style="display:flex;gap:20px;margin:14px 0;align-items:flex-start;flex-wrap:wrap;">'+charts.join('')+'</div>';
+    return '<div style="display:flex;gap:20px;margin:14px 0;align-items:flex-start;flex-wrap:wrap;break-inside:avoid;page-break-inside:avoid;">'+charts.join('')+'</div>';
 }
 
 /* ══════════ GROUP STORES (descending — best on top) ══════════ */
@@ -378,7 +378,7 @@ function buildTntPdf(stores,level,person,isAll) {
     var trend=a7>a30?'\ud83d\udcc8 Up':a7<a30-1?'\ud83d\udcc9 Down':'\u27a1\ufe0f Stable';
     var h='';
     // KPIs
-    h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px;">';
+    h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px;break-inside:avoid;page-break-inside:avoid;">';
     h+=kpiBox('Ref 7-Day',a7,'%')+kpiBox('Ref 30-Day',a30,'%')+kpiBox('Ref 90-Day',a90,'%');
     h+=kpiBox('HVAC 30-Day',aH,'%')+kpiBox('7d Trend',trend,'',a7>=a30?'#16a34a':'#dc2626');
     h+='</div>';
@@ -465,7 +465,7 @@ function buildWtwPdf(stores,level,person,isAll) {
     var rev=wos.filter(function(w){return w.st==='COMPLETED'&&w.pm!=null&&parseFloat(w.pm)>=90;}).length;
     var crit=wos.filter(function(w){return w.st==='COMPLETED'&&w.pm!=null&&parseFloat(w.pm)<90;}).length;
     var h='';
-    h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px;">';
+    h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px;break-inside:avoid;page-break-inside:avoid;">';
     h+=kpiBox('Total WOs',wos.length,'','#334155')+kpiBox('Completed',done.length,'','#16a34a');
     h+=kpiBox('Open',opn,'',opn>0?'#dc2626':'#16a34a')+kpiBox('Completion',cpct.toFixed(1),'%');
     h+=kpiBox('Avg PM',pmA>0?pmA.toFixed(1):'N/A',pmA>0?'%':'',pmA>=90?'#16a34a':pmA>0?'#dc2626':'#94a3b8');
@@ -523,7 +523,7 @@ function buildLeakPdf(stores,level,person,isAll) {
     var ov=ls.filter(function(s){return(s.cylr||0)>LKT;}).length;
     var cr=ls.filter(function(s){return(s.cylr||0)>LKT*1.5;}).length;
     var h='';
-    h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px;">';
+    h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px;break-inside:avoid;page-break-inside:avoid;">';
     h+=kpiBox('Stores',ls.length,'','#334155')+kpiBox('System Charge',(tc/1e6).toFixed(1)+'M lbs','','#334155');
     h+=kpiBox('Qty Leaked',(tq/1e3).toFixed(0)+'K lbs','','#dc2626');
     h+=kpiBox('Leak Rate',ar.toFixed(1),'%',ar>LKT?'#dc2626':'#16a34a');
@@ -575,7 +575,7 @@ function buildCombinedPdf(stores,level,person,isAll) {
     var b90=stores.filter(function(s){return s.twt_ref_30_day!=null&&s.twt_ref_30_day<90;}).length;
     var a90c=stores.filter(function(s){return s.twt_ref_30_day!=null&&s.twt_ref_30_day>=90;}).length;
     h+=sectionTitle('\ud83d\udcca','Refrigeration & HVAC Time in Target');
-    h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px;">';
+    h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px;break-inside:avoid;page-break-inside:avoid;">';
     h+=kpiBox('Ref 7d',a7,'%')+kpiBox('Ref 30d',a30,'%')+kpiBox('Ref 90d',a90,'%');
     h+=kpiBox('HVAC 30d',aH,'%')+kpiBox('<90%',b90,'',b90>0?'#dc2626':'#16a34a');
     h+='</div>';
@@ -622,7 +622,7 @@ function buildCombinedPdf(stores,level,person,isAll) {
         var rdy=wos.filter(function(w){return w.st!=='COMPLETED'&&w.pm!=null&&parseFloat(w.pm)>=90;}).length;
         var crit=wos.filter(function(w){return w.st==='COMPLETED'&&w.pm!=null&&parseFloat(w.pm)<90;}).length;
         h+=sectionTitle('\u2744\ufe0f','Win the Winter FY26');
-        h+='<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:14px;">';
+        h+='<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:14px;break-inside:avoid;page-break-inside:avoid;">';
         h+=kpiBox('WOs',wos.length,'','#334155')+kpiBox('Done',done.length,'','#16a34a');
         h+=kpiBox('Open',opn,'',opn>0?'#dc2626':'#16a34a')+kpiBox('Completion',cpct.toFixed(1),'%');
         h+=kpiBox('Ready',rdy,'','#16a34a')+kpiBox('Reopen',crit,'',crit>0?'#dc2626':'#16a34a');
@@ -653,7 +653,7 @@ function buildCombinedPdf(stores,level,person,isAll) {
         var ar2=tc2>0?(tq2/tc2*100):0;
         var ov2=lks.filter(function(s){return(s.cylr||0)>LKT;}).length;
         h+=sectionTitle('\ud83e\uddca','Leak Management');
-        h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px;">';
+        h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px;break-inside:avoid;page-break-inside:avoid;">';
         h+=kpiBox('Stores',lks.length,'','#334155')+kpiBox('Charge',(tc2/1e6).toFixed(1)+'M lbs','','#334155');
         h+=kpiBox('Leaked',(tq2/1e3).toFixed(0)+'K lbs','','#dc2626');
         h+=kpiBox('Rate',ar2.toFixed(1),'%',ar2>LKT?'#dc2626':'#16a34a');
@@ -692,14 +692,16 @@ async function generatePdf() {
         idoc.write('<!DOCTYPE html><html><head><style>'
             +'*{margin:0;padding:0;box-sizing:border-box;}'
             +'body{font-family:"Segoe UI",system-ui,-apple-system,sans-serif;background:#fff;color:#1e293b;padding:36px 40px;width:1100px;line-height:1.5;}'
-            +'table{border-collapse:collapse;width:100%;}'
+            +'table{border-collapse:collapse;width:100%;break-inside:avoid;page-break-inside:avoid;}'
+            +'h3{break-after:avoid;page-break-after:avoid;}'
+            +'svg{break-inside:avoid;page-break-inside:avoid;}'
             +'</style></head><body>'+htmlStr+'</body></html>');
         idoc.close();
         await new Promise(function(r){setTimeout(r,600);});
         var opt={margin:[0.3,0.3,0.3,0.3],filename:fn,image:{type:'jpeg',quality:0.95},
             html2canvas:{scale:2,useCORS:true,logging:false},
             jsPDF:{unit:'in',format:'letter',orientation:'landscape'},
-            pagebreak:{mode:['avoid-all','css','legacy']}};
+            pagebreak:{mode:['avoid-all','css'],avoid:['tr','svg','div[style*="break-inside"]']}};
         await html2pdf().set(opt).from(idoc.body).save();
         document.body.removeChild(iframe);
         closePdfModal();
