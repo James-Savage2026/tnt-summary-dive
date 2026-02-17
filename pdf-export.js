@@ -497,7 +497,7 @@ function buildCombinedPdf(stores,level,person,isAll) {
 
     /* WTW and Leak sections */
 
-    // ---- WTW Section (condensed) ----
+    // ---- WTW Section (dashboard-style) ----
     if (typeof WTW_DATA!=='undefined') {
         var nums=new Set(stores.map(function(s){return String(s.store_number);}));
         var wos=WTW_DATA.filter(function(w){return nums.has(String(w.s));});
@@ -511,28 +511,62 @@ function buildCombinedPdf(stores,level,person,isAll) {
         var p1d=p1.filter(function(w){return w.st==='COMPLETED';}).length;
         var p2d=p2.filter(function(w){return w.st==='COMPLETED';}).length;
         var p3d=p3.filter(function(w){return w.st==='COMPLETED';}).length;
+        var p1p=p1.length>0?p1d/p1.length*100:0,p2p=p2.length>0?p2d/p2.length*100:0,p3p=p3.length>0?p3d/p3.length*100:0;
         var rdy=wos.filter(function(w){return w.st!=='COMPLETED'&&w.pm!=null&&parseFloat(w.pm)>=90;}).length;
         var crit=wos.filter(function(w){return w.st==='COMPLETED'&&w.pm!=null&&parseFloat(w.pm)<90;}).length;
-        h+=sectionTitle('\u2744\ufe0f','Win the Winter FY26');
+        /* Gradient header like dashboard */
+        h+='<div style="background:linear-gradient(135deg,#2563eb 0%,#06b6d4 100%);border-radius:12px;padding:18px 22px;margin:20px 0 14px;display:flex;justify-content:space-between;align-items:center;">';
+        h+='<div><h2 style="font-size:17px;font-weight:800;color:#fff;margin:0;">\u2744\ufe0f Win the Winter FY26</h2>';
+        h+='<p style="font-size:11px;color:rgba(255,255,255,0.8);margin:4px 0 0;">Preventive Maintenance Work Order Tracking</p></div>';
+        h+='<div style="text-align:right;"><p style="font-size:24px;font-weight:800;color:#fff;margin:0;">'+wos.length.toLocaleString()+'</p>';
+        h+='<p style="font-size:10px;color:rgba(255,255,255,0.8);margin:2px 0 0;">Total Work Orders</p></div></div>';
         h+='<div class="no-break">';
-        h+='<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:14px;">';
-        h+=kpiBox('WOs',wos.length,'','#334155')+kpiBox('Done',done.length,'','#16a34a');
-        h+=kpiBox('Open',opn,'',opn>0?'#dc2626':'#16a34a')+kpiBox('Completion',cpct.toFixed(1),'%');
-        h+=kpiBox('Ready',rdy,'','#16a34a')+kpiBox('Reopen',crit,'',crit>0?'#dc2626':'#16a34a');
+        /* Phase cards (matching dashboard style) */
+        var phaseData=[
+            {label:'All Phases',count:wos.length,done:done.length,open:opn,pct:cpct,bg:'#f8fafc',border:'#94a3b8',color:'#334155'},
+            {label:'\ud83d\udfe6 Phase 1',count:p1.length,done:p1d,open:p1.length-p1d,pct:p1p,bg:'#eff6ff',border:'#60a5fa',color:'#1d4ed8'},
+            {label:'\ud83d\udfe2 Phase 2',count:p2.length,done:p2d,open:p2.length-p2d,pct:p2p,bg:'#f0fdf4',border:'#4ade80',color:'#15803d'},
+            {label:'\ud83d\udfe3 Phase 3',count:p3.length,done:p3d,open:p3.length-p3d,pct:p3p,bg:'#faf5ff',border:'#c084fc',color:'#7e22ce'}
+        ];
+        h+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;">';
+        phaseData.forEach(function(ph){
+            var donePct=ph.count>0?(ph.done/ph.count*100):0;
+            var openPct=100-donePct;
+            h+='<div style="background:'+ph.bg+';border:2px solid '+ph.border+';border-radius:10px;padding:12px;">';
+            h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">';
+            h+='<span style="font-size:12px;font-weight:700;color:'+ph.color+';">'+ph.label+'</span>';
+            h+='<span style="font-size:16px;font-weight:800;color:'+ph.color+';">'+ph.count+'</span></div>';
+            /* Status bar */
+            h+='<div style="height:8px;border-radius:4px;overflow:hidden;display:flex;background:#e2e8f0;">';
+            if(ph.done>0) h+='<div style="width:'+donePct+'%;background:#16a34a;"></div>';
+            if(ph.open>0) h+='<div style="width:'+openPct+'%;background:#dc2626;"></div>';
+            h+='</div>';
+            h+='<div style="display:flex;justify-content:space-between;margin-top:5px;font-size:9px;color:#64748b;">';
+            h+='<span>\u2713 '+ph.done+' done ('+donePct.toFixed(0)+'%)</span>';
+            h+='<span>'+ph.open+' open</span></div>';
+            h+='</div>';
+        });
         h+='</div>';
-        h+=chartRow(
-            svgDonutChart('Status',[{label:'Completed',value:done.length,color:'#16a34a'},{label:'Open',value:opn,color:'#dc2626'}],{size:120}),
-            svgBarChart('Phase Completion',[
-                {label:'PH1 ('+p1d+'/'+p1.length+')',value:p1.length>0?p1d/p1.length*100:0,color:p1d/p1.length>=0.5?'#16a34a':'#d97706'},
-                {label:'PH2 ('+p2d+'/'+p2.length+')',value:p2.length>0?p2d/p2.length*100:0,color:p2d/p2.length>=0.5?'#16a34a':'#dc2626'},
-                {label:'PH3 ('+p3d+'/'+p3.length+')',value:p3.length>0?p3d/p3.length*100:0,color:p3d/p3.length>=0.5?'#16a34a':'#dc2626'}
-            ],{width:380,labelWidth:130,max:100,suffix:'%',barHeight:26})
-        );
+        /* PM Readiness strip */
+        h+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;">';
+        h+='<div style="background:#f0fdf4;border:2px solid #4ade80;border-radius:10px;padding:10px;text-align:center;">';
+        h+='<div style="font-size:20px;font-weight:800;color:#16a34a;">'+rdy+'</div>';
+        h+='<div style="font-size:9px;font-weight:600;color:#15803d;text-transform:uppercase;">\u2713 Ready to Close</div></div>';
+        h+='<div style="background:#fefce8;border:2px solid #facc15;border-radius:10px;padding:10px;text-align:center;">';
+        var rev=wos.filter(function(w){return w.st==='COMPLETED'&&w.pm!=null&&parseFloat(w.pm)>=90;}).length;
+        h+='<div style="font-size:20px;font-weight:800;color:#a16207;">'+rev+'</div>';
+        h+='<div style="font-size:9px;font-weight:600;color:#a16207;text-transform:uppercase;">\ud83d\udd0d Review Needed</div></div>';
+        h+='<div style="background:#fef2f2;border:2px solid #f87171;border-radius:10px;padding:10px;text-align:center;">';
+        h+='<div style="font-size:20px;font-weight:800;color:#dc2626;">'+crit+'</div>';
+        h+='<div style="font-size:9px;font-weight:600;color:#dc2626;text-transform:uppercase;">\u26a0 Critical Reopen</div></div>';
+        h+='</div>';
+        /* Insights */
         var wIns=[];
         wIns.push('WTW at <strong>'+cpct.toFixed(1)+'%</strong> completion. '+opn+' WOs open, '+rdy+' ready to close.');
         if(crit>0) wIns.push('<strong>'+crit+' critical reopens</strong> needed (completed with PM <90%).');
+        if(pmA>0) wIns.push('Average PM Score: <strong>'+pmA.toFixed(1)+'%</strong> across '+pmV.length+' scored WOs.');
         h+=insightBox(wIns);
-        h+='</div>'; /* close WTW break-inside wrapper */
+        h+='</div>';
         h+=buildWtwManagerMatrix(wos, level);
     }
 
