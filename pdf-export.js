@@ -281,9 +281,11 @@ function buildTntPdf(stores,level,person,isAll) {
     ins.push('Product loss: <strong>$'+(loss/1e6).toFixed(1)+'M</strong> with '+oot.toLocaleString()+' cases OOT.');
     h+=insightBox(ins);
 
-    // Regional Manager Breakout
-    var rmContent=buildRmBreakout(stores,level);
-    if(rmContent) h+=rmContent;
+    // Regional Manager Breakout (skip for Sr Director — Top/Bottom 5 below is sufficient)
+    if(level!=='sr_director') {
+        var rmContent=buildRmBreakout(stores,level);
+        if(rmContent) h+=rmContent;
+    }
 
     // Group breakdown bar chart + table
     var gBy=level==='sr_director'?'fm_sr_director_name':'fm_director_name';
@@ -465,9 +467,11 @@ function buildCombinedPdf(stores,level,person,isAll) {
     }
     tIns.push(a90c+' of '+stores.length+' stores ('+(a90c/stores.length*100).toFixed(0)+'%) meeting 90% target. $'+(loss/1e6).toFixed(1)+'M estimated loss.');
     h+=insightBox(tIns);
-    // RM breakout in exec summary
-    var rmExec=buildRmBreakout(stores,level);
-    if(rmExec) h+=rmExec;
+    // RM breakout in exec summary (skip for Sr Director — Top/Bottom 5 below is sufficient)
+    if(level!=='sr_director') {
+        var rmExec=buildRmBreakout(stores,level);
+        if(rmExec) h+=rmExec;
+    }
     // Top/bottom performers bar
     var gBy=level==='sr_director'?'fm_sr_director_name':'fm_director_name';
     var cBy=level==='sr_director'?'fm_director_name':'fm_regional_manager_name';
