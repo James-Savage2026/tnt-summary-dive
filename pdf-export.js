@@ -54,51 +54,6 @@ function updatePdfPersonList() {
 }
 
 /* ══════════ STYLE HELPERS (polished) ══════════ */
-var S = {
-    th: 'padding:10px 12px;text-align:left;font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;',
-    td: 'padding:9px 12px;border-bottom:1px solid #e2e8f0;font-size:11px;',
-    hdr: 'background:linear-gradient(135deg,#0053e2 0%,#003da5 100%);color:#fff;',
-    card: 'border:1px solid #e2e8f0;border-radius:12px;padding:16px 18px;text-align:center;background:linear-gradient(180deg,#fff 0%,#f8fafc 100%);box-shadow:0 1px 3px rgba(0,0,0,0.06);break-inside:avoid;page-break-inside:avoid;',
-    section: 'font-size:15px;font-weight:800;margin:28px 0 12px;color:#0053e2;padding-bottom:8px;border-bottom:3px solid #0053e2;display:flex;align-items:center;gap:8px;break-after:avoid;page-break-after:avoid;',
-    page: 'width:1100px;padding:40px 44px;font-family:"Segoe UI",system-ui,-apple-system,sans-serif;background:#fff;color:#1e293b;line-height:1.6;'
-};
-function th(){return S.th;} function td(){return S.td;}
-function pct(v){return v!=null?parseFloat(v).toFixed(1)+'%':'N/A';}
-function scoreColor(v) {
-    if (v==null) return 'color:#94a3b8;';
-    if (v>=95) return 'color:#15803d;font-weight:700;';  /* dark green — excellent */
-    if (v>=90) return 'color:#16a34a;font-weight:700;';  /* green — target met */
-    if (v>=85) return 'color:#65a30d;font-weight:600;';  /* lime/light green — close */
-    if (v>=80) return 'color:#d97706;font-weight:600;';  /* amber — needs attention */
-    if (v>=70) return 'color:#ea580c;font-weight:600;';  /* orange — concerning */
-    return 'color:#dc2626;font-weight:700;';              /* red — critical */
-}
-function kpiBox(label, value, suffix, color) {
-    var pv=parseFloat(value);
-    var c = color || (pv>=95?'#15803d':pv>=90?'#16a34a':pv>=85?'#65a30d':pv>=80?'#d97706':pv>=70?'#ea580c':'#dc2626');
-    var dv = typeof value==='number' ? (Number.isInteger(value)||value>999?value.toLocaleString():value.toFixed(1)) : value;
-    return '<div style="'+S.card+'">'
-        +'<div style="font-size:26px;font-weight:800;color:'+c+';line-height:1.1;letter-spacing:-0.5px;">'+dv+(suffix||'')+'</div>'
-        +'<div style="font-size:10px;color:#64748b;margin-top:8px;text-transform:uppercase;letter-spacing:0.8px;font-weight:600;">'+label+'</div></div>';
-}
-function safeAvg(data,field) {
-    var v=data.filter(function(d){return d[field]!=null&&!isNaN(d[field]);});
-    return v.length?v.reduce(function(s,d){return s+parseFloat(d[field]);},0)/v.length:0;
-}
-function insightBox(items) {
-    return '<div style="background:linear-gradient(135deg,#eff6ff 0%,#f0f9ff 100%);border:1px solid #93c5fd;border-left:4px solid #0053e2;border-radius:10px;padding:20px 22px;margin:20px 0;break-inside:avoid;page-break-inside:avoid;">'
-        +'<div style="font-size:13px;font-weight:800;color:#0053e2;margin-bottom:12px;display:flex;align-items:center;gap:6px;">💡 Key Insights & Action Items</div>'
-        +'<ul style="margin:0;padding-left:20px;font-size:11.5px;color:#1e40af;line-height:2;">'
-        +items.map(function(i){return '<li style="margin-bottom:2px;">'+i+'</li>';}).join('')
-        +'</ul></div>';
-}
-function sectionTitle(icon,text) {
-    return '<h3 style="'+S.section+'"><span style="font-size:18px;">'+icon+'</span> '+text+'</h3>';
-}
-function divider() {
-    return '<div style="border-top:3px solid #0053e2;margin:32px 0 24px;opacity:0.15;"></div>';
-}
-
 /* ══════════ BANNER COMPARISON TABLE ══════════ */
 function bannerComparisonRow(stores) {
     var sp = splitByBanner(stores);
@@ -128,10 +83,10 @@ function bannerComparisonRow(stores) {
 
 /* ══════════ OPS REGION BREAKOUT ══════════ */
 function buildOpsRegionBreakout(stores) {
-    /* Group by ops_region, only show regions with significant presence (>=10 stores) */
+    /* Group by realty_ops_region, only show regions with significant presence (>=10 stores) */
     var regionMap = {};
     stores.forEach(function(s) {
-        var r = s.ops_region;
+        var r = s.realty_ops_region;
         if (!r) return;
         if (!regionMap[r]) regionMap[r] = [];
         regionMap[r].push(s);
@@ -224,117 +179,6 @@ function buildRmBreakout(stores, level) {
     return h;
 }
 
-/* ══════════ SVG CHART HELPERS ══════════ */
-function svgBarChart(title,data,opts) {
-    opts=opts||{};
-    var W=opts.width||520,barH=opts.barHeight||24,gap=5,labelW=opts.labelWidth||140;
-    var maxVal=opts.max||Math.max.apply(null,data.map(function(d){return d.value;}))||1;
-    var chartW=W-labelW-65;
-    var H=data.length*(barH+gap)+32;
-    var svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" style="font-family:Segoe UI,system-ui,sans-serif;">';
-    if (title) svg+='<text x="0" y="15" font-size="12" font-weight="700" fill="#334155">'+title+'</text>';
-    var y0=title?28:6;
-    data.forEach(function(d,i) {
-        var y=y0+i*(barH+gap);
-        var barW=Math.max(3,(d.value/maxVal)*chartW);
-        var c=d.color||'#0053e2';
-        svg+='<text x="'+(labelW-6)+'" y="'+(y+barH/2+4)+'" font-size="10" fill="#475569" text-anchor="end">'+d.label+'</text>';
-        svg+='<rect x="'+labelW+'" y="'+y+'" width="'+chartW+'" height="'+barH+'" rx="4" fill="#f1f5f9"/>';
-        svg+='<rect x="'+labelW+'" y="'+y+'" width="'+barW+'" height="'+barH+'" rx="4" fill="'+c+'"/>';
-        var valStr=opts.suffix==='%'?d.value.toFixed(1)+'%':d.value.toLocaleString();
-        var tx=barW>55?(labelW+barW-6):(labelW+barW+6);
-        var ta=barW>55?'end':'start';
-        var tc=barW>55?'#fff':'#334155';
-        svg+='<text x="'+tx+'" y="'+(y+barH/2+4)+'" font-size="10" font-weight="600" fill="'+tc+'" text-anchor="'+ta+'">'+valStr+'</text>';
-    });
-    svg+='</svg>';
-    return '<div style="margin:8px 0;">'+svg+'</div>';
-}
-function svgDonutChart(title,data,opts) {
-    opts=opts||{};
-    var size=opts.size||150,r=size*0.35,stroke=opts.stroke||22;
-    var cx=size/2,cy=size/2;
-    var total=data.reduce(function(s,d){return s+d.value;},0)||1;
-    var W=size+210,H=Math.max(size,data.length*24+30);
-    var svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" style="font-family:Segoe UI,system-ui,sans-serif;">';
-    if (title) svg+='<text x="0" y="14" font-size="12" font-weight="700" fill="#334155">'+title+'</text>';
-    var offy=title?20:0;
-    svg+='<text x="'+cx+'" y="'+(cy+offy-4)+'" font-size="20" font-weight="800" fill="#1e293b" text-anchor="middle">'+total.toLocaleString()+'</text>';
-    svg+='<text x="'+cx+'" y="'+(cy+offy+12)+'" font-size="9" fill="#94a3b8" text-anchor="middle">Total</text>';
-    var cumAngle=-90;
-    data.forEach(function(d) {
-        var angle=(d.value/total)*360;
-        if (angle<0.5){cumAngle+=angle;return;}
-        var s1=cumAngle*Math.PI/180,s2=(cumAngle+angle)*Math.PI/180;
-        var x1=cx+r*Math.cos(s1),y1=(cy+offy)+r*Math.sin(s1);
-        var x2=cx+r*Math.cos(s2),y2=(cy+offy)+r*Math.sin(s2);
-        svg+='<path d="M '+x1+' '+y1+' A '+r+' '+r+' 0 '+(angle>180?1:0)+' 1 '+x2+' '+y2+'" fill="none" stroke="'+d.color+'" stroke-width="'+stroke+'"/>';
-        cumAngle+=angle;
-    });
-    var lx=size+16,ly=offy+12;
-    data.forEach(function(d,i) {
-        var y=ly+i*24;
-        svg+='<rect x="'+lx+'" y="'+(y-8)+'" width="14" height="14" rx="3" fill="'+d.color+'"/>';
-        svg+='<text x="'+(lx+20)+'" y="'+(y+3)+'" font-size="10" font-weight="600" fill="#334155">'+d.label+'</text>';
-        svg+='<text x="'+(lx+20)+'" y="'+(y+16)+'" font-size="9" fill="#64748b">'+d.value.toLocaleString()+' ('+(d.value/total*100).toFixed(1)+'%)</text>';
-    });
-    svg+='</svg>';
-    return '<div style="margin:4px 0;">'+svg+'</div>';
-}
-function svgGauge(label,value,opts) {
-    opts=opts||{};
-    var size=opts.size||130,stroke=18;
-    var r=size*0.35,cx=size/2,cy=size*0.55;
-    var color=value>=95?'#15803d':value>=90?'#16a34a':value>=85?'#65a30d':value>=80?'#d97706':'#dc2626';
-    var angle=Math.min(180,value/100*180);
-    var sR=Math.PI,eR=Math.PI-(angle*Math.PI/180);
-    var x1=cx+r*Math.cos(sR),y1=cy+r*Math.sin(sR);
-    var x2=cx+r*Math.cos(eR),y2=cy+r*Math.sin(eR);
-    var svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+size+'" height="'+(size*0.72)+'" style="font-family:Segoe UI,system-ui,sans-serif;">';
-    svg+='<path d="M '+(cx-r)+' '+cy+' A '+r+' '+r+' 0 0 1 '+(cx+r)+' '+cy+'" fill="none" stroke="#e2e8f0" stroke-width="'+stroke+'" stroke-linecap="round"/>';
-    if (angle>0.5)
-        svg+='<path d="M '+x1+' '+y1+' A '+r+' '+r+' 0 '+(angle>90?1:0)+' 1 '+x2+' '+y2+'" fill="none" stroke="'+color+'" stroke-width="'+stroke+'" stroke-linecap="round"/>';
-    svg+='<text x="'+cx+'" y="'+(cy-2)+'" font-size="20" font-weight="800" fill="'+color+'" text-anchor="middle">'+value.toFixed(1)+'%</text>';
-    svg+='<text x="'+cx+'" y="'+(cy+14)+'" font-size="9" fill="#64748b" text-anchor="middle">'+label+'</text>';
-    svg+='</svg>';
-    return svg;
-}
-function chartRow() {
-    var charts=Array.prototype.slice.call(arguments);
-    return '<div style="display:flex;gap:20px;margin:14px 0;align-items:flex-start;flex-wrap:wrap;break-inside:avoid;page-break-inside:avoid;">'+charts.join('')+'</div>';
-}
-
-/* ══════════ GROUP STORES (descending — best on top) ══════════ */
-function groupStores(stores,groupBy) {
-    var map={};
-    stores.forEach(function(s){var k=s[groupBy]||'Unknown';if(!map[k])map[k]=[];map[k].push(s);});
-    return Object.entries(map).map(function(e){
-        var name=e[0],ss=e[1];
-        return {name:name,count:ss.length,avgRef30:safeAvg(ss,'twt_ref_30_day'),avgHvac30:safeAvg(ss,'twt_hvac_30_day'),
-            totalLoss:ss.reduce(function(s,d){return s+(d.total_loss||0);},0),
-            casesOOT:ss.reduce(function(s,d){return s+(d.cases_out_of_target||0);},0)};
-    }).sort(function(a,b){return b.avgRef30-a.avgRef30;});
-}
-function buildGroupTable(groups,label) {
-    var html=sectionTitle('\ud83d\udcca','Performance by '+label);
-    html+='<table style="width:100%;border-collapse:collapse;font-size:11px;border-radius:8px;overflow:hidden;"><thead><tr style="'+S.hdr+'">';
-    html+='<th style="'+th()+'">'+label+'</th><th style="'+th()+'">Stores</th>';
-    html+='<th style="'+th()+'">Ref 30d</th><th style="'+th()+'">HVAC 30d</th>';
-    html+='<th style="'+th()+'">Total Loss</th><th style="'+th()+'">Cases OOT</th></tr></thead><tbody>';
-    groups.forEach(function(g,i) {
-        var bg=i%2===0?'#f8fafc':'#fff';
-        html+='<tr style="background:'+bg+';">';
-        html+='<td style="'+td()+'font-weight:600;">'+g.name+'</td>';
-        html+='<td style="'+td()+'">'+g.count+'</td>';
-        html+='<td style="'+td()+scoreColor(g.avgRef30)+'">'+g.avgRef30.toFixed(1)+'%</td>';
-        html+='<td style="'+td()+scoreColor(g.avgHvac30)+'">'+g.avgHvac30.toFixed(1)+'%</td>';
-        html+='<td style="'+td()+'color:#dc2626;">$'+g.totalLoss.toLocaleString(undefined,{maximumFractionDigits:0})+'</td>';
-        html+='<td style="'+td()+'">'+g.casesOOT.toLocaleString()+'</td></tr>';
-    });
-    html+='</tbody></table>';
-    return html;
-}
-
 /* ══════════ BUILD PDF CONTENT ══════════ */
 function buildPdfContent(tab,level,person) {
     var isAll=person==='__all__';
@@ -391,6 +235,9 @@ function buildTntPdf(stores,level,person,isAll) {
 
     // ---- Ops Region Breakout (if >1 significant region) ----
     h+=buildOpsRegionBreakout(stores);
+
+    // ---- 90-Day Historical Trend ----
+    h+=buildHistTrend(stores, person);
 
     // Insights
     var ins=[];
@@ -584,6 +431,8 @@ function buildCombinedPdf(stores,level,person,isAll) {
     h+=bannerComparisonRow(stores);
     // Ops region breakout in exec summary
     h+=buildOpsRegionBreakout(stores);
+    // 90-day trend in exec summary
+    h+=buildHistTrend(stores, person);
     var tIns=[];
     var sp=splitByBanner(stores);
     var trend=a7>a30?'trending up':'trending down';

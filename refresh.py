@@ -114,14 +114,68 @@ GROUP BY lp.tracking_number
 
 QUERY_STORES = """
 SELECT
-  store_number, banner_desc, city_name AS store_city, state_cd AS store_state,
-  fm_sr_director_name, fm_director_name, fm_regional_manager_name,
-  fs_manager_name, fs_market, ops_region,
-  twt_ref, twt_ref_7_day, twt_ref_30_day, twt_ref_90_day,
-  twt_hvac, twt_hvac_7_day, twt_hvac_30_day, twt_hvac_90_day,
-  case_count, cases_out_of_target, total_loss
-FROM `re-crystal-mdm-prod.crystal.store_tabular_view`
-WHERE country_cd = 'US'
+  s.store_number, s.banner_desc, s.city_name AS store_city, s.state_cd AS store_state,
+  s.fm_sr_director_name, s.fm_director_name, s.fm_regional_manager_name,
+  s.fs_manager_name, s.fs_market, s.ops_region,
+  r.realty_ops_region,
+  s.twt_ref, s.twt_ref_7_day, s.twt_ref_30_day, s.twt_ref_90_day,
+  s.twt_hvac, s.twt_hvac_7_day, s.twt_hvac_30_day, s.twt_hvac_90_day,
+  s.case_count, s.cases_out_of_target, s.total_loss
+FROM `re-crystal-mdm-prod.crystal.store_tabular_view` s
+LEFT JOIN `re-ods-prod.us_re_ods_prod_pub.isp_fm_realty_alignment` r
+  ON CAST(s.store_number AS STRING) = CAST(r.store_no AS STRING)
+WHERE s.country_cd = 'US'
+"""
+
+QUERY_HIST_TIT = """
+WITH daily_store AS (
+  SELECT store_nbr, run_date, AVG(time_in_target) as avg_tit
+  FROM `re-ods-prod.us_re_ods_prod_pub.store_score`
+  WHERE run_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 90 DAY)
+  GROUP BY store_nbr, run_date
+)
+SELECT
+  d.run_date as dt,
+  s.fm_director_name as dir,
+  CASE WHEN s.banner_desc LIKE '%Sam%' THEN 'S' ELSE 'W' END as bn,
+  COUNT(*) as n,
+  ROUND(AVG(d.avg_tit), 2) as tit
+FROM daily_store d
+JOIN `re-crystal-mdm-prod.crystal.store_tabular_view` s
+  ON d.store_nbr = s.store_number
+WHERE s.country_cd = 'US'
+  AND s.banner_desc IN ('WM Supercenter','Neighborhood Market','Wal-Mart')
+  AND s.fm_director_name IS NOT NULL
+GROUP BY d.run_date, s.fm_director_name,
+  CASE WHEN s.banner_desc LIKE '%Sam%' THEN 'S' ELSE 'W' END
+ORDER BY d.run_date
+"""
+
+QUERY_HIST_ROR = """
+WITH daily_store AS (
+  SELECT store_nbr, run_date, AVG(time_in_target) as avg_tit
+  FROM `re-ods-prod.us_re_ods_prod_pub.store_score`
+  WHERE run_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 90 DAY)
+  GROUP BY store_nbr, run_date
+)
+SELECT
+  d.run_date as dt,
+  s.fm_director_name as dir,
+  CAST(r.realty_ops_region AS STRING) as ror,
+  COUNT(*) as n,
+  ROUND(AVG(d.avg_tit), 2) as tit
+FROM daily_store d
+JOIN `re-crystal-mdm-prod.crystal.store_tabular_view` s
+  ON d.store_nbr = s.store_number
+LEFT JOIN `re-ods-prod.us_re_ods_prod_pub.isp_fm_realty_alignment` r
+  ON CAST(s.store_number AS STRING) = CAST(r.store_no AS STRING)
+WHERE s.country_cd = 'US'
+  AND s.banner_desc IN ('WM Supercenter','Neighborhood Market','Wal-Mart')
+  AND s.fm_director_name IS NOT NULL
+  AND r.realty_ops_region IS NOT NULL
+GROUP BY d.run_date, s.fm_director_name, r.realty_ops_region
+HAVING n >= 10
+ORDER BY d.run_date
 """
 
 
@@ -148,6 +202,107 @@ def run_bq(query: str, output_path: Path, max_rows: int = 15000) -> int:
     row_count = len(lines) - 1  # minus header
     print(f"   \u2705 {row_count} rows")
     return row_count
+
+
+def csv_to_json(csv_path: Path, json_path: Path, compact_keys: dict = None,
+                float_cols: set = None, int_cols: set = None) -> int:
+    """Convert a BQ CSV output to compact JSON. Returns row count."""
+    rows = load_csv(csv_path)
+    result = []
+    for row in rows:
+        d = {}
+        for k, v in row.items():
+            out_key = compact_keys.get(k, k) if compact_keys else k
+            if v == '' or v is None:
+                d[out_key] = None
+            elif float_cols and k in float_cols:
+                try:
+                    d[out_key] = float(v)
+                except (ValueError, TypeError):
+                    d[out_key] = None
+            elif int_cols and k in int_cols:
+                try:
+                    d[out_key] = int(v)
+                except (ValueError, TypeError):
+                    d[out_key] = 0
+            else:
+                d[out_key] = v
+        result.append(d)
+    json_path.write_text(json.dumps(result, separators=(',', ':')))
+    print(f"   \u2705 Converted {csv_path.name} -> {json_path.name} ({len(result)} rows)")
+    return len(result)
+
+
+def embed_data_in_html():
+    """Embed store_data, hist_tit, and hist_ror JSON into index.html."""
+    html_path = PROJECT / 'index.html'
+    html = html_path.read_text()
+
+    # Convert CSVs -> JSON
+    store_csv = PROJECT / 'store_data.csv'
+    if store_csv.exists():
+        csv_to_json(
+            store_csv, PROJECT / 'store_data.json',
+            float_cols={'twt_ref','twt_ref_7_day','twt_ref_30_day','twt_ref_90_day',
+                        'twt_hvac','twt_hvac_7_day','twt_hvac_30_day','twt_hvac_90_day',
+                        'total_loss'},
+            int_cols={'case_count','cases_out_of_target'}
+        )
+
+    hist_csv = PROJECT / 'hist_tit.csv'
+    if hist_csv.exists():
+        csv_to_json(
+            hist_csv, PROJECT / 'hist_tit.json',
+            compact_keys={'dt': 'd', 'dir': 'dir', 'bn': 'bn', 'n': 'n', 'tit': 't'},
+            float_cols={'tit'}, int_cols={'n'}
+        )
+
+    ror_csv = PROJECT / 'hist_ror.csv'
+    if ror_csv.exists():
+        csv_to_json(
+            ror_csv, PROJECT / 'hist_ror.json',
+            compact_keys={'dt': 'd', 'dir': 'dir', 'ror': 'r', 'n': 'n', 'tit': 't'},
+            float_cols={'tit'}, int_cols={'n'}
+        )
+
+    # Embed store_data.json
+    sd_path = PROJECT / 'store_data.json'
+    if sd_path.exists():
+        sd_json = sd_path.read_text().strip()
+        marker = 'const EMBEDDED_STORE_DATA = '
+        s = html.find(marker)
+        if s >= 0:
+            js = s + len(marker)
+            bc, i = 0, js
+            while i < len(html):
+                if html[i] == '[': bc += 1
+                elif html[i] == ']':
+                    bc -= 1
+                    if bc == 0: break
+                i += 1
+            html = html[:js] + sd_json + html[i+1:]
+            print("   \u2705 Embedded EMBEDDED_STORE_DATA")
+
+    # Embed HIST_TIT + HIST_ROR
+    ht_path = PROJECT / 'hist_tit.json'
+    hr_path = PROJECT / 'hist_ror.json'
+    if ht_path.exists() and hr_path.exists():
+        ht_json = ht_path.read_text().strip()
+        hr_json = hr_path.read_text().strip()
+        block = f'const HIST_TIT = {ht_json};\n        const HIST_ROR = {hr_json};'
+        if 'const HIST_TIT = ' in html:
+            hs = html.find('const HIST_TIT = ')
+            he = html.find(';', html.find('const HIST_ROR = ', hs))
+            html = html[:hs] + block + html[he+1:]
+        else:
+            # Insert after EMBEDDED_STORE_DATA line
+            ins = html.find('const EMBEDDED_STORE_DATA = ')
+            eol = html.find(';\n', ins)
+            html = html[:eol+2] + '        ' + block + '\n' + html[eol+2:]
+        print("   \u2705 Embedded HIST_TIT + HIST_ROR")
+
+    html_path.write_text(html)
+    print(f"   \u2705 index.html updated ({len(html):,} chars)")
 
 
 def load_csv(path: Path) -> list[dict]:
@@ -358,7 +513,9 @@ def main():
         run_bq(QUERY_WTW_WORKORDERS, BQ_RAW_CSV)
         run_bq(QUERY_RACK_SCORES, RACK_CSV, max_rows=10000)
         run_bq(QUERY_LABOR, LABOR_CSV)
-        run_bq(QUERY_STORES, PROJECT / 'store_data.json')  # for TnT tab
+        run_bq(QUERY_STORES, PROJECT / 'store_data.csv')  # for TnT tab
+        run_bq(QUERY_HIST_TIT, PROJECT / 'hist_tit.csv', max_rows=8000)
+        run_bq(QUERY_HIST_ROR, PROJECT / 'hist_ror.csv', max_rows=8000)
 
         # Merge BQ data + rack scores + labor + phases
         print("\n\U0001f527 Step 2: Merging data")
@@ -377,6 +534,10 @@ def main():
     # --- Step 2: Rebuild HTML tabs ---
     print("\n\U0001f3d7\ufe0f  Step 3: Rebuilding dashboard tabs")
     run_tab_scripts()
+
+    # --- Step 2b: Embed data into HTML ---
+    print("\n\U0001f4e6 Step 3b: Embedding data into index.html")
+    embed_data_in_html()
 
     # --- Step 3: Git push ---
     if local_only or no_push:
