@@ -61,7 +61,7 @@ function bannerComparisonRow(stores) {
     var labels = [{key:'all',name:'Combined',icon:'🏢',stores:sp.all},
                   {key:'wm',name:'Walmart',icon:'🟦',stores:sp.wm},
                   {key:'sams',name:"Sam's Club",icon:'🟩',stores:sp.sams}];
-    var h = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0 20px;break-inside:avoid;page-break-inside:avoid;">';
+    var h = '<div class="no-break" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0 20px;">';
     labels.forEach(function(b) {
         var s = b.stores;
         var r30 = safeAvg(s,'twt_ref_30_day'), h30 = safeAvg(s,'twt_hvac_30_day');
@@ -100,7 +100,7 @@ function buildOpsRegionBreakout(stores) {
     var h = sectionTitle('\ud83d\uddfa\ufe0f', 'Performance by Ops Realty Region');
     /* Cards layout — Combined first, then each region */
     var cols = Math.min(regions.length + 1, 4);  /* max 4 columns */
-    h += '<div style="display:grid;grid-template-columns:repeat('+cols+',1fr);gap:12px;margin:16px 0 20px;break-inside:avoid;page-break-inside:avoid;">';
+    h += '<div class="no-break" style="display:grid;grid-template-columns:repeat('+cols+',1fr);gap:12px;margin:16px 0 20px;">';
     /* Combined card */
     var r30All = safeAvg(stores,'twt_ref_30_day'), h30All = safeAvg(stores,'twt_hvac_30_day');
     var lossAll = stores.reduce(function(a,d){return a+(d.total_loss||0);},0);
@@ -223,7 +223,7 @@ function buildTntPdf(stores,level,person,isAll) {
     var trend=a7>a30?'\ud83d\udcc8 Up':a7<a30-1?'\ud83d\udcc9 Down':'\u27a1\ufe0f Stable';
     var h='';
     // KPIs + Gauges (keep together)
-    h+='<div style="break-inside:avoid;page-break-inside:avoid;">';
+    h+='<div class="no-break">';
     h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px;">';
     h+=kpiBox('Ref 7-Day',a7,'%')+kpiBox('Ref 30-Day',a30,'%')+kpiBox('Ref 90-Day',a90,'%');
     h+=kpiBox('HVAC 30-Day',aH,'%')+kpiBox('7d Trend',trend,'',a7>=a30?'#16a34a':'#dc2626');
@@ -236,11 +236,11 @@ function buildTntPdf(stores,level,person,isAll) {
 
     // Ops Region Breakout
     var opsContent=buildOpsRegionBreakout(stores);
-    if(opsContent) h+='<div style="break-inside:avoid;page-break-inside:avoid;">'+opsContent+'</div>';
+    if(opsContent) h+='<div class="no-break">'+opsContent+'</div>';
 
     // 90-Day Historical Trend
     var histContent=buildHistTrend(stores, person);
-    if(histContent) h+='<div style="break-inside:avoid;page-break-inside:avoid;">'+histContent+'</div>';
+    if(histContent) h+='<div class="no-break">'+histContent+'</div>';
 
     // Insights
     var ins=[];
@@ -258,7 +258,7 @@ function buildTntPdf(stores,level,person,isAll) {
 
     // Regional Manager Breakout
     var rmContent=buildRmBreakout(stores,level);
-    if(rmContent) h+='<div style="break-inside:avoid;page-break-inside:avoid;">'+rmContent+'</div>';
+    if(rmContent) h+='<div class="no-break">'+rmContent+'</div>';
 
     // Group breakdown bar chart + table
     var gBy=level==='sr_director'?'fm_sr_director_name':'fm_director_name';
@@ -269,7 +269,7 @@ function buildTntPdf(stores,level,person,isAll) {
     var gcd=grps.slice(0,15).map(function(g){
         return {label:g.name.substring(0,22),value:g.avgRef30,color:g.avgRef30>=95?'#15803d':g.avgRef30>=90?'#16a34a':g.avgRef30>=85?'#65a30d':g.avgRef30>=80?'#d97706':'#dc2626'};
     });
-    h+='<div style="break-inside:avoid;page-break-inside:avoid;">';
+    h+='<div class="no-break">';
     h+=svgBarChart('Ref 30-Day by '+grpLabel,gcd,{width:540,labelWidth:160,max:100,suffix:'%'});
     h+='</div>';
     h+=buildGroupTable(grps,grpLabel);
@@ -322,7 +322,7 @@ function buildWtwPdf(stores,level,person,isAll) {
     var rev=wos.filter(function(w){return w.st==='COMPLETED'&&w.pm!=null&&parseFloat(w.pm)>=90;}).length;
     var crit=wos.filter(function(w){return w.st==='COMPLETED'&&w.pm!=null&&parseFloat(w.pm)<90;}).length;
     var h='';
-    h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px;break-inside:avoid;page-break-inside:avoid;">';
+    h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px;">';
     h+=kpiBox('Total WOs',wos.length,'','#334155')+kpiBox('Completed',done.length,'','#16a34a');
     h+=kpiBox('Open',opn,'',opn>0?'#dc2626':'#16a34a')+kpiBox('Completion',cpct.toFixed(1),'%');
     h+=kpiBox('Avg PM',pmA>0?pmA.toFixed(1):'N/A',pmA>0?'%':'',pmA>=90?'#16a34a':pmA>0?'#dc2626':'#94a3b8');
@@ -380,7 +380,7 @@ function buildLeakPdf(stores,level,person,isAll) {
     var ov=ls.filter(function(s){return(s.cylr||0)>LKT;}).length;
     var cr=ls.filter(function(s){return(s.cylr||0)>LKT*1.5;}).length;
     var h='';
-    h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px;break-inside:avoid;page-break-inside:avoid;">';
+    h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px;">';
     h+=kpiBox('Stores',ls.length,'','#334155')+kpiBox('System Charge',(tc/1e6).toFixed(1)+'M lbs','','#334155');
     h+=kpiBox('Qty Leaked',(tq/1e3).toFixed(0)+'K lbs','','#dc2626');
     h+=kpiBox('Leak Rate',ar.toFixed(1),'%',ar>LKT?'#dc2626':'#16a34a');
@@ -432,7 +432,7 @@ function buildCombinedPdf(stores,level,person,isAll) {
     var b90=stores.filter(function(s){return s.twt_ref_30_day!=null&&s.twt_ref_30_day<90;}).length;
     var a90c=stores.filter(function(s){return s.twt_ref_30_day!=null&&s.twt_ref_30_day>=90;}).length;
     h+=sectionTitle('\ud83d\udcca','Refrigeration & HVAC Time in Target');
-    h+='<div style="break-inside:avoid;page-break-inside:avoid;">';
+    h+='<div class="no-break">';
     h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px;">';
     h+=kpiBox('Ref 7d',a7,'%')+kpiBox('Ref 30d',a30,'%')+kpiBox('Ref 90d',a90,'%');
     h+=kpiBox('HVAC 30d',aH,'%')+kpiBox('<90%',b90,'',b90>0?'#dc2626':'#16a34a');
@@ -483,7 +483,7 @@ function buildCombinedPdf(stores,level,person,isAll) {
         var rdy=wos.filter(function(w){return w.st!=='COMPLETED'&&w.pm!=null&&parseFloat(w.pm)>=90;}).length;
         var crit=wos.filter(function(w){return w.st==='COMPLETED'&&w.pm!=null&&parseFloat(w.pm)<90;}).length;
         h+=sectionTitle('\u2744\ufe0f','Win the Winter FY26');
-        h+='<div style="break-inside:avoid;page-break-inside:avoid;">';
+        h+='<div class="no-break">';
         h+='<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:14px;">';
         h+=kpiBox('WOs',wos.length,'','#334155')+kpiBox('Done',done.length,'','#16a34a');
         h+=kpiBox('Open',opn,'',opn>0?'#dc2626':'#16a34a')+kpiBox('Completion',cpct.toFixed(1),'%');
@@ -516,7 +516,7 @@ function buildCombinedPdf(stores,level,person,isAll) {
         var ar2=tc2>0?(tq2/tc2*100):0;
         var ov2=lks.filter(function(s){return(s.cylr||0)>LKT;}).length;
         h+=sectionTitle('\ud83e\uddca','Leak Management');
-        h+='<div style="break-inside:avoid;page-break-inside:avoid;">';
+        h+='<div class="no-break">';
         h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px;">';
         h+=kpiBox('Stores',lks.length,'','#334155')+kpiBox('Charge',(tc2/1e6).toFixed(1)+'M lbs','','#334155');
         h+=kpiBox('Leaked',(tq2/1e3).toFixed(0)+'K lbs','','#dc2626');
@@ -557,16 +557,17 @@ async function generatePdf() {
         idoc.write('<!DOCTYPE html><html><head><style>'
             +'*{margin:0;padding:0;box-sizing:border-box;}'
             +'body{font-family:"Segoe UI",system-ui,-apple-system,sans-serif;background:#fff;color:#1e293b;padding:36px 40px;width:1100px;line-height:1.5;}'
-            +'table{border-collapse:collapse;width:100%;break-inside:avoid;page-break-inside:avoid;}'
+            +'table{border-collapse:collapse;width:100%;}'
+            +'.no-break{}'
+            +'.page-break{break-before:page;page-break-before:always;}'
             +'h3{break-after:avoid;page-break-after:avoid;}'
-            +'svg{break-inside:avoid;page-break-inside:avoid;}'
             +'</style></head><body>'+htmlStr+'</body></html>');
         idoc.close();
         await new Promise(function(r){setTimeout(r,600);});
         var opt={margin:[0.3,0.3,0.3,0.3],filename:fn,image:{type:'jpeg',quality:0.95},
             html2canvas:{scale:2,useCORS:true,logging:false},
             jsPDF:{unit:'in',format:'letter',orientation:'landscape'},
-            pagebreak:{mode:['avoid-all','css'],avoid:['tr','svg','div[style*="break-inside"]']}};
+            pagebreak:{mode:['css'],before:'.page-break',avoid:'.no-break'}};
         await html2pdf().set(opt).from(idoc.body).save();
         document.body.removeChild(iframe);
         closePdfModal();

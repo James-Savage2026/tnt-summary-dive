@@ -26,7 +26,7 @@ function svgTrendChart(title, series, opts) {
     dates.forEach(function(d, i) { dateIdx[d] = i; });
     function xPos(d) { return padL + (dateIdx[d] / (nDates - 1)) * cW; }
     function yPos(v) { return padT + cH - ((v - vMin) / range) * cH; }
-    var svg = '<svg width="'+W+'" height="'+H+'" xmlns="http://www.w3.org/2000/svg" style="break-inside:avoid;page-break-inside:avoid;">';
+    var svg = '<svg width="'+W+'" height="'+H+'" xmlns="http://www.w3.org/2000/svg" style="">';
     /* Title */
     svg += '<text x="'+padL+'" y="18" font-size="13" font-weight="700" fill="#1e293b">'+title+'</text>';
     /* Grid lines + Y labels */
@@ -65,7 +65,7 @@ function svgTrendChart(title, series, opts) {
         svg += '<text x="'+(lx+16)+'" y="'+ly+'" font-size="10" fill="#475569">'+s.label+'</text>';
     });
     svg += '</svg>';
-    return '<div style="break-inside:avoid;page-break-inside:avoid;margin:12px 0;">'+svg+'</div>';
+    return '<div class="no-break" style="margin:12px 0;">'+svg+'</div>';
 }
 
 /* Build 90-day trend for a set of stores */
@@ -118,7 +118,7 @@ var S = {
     th: 'padding:10px 12px;text-align:left;font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;',
     td: 'padding:9px 12px;border-bottom:1px solid #e2e8f0;font-size:11px;',
     hdr: 'background:linear-gradient(135deg,#0053e2 0%,#003da5 100%);color:#fff;',
-    card: 'border:1px solid #e2e8f0;border-radius:12px;padding:16px 18px;text-align:center;background:linear-gradient(180deg,#fff 0%,#f8fafc 100%);box-shadow:0 1px 3px rgba(0,0,0,0.06);break-inside:avoid;page-break-inside:avoid;',
+    card: 'border:1px solid #e2e8f0;border-radius:12px;padding:16px 18px;text-align:center;background:linear-gradient(180deg,#fff 0%,#f8fafc 100%);box-shadow:0 1px 3px rgba(0,0,0,0.06);',
     section: 'font-size:15px;font-weight:800;margin:28px 0 12px;color:#0053e2;padding-bottom:8px;border-bottom:3px solid #0053e2;display:flex;align-items:center;gap:8px;break-after:avoid;page-break-after:avoid;',
     page: 'width:1100px;padding:40px 44px;font-family:"Segoe UI",system-ui,-apple-system,sans-serif;background:#fff;color:#1e293b;line-height:1.6;'
 };
@@ -146,7 +146,7 @@ function safeAvg(data,field) {
     return v.length?v.reduce(function(s,d){return s+parseFloat(d[field]);},0)/v.length:0;
 }
 function insightBox(items) {
-    return '<div style="background:linear-gradient(135deg,#eff6ff 0%,#f0f9ff 100%);border:1px solid #93c5fd;border-left:4px solid #0053e2;border-radius:10px;padding:20px 22px;margin:20px 0;break-inside:avoid;page-break-inside:avoid;">'
+    return '<div class="no-break" style="background:linear-gradient(135deg,#eff6ff 0%,#f0f9ff 100%);border:1px solid #93c5fd;border-left:4px solid #0053e2;border-radius:10px;padding:20px 22px;margin:20px 0;">'
         +'<div style="font-size:13px;font-weight:800;color:#0053e2;margin-bottom:12px;display:flex;align-items:center;gap:6px;">💡 Key Insights & Action Items</div>'
         +'<ul style="margin:0;padding-left:20px;font-size:11.5px;color:#1e40af;line-height:2;">'
         +items.map(function(i){return '<li style="margin-bottom:2px;">'+i+'</li>';}).join('')
@@ -157,7 +157,7 @@ function sectionTitle(icon,text) {
 }
 /* Wrap a section title + content so they stay together on one page */
 function sectionBlock(icon, text, content) {
-    return '<div style="break-inside:avoid;page-break-inside:avoid;">'
+    return '<div class="no-break">'
         + sectionTitle(icon, text) + content + '</div>';
 }
 function divider() {
@@ -242,7 +242,7 @@ function svgGauge(label,value,opts) {
 }
 function chartRow() {
     var charts=Array.prototype.slice.call(arguments);
-    return '<div style="display:flex;gap:20px;margin:14px 0;align-items:flex-start;flex-wrap:wrap;break-inside:avoid;page-break-inside:avoid;">'+charts.join('')+'</div>';
+    return '<div class="no-break" style="display:flex;gap:20px;margin:14px 0;align-items:flex-start;flex-wrap:wrap;">'+charts.join('')+'</div>';
 }
 
 /* ══════════ GROUP STORES (descending — best on top) ══════════ */
