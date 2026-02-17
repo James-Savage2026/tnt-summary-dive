@@ -336,9 +336,9 @@ function buildWtwPdf(stores,level,person,isAll) {
     var p2d=p2.filter(function(w){return w.st==='COMPLETED';}).length;
     var p3d=p3.filter(function(w){return w.st==='COMPLETED';}).length;
     var p1p=p1.length>0?p1d/p1.length*100:0,p2p=p2.length>0?p2d/p2.length*100:0,p3p=p3.length>0?p3d/p3.length*100:0;
-    var rdy=wos.filter(function(w){return w.st!=='COMPLETED'&&w.pm!=null&&parseFloat(w.pm)>=90;}).length;
-    var rev=wos.filter(function(w){return w.st==='COMPLETED'&&w.pm!=null&&parseFloat(w.pm)>=90;}).length;
-    var crit=wos.filter(function(w){return w.st==='COMPLETED'&&w.pm!=null&&parseFloat(w.pm)<90;}).length;
+    var rdy=wos.filter(function(w){return w.st!=='COMPLETED'&&w.allP==='PASS';}).length;
+    var rev=wos.filter(function(w){return w.st==='COMPLETED'&&w.allP==='PASS';}).length;
+    var crit=wos.filter(function(w){return w.st==='COMPLETED'&&w.allP==='FAIL'&&w.div1!=='Y';}).length;
     var h='';
     h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px;">';
     h+=kpiBox('Total WOs',wos.length,'','#334155')+kpiBox('Completed',done.length,'','#16a34a');
@@ -512,8 +512,8 @@ function buildCombinedPdf(stores,level,person,isAll) {
         var p2d=p2.filter(function(w){return w.st==='COMPLETED';}).length;
         var p3d=p3.filter(function(w){return w.st==='COMPLETED';}).length;
         var p1p=p1.length>0?p1d/p1.length*100:0,p2p=p2.length>0?p2d/p2.length*100:0,p3p=p3.length>0?p3d/p3.length*100:0;
-        var rdy=wos.filter(function(w){return w.st!=='COMPLETED'&&w.pm!=null&&parseFloat(w.pm)>=90;}).length;
-        var crit=wos.filter(function(w){return w.st==='COMPLETED'&&w.pm!=null&&parseFloat(w.pm)<90;}).length;
+        var rdy=wos.filter(function(w){return w.st!=='COMPLETED'&&w.allP==='PASS';}).length;
+        var crit=wos.filter(function(w){return w.st==='COMPLETED'&&w.allP==='FAIL'&&w.div1!=='Y';}).length;
         /* Gradient header like dashboard */
         h+='<div style="background:linear-gradient(135deg,#2563eb 0%,#06b6d4 100%);border-radius:12px;padding:18px 22px;margin:20px 0 14px;display:flex;justify-content:space-between;align-items:center;">';
         h+='<div><h2 style="font-size:17px;font-weight:800;color:#fff;margin:0;">\u2744\ufe0f Win the Winter FY26</h2>';
@@ -553,7 +553,7 @@ function buildCombinedPdf(stores,level,person,isAll) {
         h+='<div style="font-size:20px;font-weight:800;color:#16a34a;">'+rdy+'</div>';
         h+='<div style="font-size:9px;font-weight:600;color:#15803d;text-transform:uppercase;">\u2713 Ready to Close</div></div>';
         h+='<div style="background:#fefce8;border:2px solid #facc15;border-radius:10px;padding:10px;text-align:center;">';
-        var rev=wos.filter(function(w){return w.st==='COMPLETED'&&w.pm!=null&&parseFloat(w.pm)>=90;}).length;
+        var rev=wos.filter(function(w){return w.st==='COMPLETED'&&w.allP==='PASS';}).length;
         h+='<div style="font-size:20px;font-weight:800;color:#a16207;">'+rev+'</div>';
         h+='<div style="font-size:9px;font-weight:600;color:#a16207;text-transform:uppercase;">\ud83d\udd0d Review Needed</div></div>';
         h+='<div style="background:#fef2f2;border:2px solid #f87171;border-radius:10px;padding:10px;text-align:center;">';
@@ -579,13 +579,32 @@ function buildCombinedPdf(stores,level,person,isAll) {
         var tq2=lks.reduce(function(s,d){return s+(d.cytq||0);},0);
         var ar2=tc2>0?(tq2/tc2*100):0;
         var ov2=lks.filter(function(s){return(s.cylr||0)>LKT;}).length;
-        h+=sectionTitle('\ud83e\uddca','Leak Management');
+        var cr2=lks.filter(function(s){return(s.cylr||0)>LKT*1.5;}).length;
+        var tl2=lks.reduce(function(s,d){return s+(d.cyl||0);},0);
+        /* Gradient header like dashboard */
+        h+='<div style="background:linear-gradient(135deg,#0053e2 0%,#0891b2 100%);border-radius:12px;padding:18px 22px;margin:20px 0 14px;display:flex;justify-content:space-between;align-items:center;">';
+        h+='<div><h2 style="font-size:17px;font-weight:800;color:#fff;margin:0;">\ud83e\uddca Refrigerant Leak Report — CY2026</h2>';
+        h+='<p style="font-size:11px;color:rgba(255,255,255,0.8);margin:4px 0 0;">Calendar Year &bull; Cumulative Rates</p></div>';
+        h+='<div style="text-align:right;"><p style="font-size:24px;font-weight:800;color:'+(ar2>LKT?'#fca5a5':'#86efac')+';margin:0;">'+ar2.toFixed(1)+'%</p>';
+        h+='<p style="font-size:10px;color:rgba(255,255,255,0.8);margin:2px 0 0;">Fleet Leak Rate</p></div></div>';
         h+='<div class="no-break">';
-        h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px;">';
-        h+=kpiBox('Stores',lks.length,'','#334155')+kpiBox('Charge',(tc2/1e6).toFixed(1)+'M lbs','','#334155');
-        h+=kpiBox('Leaked',(tq2/1e3).toFixed(0)+'K lbs','','#dc2626');
-        h+=kpiBox('Rate',ar2.toFixed(1),'%',ar2>LKT?'#dc2626':'#16a34a');
-        h+=kpiBox('Over '+LKT+'%',ov2,'',ov2>0?'#dc2626':'#16a34a');
+        /* KPI cards matching dashboard style */
+        h+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px;">';
+        h+='<div style="text-align:center;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">';
+        h+='<div style="background:#0053e2;color:#fff;padding:6px;font-size:9px;font-weight:600;">CY2026 Leak Rate</div>';
+        h+='<div style="padding:10px;"><span style="font-size:20px;font-weight:800;'+scoreColor(100-ar2)+'">'+ar2.toFixed(1)+'%</span></div></div>';
+        h+='<div style="text-align:center;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">';
+        h+='<div style="background:#0053e2;color:#fff;padding:6px;font-size:9px;font-weight:600;">System Charge</div>';
+        h+='<div style="padding:10px;"><span style="font-size:20px;font-weight:800;color:#334155;">'+(tc2/1e6).toFixed(1)+'M</span><span style="font-size:10px;color:#64748b;"> lbs</span></div></div>';
+        h+='<div style="text-align:center;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">';
+        h+='<div style="background:#0053e2;color:#fff;padding:6px;font-size:9px;font-weight:600;">Qty Leaked CY26</div>';
+        h+='<div style="padding:10px;"><span style="font-size:20px;font-weight:800;color:#dc2626;">'+(tq2/1e3).toFixed(0)+'K</span><span style="font-size:10px;color:#64748b;"> lbs</span></div></div>';
+        h+='<div style="text-align:center;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">';
+        h+='<div style="background:#0053e2;color:#fff;padding:6px;font-size:9px;foweight:600;">Leak Events</div>';
+        h+='<div style="padding:10px;"><span style="font-size:20px;font-weight:800;color:#334155;">'+tl2.toLocaleString()+'</span></div></div>';
+        h+='<div style="text-align:center;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">';
+        h+='<div style="background:'+(ov2>0?'#dc2626':'#16a34a')+';color:#fff;padding:6px;font-size:9px;font-weight:600;">Over '+LKT+'% Threshold</div>';
+        h+='<div style="padding:10px;"><span style="font-size:20px;font-weight:800;'+(ov2>0?'color:#dc2626;':'color:#16a34a;')+'">'+ov2+'</span><span style="font-size:10px;color:#64748b;"> stores</span></div></div>';
         h+='</div>';
         h+=chartRow(svgGauge('Leak Rate',ar2,{size:130}),
             svgDonutChart('Compliance',[{label:'Under '+LKT+'%',value:lks.length-ov2,color:'#16a34a'},{label:'Over '+LKT+'%',value:ov2,color:'#dc2626'}],{size:120}));
