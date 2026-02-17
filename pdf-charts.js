@@ -6,7 +6,7 @@
 function svgTrendChart(title, series, opts) {
     /* series: [{label, color, data:[{d:'2025-01-01',v:92.3},...]},...] */
     var o = opts || {};
-    var W = o.width || 500, H = o.height || 200;
+    var W = o.width || 960, H = o.height || 200;
     var padL = 50, padR = 16, padT = 32, padB = 52;
     var cW = W - padL - padR, cH = H - padT - padB;
     var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -301,6 +301,109 @@ function buildGroupTable(groups,label) {
     });
     html+='</tbody></table>';
     return html;
+}
+
+
+/* ══════════ WTW MANAGER × PHASE MATRIX TABLE ══════════ */
+function buildWtwManagerMatrix(wos, level) {
+    /* Build RM → FSM hierarchy with per-phase completion */
+    var groupKey = level === 'sr_director' ? 'fm' : 'rm';
+    var subKey = 'fsm';
+    var groupLabel = level === 'sr_director' ? 'Director' : 'Regional Manager';
+    var tree = {};
+    wos.forEach(function(w) {
+        var gName = w[groupKey] || 'Unknown';
+        var sName = w[subKey] || 'Unassigned';
+        var ph = w.ph || 'PH1';
+        if (!tree[gName]) tree[gName] = {};
+        if (!tree[gName][sName]) tree[gName][sName] = {
+            t: 0, d: 0, ph1t: 0, ph1d: 0, ph2t: 0, ph2d: 0, ph3t: 0, ph3d: 0, ps: 0, pn: 0
+        };
+        var node = tree[gName][sName];
+        node.t++;
+        if (w.st === 'COMPLETED') node.d++;
+        if (ph === 'PH1') { node.ph1t++; if (w.st === 'COMPLETED') node.ph1d++; }
+        else if (ph === 'PH2') { node.ph2t++; if (w.st === 'COMPLETED') node.ph2d++; }
+        else { node.ph3t++; if (w.st === 'COMPLETED') node.ph3d++; }
+        if (w.pm != null && !isNaN(parseFloat(w.pm))) { node.ps += parseFloat(w.pm); node.pn++; }
+    });
+    /* Aggregate group totals */
+    var groups = Object.keys(tree).sort().map(function(gName) {
+        var subs = Object.keys(tree[gName]).sort().map(function(sName) {
+            var n = tree[gName][sName];
+            return {
+                name: sName, t: n.t, d: n.d,
+                ph1: n.ph1t > 0 ? n.ph1d / n.ph1t * 100 : -1, ph1t: n.ph1t, ph1d: n.ph1d,
+                ph2: n.ph2t > 0 ? n.ph2d / n.ph2t * 100 : -1, ph2t: n.ph2t, ph2d: n.ph2d,
+                ph3: n.ph3t > 0 ? n.ph3d / n.ph3t * 100 : -1, ph3t: n.ph3t, ph3d: n.ph3d,
+                pct: n.t > 0 ? n.d / n.t * 100 : 0,
+                pm: n.pn > 0 ? n.ps / n.pn : -1
+            };
+        });
+        /* Group totals */
+        var gt = { t: 0, d: 0, ph1t: 0, ph1d: 0, ph2t: 0, ph2d: 0, ph3t: 0, ph3d: 0, ps: 0, pn: 0 };
+        subs.forEach(function(s) {
+            gt.t += s.t; gt.d += s.d;
+            gt.ph1t += s.ph1t; gt.ph1d += s.ph1d;
+            gt.ph2t += s.ph2t; gt.ph2d += s.ph2d;
+            gt.ph3t += s.ph3t; gt.ph3d += s.ph3d;
+            if (s.pm >= 0) { gt.ps += s.pm * s.t; gt.pn += s.t; } /* weighted */
+        });
+        return {
+            name: gName, subs: subs,
+            t: gt.t, d: gt.d, pct: gt.t > 0 ? gt.d / gt.t * 100 : 0,
+            ph1: gt.ph1t > 0 ? gt.ph1d / gt.ph1t * 100 : -1,
+            ph2: gt.ph2t > 0 ? gt.ph2d / gt.ph2t * 100 : -1,
+            ph3: gt.ph3t > 0 ? gt.ph3d / gt.ph3t * 100 : -1
+        };
+    });
+    if (groups.length === 0) return '';
+    function phCell(val, done, total, isGroup) {
+        if (val < 0) return '<td style="' + td() + 'text-align:center;color:#94a3b8;padding:5px 6px;font-size:10px;">—</td>';
+        var countStr = isGroup ? '' : ' <span style="font-size:8px;color:#94a3b8;">(' + done + '/' + total + ')</span>';
+        var fw = isGroup ? 'font-weight:700;' : '';
+        return '<td style="' + td() + 'text-align:center;padding:5px 6px;font-size:10px;' + fw + scoreColor(val) + '">' + val.toFixed(0) + '%' + countStr + '</td>';
+    }
+    var h = sectionTitle('\ud83d\udcca', groupLabel + ' \u2192 FS Manager Completion by Phase');
+    h += '<table style="width:100%;border-collapse:collapse;font-size:10px;border-radius:8px;overflow:hidden;">';
+    h += '<thead><tr style="' + S.hdr + '">';
+    h += '<th style="' + th() + 'font-size:9px;min-width:130px;">' + groupLabel + ' / FS Manager</th>';
+    h += '<th style="' + th() + 'font-size:9px;text-align:center;">WOs</th>';
+    h += '<th style="' + th() + 'font-size:9px;text-align:center;">Overall</th>';
+    h += '<th style="' + th() + 'font-size:9px;text-align:center;">PH1</th>';
+    h += '<th style="' + th() + 'font-size:9px;text-align:center;">PH2</th>';
+    h += '<th style="' + th() + 'font-size:9px;text-align:center;">PH3</th>';
+    h += '<th style="' + th() + 'font-size:9px;text-align:center;">Avg PM</th>';
+    h += '</tr></thead><tbody>';
+    groups.forEach(function(g) {
+        /* Group header row */
+        h += '<tr style="background:#eef2ff;">';
+        h += '<td style="' + td() + 'font-weight:800;font-size:11px;padding:7px 8px;color:#1e40af;">' + g.name + '</td>';
+        h += '<td style="' + td() + 'text-align:center;font-weight:700;padding:7px 6px;">' + g.d + '/' + g.t + '</td>';
+        h += '<td style="' + td() + 'text-align:center;font-weight:700;padding:7px 6px;' + scoreColor(g.pct) + '">' + g.pct.toFixed(0) + '%</td>';
+        h += phCell(g.ph1, '', '', true);
+        h += phCell(g.ph2, '', '', true);
+        h += phCell(g.ph3, '', '', true);
+        h += '<td style="' + td() + 'text-align:center;padding:7px 6px;"></td>';
+        h += '</tr>';
+        /* Sub-rows for each FSM */
+        g.subs.forEach(function(s, si) {
+            var bg = si % 2 === 0 ? '#fff' : '#f8fafc';
+            h += '<tr style="background:' + bg + ';">';
+            h += '<td style="' + td() + 'padding:5px 8px 5px 24px;font-size:10px;color:#475569;">\u2514 ' + s.name + '</td>';
+            h += '<td style="' + td() + 'text-align:center;padding:5px 6px;font-size:10px;">' + s.d + '/' + s.t + '</td>';
+            h += '<td style="' + td() + 'text-align:center;padding:5px 6px;font-size:10px;' + scoreColor(s.pct) + '">' + s.pct.toFixed(0) + '%</td>';
+            h += phCell(s.ph1, s.ph1d, s.ph1t);
+            h += phCell(s.ph2, s.ph2d, s.ph2t);
+            h += phCell(s.ph3, s.ph3d, s.ph3t);
+            var pmStr = s.pm >= 0 ? s.pm.toFixed(1) + '%' : '—';
+            var pmC = s.pm >= 0 ? scoreColor(s.pm) : 'color:#94a3b8;';
+            h += '<td style="' + td() + 'text-align:center;padding:5px 6px;font-size:10px;' + pmC + '">' + pmStr + '</td>';
+            h += '</tr>';
+        });
+    });
+    h += '</tbody></table>';
+    return h;
 }
 
 

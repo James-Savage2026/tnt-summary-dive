@@ -261,11 +261,11 @@ function buildTntPdf(stores,level,person,isAll) {
 
     // Ops Region Breakout
     var opsContent=buildOpsRegionBreakout(stores);
-    if(opsContent) h+='<div class="no-break">'+opsContent+'</div>';
+    if(opsContent) h+=opsContent;
 
     // 90-Day Historical Trend
     var histContent=buildHistTrend(stores, person);
-    if(histContent) h+='<div class="no-break">'+histContent+'</div>';
+    if(histContent) h+=histContent;
 
     // Insights
     var ins=[];
@@ -283,7 +283,7 @@ function buildTntPdf(stores,level,person,isAll) {
 
     // Regional Manager Breakout
     var rmContent=buildRmBreakout(stores,level);
-    if(rmContent) h+='<div class="page-break"></div><div class="no-break">'+rmContent+'</div>';
+    if(rmContent) h+=rmContent;
 
     // Group breakdown bar chart + table
     var gBy=level==='sr_director'?'fm_sr_director_name':'fm_director_name';
@@ -299,8 +299,7 @@ function buildTntPdf(stores,level,person,isAll) {
     h+='</div>';
     h+=buildGroupTable(grps,grpLabel);
 
-    // Bottom 10 + FS Managers on fresh page
-    h+='<div class="page-break"></div>';
+    // Bottom 10
     h+=buildBottom10Table(stores);
 
     // FS Manager Table
@@ -372,6 +371,8 @@ function buildWtwPdf(stores,level,person,isAll) {
         gl.forEach(function(g,i){var bg=i%2===0?'#f8fafc':'#fff';h+='<tr style="background:'+bg+';">';h+='<td style="'+td()+'font-weight:600;">'+g.name+'</td>';h+='<td style="'+td()+'">'+g.total+'</td>';h+='<td style="'+td()+'">'+g.done+'</td>';h+='<td style="'+td()+scoreColor(g.pct)+'">'+g.pct.toFixed(1)+'%</td>';h+='<td style="'+td()+scoreColor(g.pmAvg)+'">'+g.pmAvg.toFixed(1)+'%</td></tr>';});
         h+='</tbody></table>';
     }
+    // Manager × Phase completion matrix
+    h+=buildWtwManagerMatrix(wos, level);
     return h;
 }
 
@@ -462,9 +463,9 @@ function buildCombinedPdf(stores,level,person,isAll) {
     }
     tIns.push(a90c+' of '+stores.length+' stores ('+(a90c/stores.length*100).toFixed(0)+'%) meeting 90% target. $'+(loss/1e6).toFixed(1)+'M estimated loss.');
     h+=insightBox(tIns);
-    // RM breakout in exec summary — new page
-    h+='<div class="page-break"></div>';
-    h+=buildRmBreakout(stores,level);
+    // RM breakout in exec summary
+    var rmExec=buildRmBreakout(stores,level);
+    if(rmExec) h+=rmExec;
     // Top/bottom performers bar
     var gBy=level==='sr_director'?'fm_sr_director_name':'fm_director_name';
     var cBy=level==='sr_director'?'fm_director_name':'fm_regional_manager_name';
@@ -473,12 +474,11 @@ function buildCombinedPdf(stores,level,person,isAll) {
     var gcd=grps.slice(0,10).map(function(g){return{label:g.name.substring(0,22),value:g.avgRef30,color:g.avgRef30>=95?'#15803d':g.avgRef30>=90?'#16a34a':g.avgRef30>=85?'#65a30d':g.avgRef30>=80?'#d97706':'#dc2626'};});
     h+=svgBarChart('Ref 30-Day by '+gLbl,gcd,{width:480,labelWidth:160,max:100,suffix:'%'});
 
-    // Bottom 10 + FS Manager on fresh page
-    h+='<div class="page-break"></div>';
+    // Bottom 10 + FS Manager
     h+=buildBottom10Table(stores);
     h+=sectionBlock('\ud83d\udc64','FS Manager Performance',buildFsManagerTable(stores));
 
-    h+='<div class="page-break"></div>'; /* Force page break before WTW */
+    /* WTW and Leak sections */
 
     // ---- WTW Section (condensed) ----
     if (typeof WTW_DATA!=='undefined') {
@@ -517,8 +517,6 @@ function buildCombinedPdf(stores,level,person,isAll) {
         h+=insightBox(wIns);
         h+='</div>'; /* close WTW break-inside wrapper */
     }
-
-    h+='<div class="page-break"></div>'; /* Force page break before Leak */
 
     // ---- Leak Section (condensed) ----
     if (typeof LK_STORES!=='undefined') {
