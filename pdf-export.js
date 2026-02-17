@@ -96,43 +96,50 @@ function buildOpsRegionBreakout(stores) {
         .map(function(e) { return { id: e[0], stores: e[1] }; })
         .filter(function(r) { return r.stores.length >= 10; })
         .sort(function(a, b) { return b.stores.length - a.stores.length; });
-    if (regions.length <= 1) return '';  /* Only show if >1 significant ops realty region */
-    var h = sectionTitle('\ud83d\uddfa\ufe0f', 'Performance by Ops Realty Region');
-    /* Cards layout — Combined first, then each region */
-    var cols = Math.min(regions.length + 1, 4);  /* max 4 columns */
-    h += '<div class="no-break" style="display:grid;grid-template-columns:repeat('+cols+',1fr);gap:12px;margin:16px 0 20px;">';
-    /* Combined card */
+    if (regions.length <= 1) return '';
+    /* Build rows: Combined first, then each region sorted by Ref 30d desc */
+    var rows = [];
     var r30All = safeAvg(stores,'twt_ref_30_day'), h30All = safeAvg(stores,'twt_hvac_30_day');
     var lossAll = stores.reduce(function(a,d){return a+(d.total_loss||0);},0);
     var b90All = stores.filter(function(d){return d.twt_ref_30_day!=null&&d.twt_ref_30_day<90;}).length;
-    h += '<div style="border:2px solid #334155;border-radius:12px;padding:14px;background:#fff;">';
-    h += '<div style="font-size:13px;font-weight:800;color:#334155;margin-bottom:10px;display:flex;align-items:center;gap:6px;">\ud83c\udfe2 Combined';
-    h += '<span style="font-size:10px;font-weight:500;color:#94a3b8;margin-left:auto;">'+stores.length+' stores</span></div>';
-    h += '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;">';
-    h += '<div style="text-align:center;"><div style="font-size:18px;font-weight:800;'+scoreColor(r30All)+'">'+r30All.toFixed(1)+'%</div><div style="font-size:9px;color:#64748b;text-transform:uppercase;">Ref 30d</div></div>';
-    h += '<div style="text-align:center;"><div style="font-size:18px;font-weight:800;'+scoreColor(h30All)+'">'+h30All.toFixed(1)+'%</div><div style="font-size:9px;color:#64748b;text-transform:uppercase;">HVAC 30d</div></div>';
-    h += '<div style="text-align:center;"><div style="font-size:14px;font-weight:700;color:#dc2626;">$'+(lossAll/1e6).toFixed(1)+'M</div><div style="font-size:9px;color:#64748b;text-transform:uppercase;">Loss</div></div>';
-    h += '<div style="text-align:center;"><div style="font-size:14px;font-weight:700;'+(b90All>0?'color:#dc2626;':'color:#16a34a;')+'">'+b90All+'</div><div style="font-size:9px;color:#64748b;text-transform:uppercase;">&lt;90%</div></div>';
-    h += '</div></div>';
-    /* Each ops region card */
-    var regionColors = ['#7c3aed','#0891b2','#c2410c','#4f46e5','#059669'];
-    regions.forEach(function(reg, idx) {
+    rows.push({name:'Combined',count:stores.length,r30:r30All,h30:h30All,loss:lossAll,b90:b90All,isCombined:true});
+    regions.forEach(function(reg) {
         var s = reg.stores;
-        var r30 = safeAvg(s,'twt_ref_30_day'), h30 = safeAvg(s,'twt_hvac_30_day');
-        var loss = s.reduce(function(a,d){return a+(d.total_loss||0);},0);
-        var b90 = s.filter(function(d){return d.twt_ref_30_day!=null&&d.twt_ref_30_day<90;}).length;
-        var borderC = regionColors[idx % regionColors.length];
-        h += '<div style="border:2px solid '+borderC+';border-radius:12px;padding:14px;background:#fff;">';
-        h += '<div style="font-size:13px;font-weight:800;color:'+borderC+';margin-bottom:10px;display:flex;align-items:center;gap:6px;">\ud83d\uddfa\ufe0f Realty Region '+reg.id;
-        h += '<span style="font-size:10px;font-weight:500;color:#94a3b8;margin-left:auto;">'+s.length+' stores</span></div>';
-        h += '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;">';
-        h += '<div style="text-align:center;"><div style="font-size:18px;font-weight:800;'+scoreColor(r30)+'">'+r30.toFixed(1)+'%</div><div style="font-size:9px;color:#64748b;text-transform:uppercase;">Ref 30d</div></div>';
-        h += '<div style="text-align:center;"><div style="font-size:18px;font-weight:800;'+scoreColor(h30)+'">'+h30.toFixed(1)+'%</div><div style="font-size:9px;color:#64748b;text-transform:uppercase;">HVAC 30d</div></div>';
-        h += '<div style="text-align:center;"><div style="font-size:14px;font-weight:700;color:#dc2626;">$'+(loss/1e6).toFixed(1)+'M</div><div style="font-size:9px;color:#64748b;text-transform:uppercase;">Loss</div></div>';
-        h += '<div style="text-align:center;"><div style="font-size:14px;font-weight:700;'+(b90>0?'color:#dc2626;':'color:#16a34a;')+'">'+b90+'</div><div style="font-size:9px;color:#64748b;text-transform:uppercase;">&lt;90%</div></div>';
-        h += '</div></div>';
+        rows.push({
+            name:'Region '+reg.id, count:s.length,
+            r30:safeAvg(s,'twt_ref_30_day'), h30:safeAvg(s,'twt_hvac_30_day'),
+            loss:s.reduce(function(a,d){return a+(d.total_loss||0);},0),
+            b90:s.filter(function(d){return d.twt_ref_30_day!=null&&d.twt_ref_30_day<90;}).length,
+            isCombined:false
+        });
     });
-    h += '</div>';
+    /* Sort non-combined rows by Ref 30d descending */
+    var dataRows = rows.slice(1).sort(function(a,b){return b.r30-a.r30;});
+    var h = sectionTitle('\ud83d\uddfa\ufe0f', 'Performance by Ops Realty Region');
+    h += '<table style="width:100%;border-collapse:collapse;font-size:11px;border-radius:8px;overflow:hidden;"><thead><tr style="'+S.hdr+'">';
+    h += '<th style="'+th()+'">Region</th><th style="'+th()+'">Stores</th>';
+    h += '<th style="'+th()+'">Ref 30d</th><th style="'+th()+'">HVAC 30d</th>';
+    h += '<th style="'+th()+'">Loss</th><th style="'+th()+'">&lt;90%</th></tr></thead><tbody>';
+    /* Combined row (bold, slight background) */
+    h += '<tr style="background:#e2e8f0;font-weight:700;">';
+    h += '<td style="'+td()+'">'+rows[0].name+'</td>';
+    h += '<td style="'+td()+'">'+rows[0].count+'</td>';
+    h += '<td style="'+td()+scoreColor(rows[0].r30)+'">'+rows[0].r30.toFixed(1)+'%</td>';
+    h += '<td style="'+td()+scoreColor(rows[0].h30)+'">'+rows[0].h30.toFixed(1)+'%</td>';
+    h += '<td style="'+td()+'color:#dc2626;">$'+(rows[0].loss/1e6).toFixed(1)+'M</td>';
+    h += '<td style="'+td()+(rows[0].b90>0?'color:#dc2626;':'')+'">'+rows[0].b90+'</td></tr>';
+    /* Data rows */
+    dataRows.forEach(function(r,i) {
+        var bg = i%2===0?'#f8fafc':'#fff';
+        h += '<tr style="background:'+bg+';">';
+        h += '<td style="'+td()+'font-weight:600;">'+r.name+'</td>';
+        h += '<td style="'+td()+'">'+r.count+'</td>';
+        h += '<td style="'+td()+scoreColor(r.r30)+'">'+r.r30.toFixed(1)+'%</td>';
+        h += '<td style="'+td()+scoreColor(r.h30)+'">'+r.h30.toFixed(1)+'%</td>';
+        h += '<td style="'+td()+'color:#dc2626;">$'+(r.loss/1e6).toFixed(1)+'M</td>';
+        h += '<td style="'+td()+(r.b90>0?'color:#dc2626;':'')+'">'+r.b90+'</td></tr>';
+    });
+    h += '</tbody></table>';
     return h;
 }
 
@@ -304,8 +311,10 @@ function buildTntPdf(stores,level,person,isAll) {
     // Bottom 10
     h+=buildBottom10Table(stores);
 
-    // Top 5 / Bottom 5 Regionals
-    h+=buildTopBottomRegionals(stores);
+    // Top 5 / Bottom 5 Regionals (skip for Sr Director — keep it at Director level)
+    if(level!=='sr_director') {
+        h+=buildTopBottomRegionals(stores);
+    }
 
     return h;
 }
@@ -480,9 +489,11 @@ function buildCombinedPdf(stores,level,person,isAll) {
     var gcd=grps.slice(0,10).map(function(g){return{label:g.name.substring(0,22),value:g.avgRef30,color:g.avgRef30>=95?'#15803d':g.avgRef30>=90?'#16a34a':g.avgRef30>=85?'#65a30d':g.avgRef30>=80?'#d97706':'#dc2626'};});
     h+=svgBarChart('Ref 30-Day by '+gLbl,gcd,{width:480,labelWidth:160,max:100,suffix:'%'});
 
-    // Bottom 10 + Top/Bottom Regionals
+    // Bottom 10 + Top/Bottom Regionals (skip regionals for Sr Director)
     h+=buildBottom10Table(stores);
-    h+=buildTopBottomRegionals(stores);
+    if(level!=='sr_director') {
+        h+=buildTopBottomRegionals(stores);
+    }
 
     /* WTW and Leak sections */
 
