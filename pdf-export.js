@@ -258,7 +258,7 @@ function buildTntPdf(stores,level,person,isAll) {
 
     // Regional Manager Breakout
     var rmContent=buildRmBreakout(stores,level);
-    if(rmContent) h+='<div class="no-break">'+rmContent+'</div>';
+    if(rmContent) h+='<div class="page-break"></div><div class="no-break">'+rmContent+'</div>';
 
     // Group breakdown bar chart + table
     var gBy=level==='sr_director'?'fm_sr_director_name':'fm_director_name';
@@ -274,7 +274,8 @@ function buildTntPdf(stores,level,person,isAll) {
     h+='</div>';
     h+=buildGroupTable(grps,grpLabel);
 
-    // Bottom 10
+    // Bottom 10 + FS Managers on fresh page
+    h+='<div class="page-break"></div>';
     var bot=stores.filter(function(d){return d.twt_ref_30_day!=null;}).sort(function(a,b){return(a.twt_ref_30_day||0)-(b.twt_ref_30_day||0);}).slice(0,10);
     var botH='<table style="width:100%;border-collapse:collapse;font-size:11px;border-radius:8px;overflow:hidden;"><thead><tr style="'+S.hdr+'">';
     botH+='<th style="'+th()+'">Store</th><th style="'+th()+'">Banner</th><th style="'+th()+'">RM</th>';
@@ -454,7 +455,8 @@ function buildCombinedPdf(stores,level,person,isAll) {
     }
     tIns.push(a90c+' of '+stores.length+' stores ('+(a90c/stores.length*100).toFixed(0)+'%) meeting 90% target. $'+(loss/1e6).toFixed(1)+'M estimated loss.');
     h+=insightBox(tIns);
-    // RM breakout in exec summary
+    // RM breakout in exec summary — new page
+    h+='<div class="page-break"></div>';
     h+=buildRmBreakout(stores,level);
     // Top/bottom performers bar
     var gBy=level==='sr_director'?'fm_sr_director_name':'fm_director_name';
@@ -464,7 +466,10 @@ function buildCombinedPdf(stores,level,person,isAll) {
     var gcd=grps.slice(0,10).map(function(g){return{label:g.name.substring(0,22),value:g.avgRef30,color:g.avgRef30>=95?'#15803d':g.avgRef30>=90?'#16a34a':g.avgRef30>=85?'#65a30d':g.avgRef30>=80?'#d97706':'#dc2626'};});
     h+=svgBarChart('Ref 30-Day by '+gLbl,gcd,{width:540,labelWidth:160,max:100,suffix:'%'});
 
-    h+=divider();
+    // FS Manager table in exec summary
+    h+=sectionBlock('\ud83d\udc64','FS Manager Performance',buildFsManagerTable(stores));
+
+    h+='<div class="page-break"></div>'; /* Force page break before WTW */
 
     // ---- WTW Section (condensed) ----
     if (typeof WTW_DATA!=='undefined') {
@@ -504,7 +509,7 @@ function buildCombinedPdf(stores,level,person,isAll) {
         h+='</div>'; /* close WTW break-inside wrapper */
     }
 
-    h+=divider();
+    h+='<div class="page-break"></div>'; /* Force page break before Leak */
 
     // ---- Leak Section (condensed) ----
     if (typeof LK_STORES!=='undefined') {
