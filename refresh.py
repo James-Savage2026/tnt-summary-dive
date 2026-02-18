@@ -151,6 +151,33 @@ GROUP BY d.run_date, s.fm_director_name,
 ORDER BY d.run_date
 """
 
+QUERY_WEEKLY_TREND = """
+WITH weekly_store AS (
+  SELECT
+    store_nbr,
+    CONCAT(CAST(wmt_year_nbr AS STRING), LPAD(CAST(wmt_week_nbr AS STRING), 2, '0')) AS wmt_week,
+    AVG(time_in_target) AS avg_tit
+  FROM `re-ods-prod.us_re_ods_prod_pub.store_score`
+  WHERE run_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 90 DAY)
+  GROUP BY store_nbr, wmt_year_nbr, wmt_week_nbr
+)
+SELECT
+  w.wmt_week,
+  s.fm_sr_director_name AS fm_sr_director,
+  s.fm_director_name AS fm_director,
+  s.fm_regional_manager_name AS fm_regional_mgr,
+  COUNT(DISTINCT w.store_nbr) AS store_count,
+  ROUND(AVG(w.avg_tit), 2) AS avg_weekly_tit
+FROM weekly_store w
+JOIN `re-crystal-mdm-prod.crystal.store_tabular_view` s
+  ON w.store_nbr = s.store_number
+WHERE s.country_cd = 'US'
+  AND s.fm_director_name IS NOT NULL
+  AND s.fm_sr_director_name IS NOT NULL
+GROUP BY w.wmt_week, s.fm_sr_director_name, s.fm_director_name, s.fm_regional_manager_name
+ORDER BY w.wmt_week
+"""
+
 QUERY_HIST_ROR = """
 WITH daily_store AS (
   SELECT store_nbr, run_date, AVG(time_in_target) as avg_tit
@@ -265,6 +292,15 @@ def embed_data_in_html():
             float_cols={'tit'}, int_cols={'n'}
         )
 
+    trend_csv = PROJECT / 'weekly_trend.csv'
+    if trend_csv.exists():
+        csv_to_json(
+            trend_csv, PROJECT / 'trend_compact.json',
+            compact_keys={'wmt_week': 'w', 'fm_director': 'd', 'fm_regional_mgr': 'r',
+                          'fm_sr_director': 's', 'store_count': 'n', 'avg_weekly_tit': 't'},
+            float_cols={'avg_weekly_tit'}, int_cols={'store_count'}
+        )
+
     # Embed store_data.json
     sd_path = PROJECT / 'store_data.json'
     if sd_path.exists():
@@ -300,6 +336,24 @@ def embed_data_in_html():
             eol = html.find(';\n', ins)
             html = html[:eol+2] + '        ' + block + '\n' + html[eol+2:]
         print("   \u2705 Embedded HIST_TIT + HIST_ROR")
+
+    # Embed TREND_DATA (weekly trend by director/RM)
+    td_path = PROJECT / 'trend_compact.json'
+    if td_path.exists():
+        td_json = td_path.read_text().strip()
+        marker = 'const TREND_DATA = '
+        ts = html.find(marker)
+        if ts >= 0:
+            js = ts + len(marker)
+            bc, i = 0, js
+            while i < len(html):
+                if html[i] == '[': bc += 1
+                elif html[i] == ']':
+                    bc -= 1
+                    if bc == 0: break
+                i += 1
+            html = html[:js] + td_json + html[i+1:]
+            print("   \u2705 Embedded TREND_DATA")
 
     html_path.write_text(html)
     print(f"   \u2705 index.html updated ({len(html):,} chars)")
@@ -516,6 +570,7 @@ def main():
         run_bq(QUERY_STORES, PROJECT / 'store_data.csv')  # for TnT tab
         run_bq(QUERY_HIST_TIT, PROJECT / 'hist_tit.csv', max_rows=8000)
         run_bq(QUERY_HIST_ROR, PROJECT / 'hist_ror.csv', max_rows=8000)
+        run_bq(QUERY_WEEKLY_TREND, PROJECT / 'weekly_trend.csv', max_rows=5000)
 
         # Merge BQ data + rack scores + labor + phases
         print("\n\U0001f527 Step 2: Merging data")
