@@ -1,13 +1,23 @@
 # HVAC TnT Dashboard — Session Checkpoint
 
-**Last Updated:** 2026-02-16 ~10:30 PM  
-**Last Commit:** `5c6eee5` — "share.sh --laura: personalized pre-filtered ZIPs for Laura Moore + 5 directors"  
+**Last Updated:** 2026-02-18 ~2:00 PM  
+**Last Commit:** `8b3a3dc` — "Add 11-week TnT trend line chart by director"  
 **Branch:** `main` — clean, up to date with both remotes  
 **Session:** Stable — no crashes
 
 ---
 
 ## ✅ What Got Done This Session
+
+### 0. 11-Week TnT Trend Line Chart (NEW)
+- Added multi-line Chart.js line chart showing weekly TnT performance over 11 Walmart weeks
+- Data source: `trend_data.json` → compacted to `trend_compact.json` (1,518 rows, 29 directors × RMs)
+- Embedded as `TREND_DATA` in index.html
+- Responds to cascading filters: at Sr Director level shows directors, at Director level shows RMs
+- Weighted average across stores per group per week
+- Added `QUERY_WEEKLY_TREND` to `refresh.py` for automated BQ pulls
+- Located below the breakdown bar chart, above Manager Performance Table
+- Commit: `8b3a3dc`
 
 ### 1. Email Screenshot Fix
 - Right-edge clipping on email screenshot resolved
@@ -55,6 +65,7 @@
 | `README.md` | 12KB | Full docs with update instructions |
 | `DATA_SOURCES.md` | 12KB | Single source of truth for data & business rules |
 | `store_data.json` | 3.3MB | Current store data (6,469 stores) |
+| `trend_compact.json` | 134KB | Weekly TnT trend data (11 weeks × 29 dirs × RMs) |
 | `add_wtw_tab.py` | 78KB | WTW tab HTML/JS generator |
 | `add_leak_tab.py` | 6.7KB | Leak tab HTML/JS generator |
 | `leak_tab_js.py` | 21KB | Leak tab JS logic |
