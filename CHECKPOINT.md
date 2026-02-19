@@ -1,7 +1,7 @@
 # HVAC TnT Dashboard — Session Checkpoint
 
-**Last Updated:** 2026-02-18 ~2:00 PM  
-**Last Commit:** `8b3a3dc` — "Add 11-week TnT trend line chart by director"  
+**Last Updated:** 2026-02-19 ~2:30 PM  
+**Last Commit:** `787068c` — "Add Terminal Cases tab (4th tab) - mirrors Tableau report"  
 **Branch:** `main` — clean, up to date with both remotes  
 **Session:** Stable — no crashes
 
@@ -9,7 +9,19 @@
 
 ## ✅ What Got Done This Session
 
-### 0. 11-Week TnT Trend Line Chart (NEW)
+### 0b. Terminal Cases Tab (NEW)
+- Added 4th tab: 🌡️ Terminal Cases
+- Data: `re-crystal-mdm-prod.crystal.case_terminal_performance` (513 cases, 325 stores)
+- Mirrors Tableau "Refrigeration Cases Terminal Status Report"
+- KPIs: Total Cases, Total Stores, Cases with/without Open WOs
+- Charts: Open WOs donut, Consecutive Days bar, Sub Market bar, Director bar
+- Case class cards (MT/LT breakdown with percentages)
+- Full detail table with sorting, search, color-coded metrics
+- 12 cascading filters: Sr Dir, Director, RM, FSM, Market, Sub Market, Case Class, Consec Days, Open WOs, HVACR Tech, Store, Ops Region
+- Script: `add_terminal_tab.py`
+- Commit: `787068c`
+
+### 0a. 11-Week TnT Trend Line Chart (NEW)
 - Added multi-line Chart.js line chart showing weekly TnT performance over 11 Walmart weeks
 - Data source: `trend_data.json` → compacted to `trend_compact.json` (1,518 rows, 29 directors × RMs)
 - Embedded as `TREND_DATA` in index.html
@@ -68,6 +80,7 @@
 | `trend_compact.json` | 134KB | Weekly TnT trend data (11 weeks × 29 dirs × RMs) |
 | `add_wtw_tab.py` | 78KB | WTW tab HTML/JS generator |
 | `add_leak_tab.py` | 6.7KB | Leak tab HTML/JS generator |
+| `add_terminal_tab.py` | 12KB | Terminal Cases tab generator |
 | `leak_tab_js.py` | 21KB | Leak tab JS logic |
 | `leak_tab_html.py` | 15KB | Leak tab HTML structure |
 | `store_detail_js.py` | 13KB | Shared store detail panel |
@@ -79,7 +92,7 @@
 ## 📊 Dashboard Current State
 
 - **6,469 stores** across 6 Sr. Directors, 30 Directors
-- **3 tabs:** TnT Dashboard, Win-the-Winter, Leak Management
+- **4 tabs:** TnT Dashboard, Win-the-Winter, Leak Management, Terminal Cases
 - **Filters:** Sr. Director → Director → RM → FSM → Market (cascading)
 - **Banner filter:** All / Walmart / Sam's Club
 - **Store detail panel** with Ref/HVAC assets, work orders, email button
