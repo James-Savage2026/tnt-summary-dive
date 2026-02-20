@@ -87,30 +87,58 @@ For each phase, show per-director:
 - Stores with TnT data (where `twt_ref` is not null)
 - Avg Ref TnT (`twt_ref`)
 - Avg HVAC TnT (`twt_hvac`)
-- Passing count: Walmart stores >= 90%, Sam's Club >= 87%
-- Failing count: total - passing
-- Pass rate percentage
 - Total cases (`case_count`)
 - Cases out of target (`cases_out_of_target`)
+- **NO pass rates** — TnT scores only
+
+#### Momentum / Trending Up (green box)
+- Ref TnT delta vs last week: current `twt_ref` avg minus `twt_ref_7_day` avg
+- Ref TnT delta vs last month: current `twt_ref` avg minus `twt_ref_30_day` avg
+- Ref TnT delta vs 90-day avg: current `twt_ref` avg minus `twt_ref_90_day` avg
+- Show previous → current values
+
+#### Key Wins (positive framing — checkmark list)
+- Auto-generate insights from the data:
+  - Did all directors improve from last week? → "Every director improved"
+  - Who climbed the most this week? (biggest 7-day delta)
+  - Who made biggest 30-day jump?
+  - HVAC TnT week-over-week improvement
+  - Product loss ranking vs other Sr. Directors
+- **Keep it positive** — highlight wins, not failures
+
+#### Sr. Director Rankings Table
+- All Sr. Directors ranked by Ref TnT descending
+- Columns: Rank, Name, Stores, Ref TnT, HVAC TnT, Est. Loss
+- Laura's row highlighted with ⭐ and yellow background
+- Note: Laura has lowest product loss — call it out
+
+#### Director Table
+Per director (sorted by Ref TnT descending):
+- Stores (count with data)
+- Ref TnT (average of `twt_ref`)
+- Fleet Rank (just `#N`, no "of 29")
+- vs Last Wk (delta from `twt_ref_7_day`, green text)
+- vs Last Mo (delta from `twt_ref_30_day`, green text)
+- HVAC TnT (average of `twt_hvac`)
+- Total row + Fleet average row at bottom
+- Color-coded TnT badges:
+  - Green: >= 89%
+  - Amber: 85-88.9%
+  - Red: < 85%
+- Rank badges:
+  - Green: top 10
+  - Gray: 11-20
+  - Amber: 21+
+
+#### Fleet Rank Calculation
+- Get ALL directors with TnT data from `EMBEDDED_STORE_DATA`
+- Sort by avg `twt_ref` descending
+- Find position of each Laura director
 
 #### Product Loss Callout (red box)
 - Total estimated loss (`total_loss` summed)
+- Note "Lowest among all Sr. Directors" if true
 - Ranked by director, highest loss first
-
-#### Director Table
-Per director (sorted by pass rate descending):
-- Stores (count with data)
-- Ref TnT (average of `twt_ref`)
-- HVAC TnT (average of `twt_hvac`)
-- Passing count
-- Pass Rate (% passing)
-- Cases OOT (`cases_out_of_target` summed)
-- Est. Loss (`total_loss` summed, displayed in $M)
-- Total row at bottom
-- Color-coded badges:
-  - Green: >= 90% TnT or >= 45% pass rate
-  - Amber: 85-89% TnT or 30-44% pass rate
-  - Red: < 85% TnT or < 30% pass rate
 
 ---
 

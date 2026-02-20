@@ -15,8 +15,6 @@ body { font-family: Calibri, Arial, sans-serif; color: #333; max-width: 660px; m
 .stat-box { background: #F7FAFF; border: 1px solid #DCE8F5; border-radius: 8px; padding: 10px 14px; text-align: center; flex: 1; }
 .stat-box .num { font-size: 22px; font-weight: 700; color: #0071CE; }
 .stat-box .label { font-size: 10px; color: #888; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
-.stat-box.green .num { color: #16A34A; }
-.stat-box.amber .num { color: #D97706; }
 .stat-box.red .num { color: #DC2626; }
 table.t { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 12px; }
 table.t th { background: #F7FAFF; color: #555; font-size: 9px; text-transform: uppercase; letter-spacing: 0.8px; padding: 8px 8px; text-align: center; border-bottom: 2px solid #DCE8F5; }
@@ -25,10 +23,25 @@ table.t td { padding: 10px 8px; border-bottom: 1px solid #F0F0F0; text-align: ce
 table.t td:first-child { text-align: left; font-weight: 600; color: #1A1A1A; }
 table.t tr:last-child td { border-bottom: none; }
 .total-row td { background: #F0F7FF; font-weight: 700 !important; border-top: 2px solid #0071CE !important; }
+.fleet-row td { background: #F9F9F9; font-weight: 600 !important; border-top: 1px solid #DDD !important; font-style: italic; }
 .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
 .bg { background: #DCFCE7; color: #16A34A; }
 .ba { background: #FEF3C7; color: #92400E; }
 .br { background: #FEE2E2; color: #DC2626; }
+.rank-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+.rank-top { background: #DCFCE7; color: #16A34A; }
+.rank-mid { background: #F3F4F6; color: #6B7280; }
+.rank-low { background: #FEF3C7; color: #92400E; }
+.up { color: #16A34A; font-weight: 700; }
+.trend-box { background: linear-gradient(135deg, #F0FFF4, #ECFDF5); border: 1px solid #BBF7D0; border-radius: 10px; padding: 20px 24px; margin: 16px 0; }
+.trend-box h3 { margin: 0 0 12px 0; font-size: 16px; color: #16A34A; }
+.trend-row { display: flex; gap: 16px; margin: 10px 0; }
+.trend-card { flex: 1; background: white; border: 1px solid #BBF7D0; border-radius: 8px; padding: 14px; text-align: center; }
+.trend-card .delta { font-size: 24px; font-weight: 800; color: #16A34A; }
+.trend-card .period { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+.trend-card .detail { font-size: 11px; color: #555; margin-top: 6px; }
+.compare-box { background: linear-gradient(135deg, #F0F7FF, #EFF6FF); border: 1px solid #BFDBFE; border-radius: 10px; padding: 20px 24px; margin: 16px 0; }
+.compare-box h3 { margin: 0 0: 12px 0; font-size: 16px; color: #0071CE; }
 .loss-box { background: linear-gradient(135deg, #FFF5F5, #FEF2F2); border: 1px solid #FECACA; border-radius: 10px; padding: 20px 24px; margin: 16px 0; }
 .loss-box h3 { margin: 0 0 6px 0; font-size: 16px; color: #DC2626; }
 .loss-box .big-num { font-size: 32px; font-weight: 800; color: #DC2626; }
@@ -36,6 +49,10 @@ table.t tr:last-child td { border-bottom: none; }
 .loss-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
 .loss-chip { background: white; border: 1px solid #FECACA; border-radius: 6px; padding: 6px 12px; font-size: 12px; }
 .loss-chip b { color: #DC2626; }
+.insight-list { padding: 0; margin: 12px 0; list-style: none; }
+.insight-list li { padding: 8px 0 8px 24px; position: relative; font-size: 13px; line-height: 1.5; border-bottom: 1px solid #F0F0F0; }
+.insight-list li:last-child { border-bottom: none; }
+.insight-list li::before { content: '\2714'; position: absolute; left: 0; color: #16A34A; font-weight: 700; }
 .footer { padding: 20px 32px; background: #F9F9F9; border-top: 1px solid #EEE; font-size: 12px; color: #999; text-align: center; }
 .footer a { color: #0071CE; text-decoration: none; }
 </style></head>
@@ -44,7 +61,7 @@ table.t tr:last-child td { border-bottom: none; }
 <div class="wrapper">
 
 <div class="header">
-  <h1>&#127777; TnT Daily Digest</h1>
+  <h1>&#128202; TnT Daily Digest</h1>
   <div class="date">Laura Moore's Org &bull; February 20, 2026</div>
 </div>
 
@@ -57,17 +74,143 @@ table.t tr:last-child td { border-bottom: none; }
 <div class="section-title">1,099 Stores &bull; 1,000 Reporting</div>
 
 <div class="stat-row">
-  <div class="stat-box"><div class="num">87.8%</div><div class="label">Avg Ref TnT</div></div>
-  <div class="stat-box"><div class="num">94.5%</div><div class="label">Avg HVAC TnT</div></div>
-  <div class="stat-box green"><div class="num">390</div><div class="label">Stores Passing</div></div>
-  <div class="stat-box red"><div class="num">610</div><div class="label">Stores Failing</div></div>
-</div>
-
-<div class="stat-row">
-  <div class="stat-box"><div class="num">39.0%</div><div class="label">Pass Rate</div></div>
+  <div class="stat-box"><div class="num">87.8%</div><div class="label">Ref TnT</div></div>
+  <div class="stat-box"><div class="num">94.5%</div><div class="label">HVAC TnT</div></div>
   <div class="stat-box"><div class="num">122,355</div><div class="label">Total Cases</div></div>
   <div class="stat-box red"><div class="num">53,874</div><div class="label">Cases Out of Target</div></div>
 </div>
+
+<hr class="divider">
+
+<!-- TRENDING UP -->
+<div class="section-label">Momentum</div>
+<div class="section-title">&#128640; Your Org is Trending Up</div>
+
+<div class="trend-box">
+  <h3>&#9650; Ref TnT Improvement</h3>
+  <div class="trend-row">
+    <div class="trend-card">
+      <div class="delta">+0.67%</div>
+      <div class="period">vs Last Week</div>
+      <div class="detail">87.14% &#8594; 87.81%</div>
+    </div>
+    <div class="trend-card">
+      <div class="delta">+2.20%</div>
+      <div class="period">vs Last Month</div>
+      <div class="detail">85.61% &#8594; 87.81%</div>
+    </div>
+    <div class="trend-card">
+      <div class="delta">+1.50%</div>
+      <div class="period">vs 90-Day Avg</div>
+      <div class="detail">86.31% &#8594; 87.81%</div>
+    </div>
+  </div>
+</div>
+
+<div class="section-label">Key Wins</div>
+<ul class="insight-list">
+  <li><b>Every director improved</b> from last week &mdash; no one went backward</li>
+  <li><b>Brian Conover</b> climbed the most this week (<span class="up">+0.97%</span>), now at 89.5% Ref TnT</li>
+  <li><b>Jack Grahek</b> made the biggest 30-day jump (<span class="up">+2.31%</span>), from 85.6% to 87.9%</li>
+  <li><b>HVAC TnT up +2.39%</b> from last week (92.1% &#8594; 94.5%) &mdash; strong across the board</li>
+  <li><b>Lowest product loss</b> among all Sr. Directors at $42.3M</li>
+</ul>
+
+<hr class="divider">
+
+<!-- SR DIRECTOR RANKINGS -->
+<div class="section-label">Where You Stand</div>
+<div class="section-title">Sr. Director Rankings</div>
+
+<table class="t">
+<tr><th>#</th><th>Sr. Director</th><th>Stores</th><th>Ref TnT</th><th>HVAC TnT</th><th>Est. Loss</th></tr>
+<tr><td>1</td><td>Nick Paladino</td><td>966</td><td>88.1%</td><td>94.8%</td><td>$55.0M</td></tr>
+<tr><td>2</td><td>B.A. Glass</td><td>1,019</td><td>88.1%</td><td>94.5%</td><td>$55.4M</td></tr>
+<tr><td>3</td><td>Monique Brennan</td><td>1,101</td><td>88.1%</td><td>94.3%</td><td>$64.6M</td></tr>
+<tr style="background:#FFFBEB;"><td>4</td><td style="color:#0071CE; font-weight:700;">&#11088; Laura Moore</td><td>1,000</td><td><b>87.8%</b></td><td><b>94.5%</b></td><td><b>$42.3M</b></td></tr>
+<tr><td>5</td><td>Whitney Box</td><td>982</td><td>86.9%</td><td>94.3%</td><td>$51.9M</td></tr>
+</table>
+
+<hr class="divider">
+
+<!-- DIRECTOR TABLE -->
+<div class="section-label">Director Breakdown</div>
+<div class="section-title">Laura's Directors</div>
+
+<table class="t">
+<tr>
+  <th>Director</th>
+  <th>Stores</th>
+  <th>Ref TnT</th>
+  <th>Rank</th>
+  <th>vs Last Wk</th>
+  <th>vs Last Mo</th>
+  <th>HVAC TnT</th>
+</tr>
+<tr>
+  <td>Brian Conover</td>
+  <td>266</td>
+  <td><span class="badge bg">89.5%</span></td>
+  <td><span class="rank-badge rank-top">#4</span></td>
+  <td><span class="up">+0.97%</span></td>
+  <td><span class="up">+2.29%</span></td>
+  <td>94.2%</td>
+</tr>
+<tr>
+  <td>Donnie Chester</td>
+  <td>284</td>
+  <td><span class="badge ba">87.9%</span></td>
+  <td><span class="rank-badge rank-mid">#11</span></td>
+  <td><span class="up">+0.80%</span></td>
+  <td><span class="up">+2.14%</span></td>
+  <td>94.8%</td>
+</tr>
+<tr>
+  <td>Jack Grahek</td>
+  <td>158</td>
+  <td><span class="badge ba">87.9%</span></td>
+  <td><span class="rank-badge rank-mid">#13</span></td>
+  <td><span class="up">+0.41%</span></td>
+  <td><span class="up">+2.31%</span></td>
+  <td>95.1%</td>
+</tr>
+<tr>
+  <td>Sonya Webster</td>
+  <td>152</td>
+  <td><span class="badge ba">86.3%</span></td>
+  <td><span class="rank-badge rank-low">#25</span></td>
+  <td><span class="up">+0.15%</span></td>
+  <td><span class="up">+2.19%</span></td>
+  <td>94.3%</td>
+</tr>
+<tr>
+  <td>Josh Thaxton</td>
+  <td>140</td>
+  <td><span class="badge ba">85.9%</span></td>
+  <td><span class="rank-badge rank-low">#27</span></td>
+  <td><span class="up">+0.66%</span></td>
+  <td><span class="up">+1.99%</span></td>
+  <td>94.2%</td>
+</tr>
+<tr class="total-row">
+  <td>Laura Moore Total</td>
+  <td>1,000</td>
+  <td><span class="badge ba">87.8%</span></td>
+  <td><span class="rank-badge rank-mid">#4</span></td>
+  <td><span class="up">+0.67%</span></td>
+  <td><span class="up">+2.20%</span></td>
+  <td>94.5%</td>
+</tr>
+<tr class="fleet-row">
+  <td>Fleet Average</td>
+  <td>5,068</td>
+  <td>87.8%</td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td>94.5%</td>
+</tr>
+</table>
 
 <hr class="divider">
 
@@ -75,7 +218,7 @@ table.t tr:last-child td { border-bottom: none; }
 <div class="loss-box">
   <h3>&#128176; Estimated Product Loss</h3>
   <div class="big-num">$42.3M</div>
-  <div class="sub">Across Laura Moore's org</div>
+  <div class="sub">Lowest among all Sr. Directors</div>
   <div class="loss-row">
     <div class="loss-chip">Donnie Chester: <b>$11.9M</b></div>
     <div class="loss-chip">Brian Conover: <b>$9.6M</b></div>
@@ -86,85 +229,6 @@ table.t tr:last-child td { border-bottom: none; }
     <div class="loss-chip">Jack Grahek: <b>$6.0M</b></div>
   </div>
 </div>
-
-<hr class="divider">
-
-<!-- DIRECTOR TABLE -->
-<div class="section-label">Director Breakdown</div>
-<div class="section-title">Performance by Director</div>
-
-<table class="t">
-<tr>
-  <th>Director</th>
-  <th>Stores</th>
-  <th>Ref TnT</th>
-  <th>HVAC TnT</th>
-  <th>Passing</th>
-  <th>Pass Rate</th>
-  <th>Cases OOT</th>
-  <th>Est. Loss</th>
-</tr>
-<tr>
-  <td>Brian Conover</td>
-  <td>266</td>
-  <td><span class="badge ba">89.5%</span></td>
-  <td>94.2%</td>
-  <td>144</td>
-  <td><span class="badge bg">54.1%</span></td>
-  <td>15,417</td>
-  <td>$9.6M</td>
-</tr>
-<tr>
-  <td>Jack Grahek</td>
-  <td>158</td>
-  <td><span class="badge ba">87.9%</span></td>
-  <td>95.1%</td>
-  <td>62</td>
-  <td><span class="badge ba">39.2%</span></td>
-  <td>7,996</td>
-  <td>$6.0M</td>
-</tr>
-<tr>
-  <td>Donnie Chester</td>
-  <td>284</td>
-  <td><span class="badge ba">87.9%</span></td>
-  <td>94.8%</td>
-  <td>110</td>
-  <td><span class="badge ba">38.7%</span></td>
-  <td>15,367</td>
-  <td>$11.9M</td>
-</tr>
-<tr>
-  <td>Josh Thaxton</td>
-  <td>140</td>
-  <td><span class="badge br">85.9%</span></td>
-  <td>94.2%</td>
-  <td>38</td>
-  <td><span class="badge br">27.1%</span></td>
-  <td>7,309</td>
-  <td>$8.1M</td>
-</tr>
-<tr>
-  <td>Sonya Webster</td>
-  <td>152</td>
-  <td><span class="badge br">86.3%</span></td>
-  <td>94.3%</td>
-  <td>36</td>
-  <td><span class="badge br">23.7%</span></td>
-  <td>7,785</td>
-  <td>$6.6M</td>
-</tr>
-<tr class="total-row">
-  <td>Laura Moore Total</td>
-  <td>1,000</td>
-  <td><span class="badge ba">87.8%</span></td>
-  <td>94.5%</td>
-  <td>390</td>
-  <td><span class="badge ba">39.0%</span></td>
-  <td>53,874</td>
-  <td>$42.3M</td>
-</tr>
-</table>
 
 <hr class="divider">
 
