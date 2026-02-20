@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><style>
+body { font-family: Calibri, Arial, sans-serif; color: #333; max-width: 660px; margin: 0 auto; padding: 0; background: #F4F4F4; }
+.wrapper { background: #FFFFFF; border-radius: 12px; overflow: hidden; margin: 20px auto; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+.header { background: linear-gradient(135deg, #0071CE, #004C91); padding: 28px 32px; color: white; }
+.header h1 { margin: 0; font-size: 20px; font-weight: 600; }
+.header .date { font-size: 12px; opacity: 0.8; margin-top: 6px; }
+.content { padding: 28px 32px; }
+.greeting { font-size: 15px; margin-bottom: 16px; line-height: 1.6; }
+.section-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #0071CE; margin-bottom: 8px; }
+.section-title { font-size: 18px; font-weight: 700; color: #1A1A1A; margin: 0 0 14px 0; }
+.divider { border: none; border-top: 1px solid #E8E8E8; margin: 24px 0; }
+.stat-row { display: flex; gap: 10px; margin: 14px 0 18px 0; }
+.stat-box { background: #F7FAFF; border: 1px solid #DCE8F5; border-radius: 8px; padding: 10px 14px; text-align: center; flex: 1; }
+.stat-box .num { font-size: 22px; font-weight: 700; color: #0071CE; }
+.stat-box .label { font-size: 10px; color: #888; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-box.green .num { color: #16A34A; }
+.stat-box.amber .num { color: #D97706; }
+table.t { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 12px; }
+table.t th { background: #F7FAFF; color: #555; font-size: 9px; text-transform: uppercase; letter-spacing: 0.8px; padding: 8px 8px; text-align: center; border-bottom: 2px solid #DCE8F5; }
+table.t th:first-child { text-align: left; }
+table.t td { padding: 10px 8px; border-bottom: 1px solid #F0F0F0; text-align: center; }
+table.t td:first-child { text-align: left; font-weight: 600; color: #1A1A1A; }
+table.t tr:last-child td { border-bottom: none; }
+.total-row td { background: #F0F7FF; font-weight: 700 !important; border-top: 2px solid #0071CE !important; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+.bg { background: #DCFCE7; color: #16A34A; }
+.ba { background: #FEF3C7; color: #92400E; }
+.br { background: #FEE2E2; color: #DC2626; }
+.phase-header { background: #E8F4FD; color: #0071CE; font-weight: 700; font-size: 13px; padding: 10px 12px; border-radius: 8px 8px 0 0; margin-top: 20px; margin-bottom: 0; }
+.ready-box { background: linear-gradient(135deg, #F0FFF4, #ECFDF5); border: 1px solid #BBF7D0; border-radius: 10px; padding: 20px 24px; margin: 16px 0; }
+.ready-box h3 { margin: 0 0 6px 0; font-size: 16px; color: #16A34A; }
+.ready-box .big-num { font-size: 36px; font-weight: 800; color: #16A34A; }
+.ready-box .sub { font-size: 13px; color: #555; margin-top: 4px; }
+.ready-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.ready-chip { background: white; border: 1px solid #BBF7D0; border-radius: 6px; padding: 6px 12px; font-size: 12px; }
+.ready-chip b { color: #16A34A; }
+.footer { padding: 20px 32px; background: #F9F9F9; border-top: 1px solid #EEE; font-size: 12px; color: #999; text-align: center; }
+.footer a { color: #0071CE; text-decoration: none; }
+</style></head>
+<body>
+
+<div class="wrapper">
+
+<div class="header">
+  <h1>&#10052;&#65039; Win-the-Winter Daily Digest</h1>
+  <div class="date">Laura Moore's Org &bull; February 20, 2026</div>
+</div>
+
+<div class="content">
+
+<p class="greeting">Hey Laura, here's today's WTW snapshot.</p>
+
+<!-- ORG OVERVIEW -->
+<div class="section-label">Laura Moore's Org</div>
+<div class="section-title">1,099 Stores &bull; 1,045 WTW Work Orders</div>
+
+<div class="stat-row">
+  <div class="stat-box green"><div class="num">231</div><div class="label">Completed</div></div>
+  <div class="stat-box amber"><div class="num">803</div><div class="label">In Progress</div></div>
+  <div class="stat-box"><div class="num">11</div><div class="label">Open</div></div>
+</div>
+
+<div class="stat-row">
+  <div class="stat-box"><div class="num">22.1%</div><div class="label">% Completed</div></div>
+  <div class="stat-box"><div class="num">92.9%</div><div class="label">Avg PM Score</div></div>
+  <div class="stat-box"><div class="num">26.6%</div><div class="label">Pass Rate</div></div>
+</div>
+
+<hr class="divider">
+
+<!-- READY TO COMPLETE -->
+<div class="ready-box">
+  <h3>&#9989; Ready to Complete</h3>
+  <div class="big-num">188</div>
+  <div class="sub">WOs currently In Progress with <b>all PM components passing</b></div>
+  <div style="margin-top:8px; font-size:13px; color:#555;"><b>106</b> of these have <b>6+ labor hours</b> logged</div>
+  <div class="ready-row">
+    <div class="ready-chip">Brian Conover: <b>70</b> (48 w/ 6+hrs)</div>
+    <div class="ready-chip">Donnie Chester: <b>46</b> (21 w/ 6+hrs)</div>
+    <div class="ready-chip">Jack Grahek: <b>39</b> (20 w/ 6+hrs)</div>
+  </div>
+  <div class="ready-row">
+    <div class="ready-chip">Josh Thaxton: <b>14</b> (8 w/ 6+hrs)</div>
+    <div class="ready-chip">Sonya Webster: <b>19</b> (9 w/ 6+hrs)</div>
+  </div>
+  <div class="ready-row" style="margin-top:8px;">
+    <div class="ready-chip">PH1: <b>16</b></div>
+    <div class="ready-chip">PH2: <b>83</b></div>
+    <div class="ready-chip">PH3: <b>89</b></div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- PHASE 1 -->
+<div class="section-label">Phase Breakdown</div>
+
+<p class="phase-header">Phase 1 &mdash; 353 WOs</p>
+<table class="t">
+<tr><th>Director</th><th>WOs</th><th>Done</th><th>% Done</th><th>IP</th><th>Avg PM</th><th>Pass Rate</th></tr>
+<tr><td>Brian Conover</td><td>71</td><td>37</td><td><span class="badge bg">52.1%</span></td><td>32</td><td>92.4%</td><td><span class="badge ba">29.6%</span></td></tr>
+<tr><td>Donnie Chester</td><td>89</td><td>40</td><td><span class="badge bg">44.9%</span></td><td>49</td><td>92.2%</td><td><span class="badge ba">21.3%</span></td></tr>
+<tr><td>Jack Grahek</td><td>59</td><td>26</td><td><span class="badge bg">44.1%</span></td><td>33</td><td>91.3%</td><td><span class="badge br">16.9%</span></td></tr>
+<tr><td>Josh Thaxton</td><td>69</td><td>29</td><td><span class="badge bg">42.0%</span></td><td>40</td><td>90.9%</td><td><span class="badge br">13.0%</span></td></tr>
+<tr><td>Sonya Webster</td><td>65</td><td>17</td><td><span class="badge ba">26.2%</span></td><td>48</td><td>90.5%</td><td><span class="badge br">12.3%</span></td></tr>
+<tr class="total-row"><td>Phase 1 Total</td><td>353</td><td>149</td><td><span class="badge bg">42.2%</span></td><td>202</td><td>91.5%</td><td><span class="badge br">19.0%</span></td></tr>
+</table>
+
+<p class="phase-header">Phase 2 &mdash; 359 WOs</p>
+<table class="t">
+<tr><th>Director</th><th>WOs</th><th>Done</th><th>% Done</th><th>IP</th><th>Avg PM</th><th>Pass Rate</th></tr>
+<tr><td>Brian Conover</td><td>100</td><td>15</td><td><span class="badge ba">15.0%</span></td><td>82</td><td>94.3%</td><td><span class="badge bg">49.0%</span></td></tr>
+<tr><td>Jack Grahek</td><td>58</td><td>11</td><td><span class="badge ba">19.0%</span></td><td>45</td><td>93.2%</td><td><span class="badge ba">24.1%</span></td></tr>
+<tr><td>Donnie Chester</td><td>114</td><td>14</td><td><span class="badge br">12.3%</span></td><td>100</td><td>93.0%</td><td><span class="badge ba">27.2%</span></td></tr>
+<tr><td>Sonya Webster</td><td>50</td><td>3</td><td><span class="badge br">6.0%</span></td><td>47</td><td>92.9%</td><td><span class="badge br">16.0%</span></td></tr>
+<tr><td>Josh Thaxton</td><td>37</td><td>2</td><td><span class="badge br">5.4%</span></td><td>35</td><td>93.2%</td><td><span class="badge br">10.8%</span></td></tr>
+<tr class="total-row"><td>Phase 2 Total</td><td>359</td><td>45</td><td><span class="badge br">12.5%</span></td><td>309</td><td>93.4%</td><td><span class="badge ba">29.5%</span></td></tr>
+</table>
+
+<p class="phase-header">Phase 3 &mdash; 333 WOs</p>
+<table class="t">
+<tr><th>Director</th><th>WOs</th><th>Done</th><th>% Done</th><th>IP</th><th>Avg PM</th><th>Pass Rate</th></tr>
+<tr><td>Josh Thaxton</td><td>47</td><td>9</td><td><span class="badge ba">19.1%</span></td><td>38</td><td>93.5%</td><td><span class="badge ba">23.4%</span></td></tr>
+<tr><td>Sonya Webster</td><td>45</td><td>7</td><td><span class="badge ba">15.6%</span></td><td>38</td><td>93.8%</td><td><span class="badge ba">22.2%</span></td></tr>
+<tr><td>Brian Conover</td><td>97</td><td>10</td><td><span class="badge br">10.3%</span></td><td>84</td><td>93.8%</td><td><span class="badge bg">38.1%</span></td></tr>
+<tr><td>Donnie Chester</td><td>84</td><td>7</td><td><span class="badge br">8.3%</span></td><td>76</td><td>93.5%</td><td><span class="badge ba">25.0%</span></td></tr>
+<tr><td>Jack Grahek</td><td>60</td><td>4</td><td><span class="badge br">6.7%</span></td><td>56</td><td>94.1%</td><td><span class="badge bg">43.3%</span></td></tr>
+<tr class="total-row"><td>Phase 3 Total</td><td>333</td><td>37</td><td><span class="badge br">11.1%</span></td><td>292</td><td>93.7%</td><td><span class="badge ba">31.5%</span></td></tr>
+</table>
+
+<hr class="divider">
+
+<div class="section-label">Quick Link</div>
+<p><b>&#10148; Open Dashboard:</b> <a href="https://gecgithub01.walmart.com/pages/j0s028j/north-bu-hvacr-report-hub/">https://gecgithub01.walmart.com/pages/j0s028j/north-bu-hvacr-report-hub/</a></p>
+
+</div>
+
+<div class="footer">
+  <a href="https://gecgithub01.walmart.com/pages/j0s028j/north-bu-hvacr-report-hub/">Open Dashboard</a> &nbsp;&bull;&nbsp; Data refreshes daily at 6:00 AM CT<br>
+  Questions? Reply to this email &mdash; James Savage &bull; 918-308-0662
+</div>
+
+</div>
+
+</body>
+</html>
