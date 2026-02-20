@@ -20,6 +20,8 @@ from pathlib import Path
 
 DASHBOARD = Path(__file__).parent / 'index.html'
 DATA_FILE = Path(__file__).parent / 'terminal_cases.csv'
+WO_FILE = Path(__file__).parent / 'terminal_wos.csv'
+SC_URL = 'https://www.servicechannel.com/sc/wo/Workorders/index?id='
 
 
 def load_csv(path):
@@ -248,12 +250,14 @@ def build_terminal_html(total_cases, total_stores, run_stamp):
                             <th class="px-2 py-2 text-left font-medium text-gray-600 cursor-pointer" onclick="sortTermTable('cn')">Case Name</th>
                             <th class="px-2 py-2 text-left font-medium text-gray-600">Class</th>
                             <th class="px-2 py-2 text-center font-medium text-gray-600 cursor-pointer" onclick="sortTermTable('ow')">Open WOs</th>
+                            <th class="px-2 py-2 text-left font-medium text-gray-600">WO Links</th>
                             <th class="px-2 py-2 text-center font-medium text-gray-600 cursor-pointer" onclick="sortTermTable('pt')" title="% Time in Terminal State (24h)">% Terminal</th>
                             <th class="px-2 py-2 text-center font-medium text-gray-600 cursor-pointer" onclick="sortTermTable('cd')" title="Consecutive Days in Terminal State">Consec Days</th>
                             <th class="px-2 py-2 text-center font-medium text-gray-600 cursor-pointer" onclick="sortTermTable('dt')" title="Days in Terminal State Last 30">Days/30</th>
                             <th class="px-2 py-2 text-center font-medium text-gray-600 cursor-pointer" onclick="sortTermTable('mt')">Median Temp</th>
                             <th class="px-2 py-2 text-center font-medium text-gray-600 cursor-pointer" onclick="sortTermTable('sp')">Setpoint</th>
                             <th class="px-2 py-2 text-center font-medium text-gray-600">Variance</th>
+                            <th class="px-2 py-2 text-center font-medium text-gray-600">Email</th>
                         </tr>
                     </thead>
                     <tbody id="termTableBody" class="bg-white divide-y divide-gray-100">
@@ -548,11 +552,22 @@ function updateTerminalTable(data) {{
     const pctColor = v => v >= 90 ? 'bg-red-100 text-red-800 font-bold' : v >= 50 ? 'bg-amber-50 text-amber-800' : 'text-gray-700';
     const daysColor = d => d >= 3 ? 'bg-red-100 text-red-800 font-bold' : d >= 1 ? 'bg-amber-50 text-amber-800' : 'text-gray-500';
 
+    const SC = 'https://www.servicechannel.com/sc/wo/Workorders/index?id=';
     let html = '';
     sorted.forEach(r => {{
         const variance = (r.mt != null && r.sp != null) ? (r.mt - r.sp).toFixed(1) : '--';
         const varNum = parseFloat(variance);
         const varColor = isNaN(varNum) ? '' : varNum > 10 ? 'text-red-600 font-bold' : varNum > 5 ? 'text-amber-600' : 'text-gray-600';
+        // WO links
+        let woLinks = '<span class="text-gray-300">&mdash;</span>';
+        if (r.wos && r.wos.length > 0) {{
+            woLinks = r.wos.slice(0, 3).map(t =>
+                `<a href="${{SC}}${{t}}" target="_blank" class="text-blue-600 hover:underline font-medium" onclick="event.stopPropagation()">#${{t}}</a>`
+            ).join('<br>');
+            if (r.wos.length > 3) woLinks += `<br><span class="text-gray-400 text-xs">+${{r.wos.length - 3}} more</span>`;
+        }}
+        // Email button
+        const firstName = (r.mgr || '').split(' ')[0] || 'Team';
         html += `<tr class="hover:bg-gray-50">
             <td class="px-2 py-1.5 font-medium text-gray-900">${{r.sn}}</td>
             <td class="px-2 py-1.5 text-gray-600">${{r.fsm || '--'}}</td>
@@ -563,15 +578,42 @@ function updateTerminalTable(data) {{
             <td class="px-2 py-1.5 font-medium">${{r.cn}}</td>
             <td class="px-2 py-1.5"><span class="px-1.5 py-0.5 rounded text-xs font-medium ${{r.cc === 'LT' ? 'bg-blue-100 text-blue-700' : r.cc === 'MT' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'}}">${{r.cc || '--'}}</span></td>
             <td class="px-2 py-1.5 text-center ${{r.ow > 0 ? 'text-blue-600 font-bold' : 'text-gray-400'}}">${{r.ow}}</td>
+            <td class="px-2 py-1.5 text-left">${{woLinks}}</td>
             <td class="px-2 py-1.5 text-center ${{pctColor(r.pt)}}">${{r.pt != null ? r.pt.toFixed(1) + '%' : '--'}}</td>
             <td class="px-2 py-1.5 text-center ${{daysColor(r.cd)}}">${{r.cd}}</td>
             <td class="px-2 py-1.5 text-center text-gray-600">${{r.dt}}</td>
-            <td class="px-2 py-1.5 text-center text-gray-700">${{r.mt != null ? r.mt + '°F' : '--'}}</td>
-            <td class="px-2 py-1.5 text-center text-gray-500">${{r.sp != null ? r.sp + '°F' : '--'}}</td>
-            <td class="px-2 py-1.5 text-center ${{varColor}}">${{variance !== '--' ? variance + '°' : '--'}}</td>
+            <td class="px-2 py-1.5 text-center text-gray-700">${{r.mt != null ? r.mt + '\u00b0F' : '--'}}</td>
+            <td class="px-2 py-1.5 text-center text-gray-500">${{r.sp != null ? r.sp + '\u00b0F' : '--'}}</td>
+            <td class="px-2 py-1.5 text-center ${{varColor}}">${{variance !== '--' ? variance + '\u00b0' : '--'}}</td>
+            <td class="px-2 py-1.5 text-center">
+                <button onclick="emailTerminalFSM('${{r.mgr}}','${{r.sn}}','${{r.cn}}','${{r.cc}}','${{r.cd}}','${{r.pt}}')" 
+                    class="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded" title="Email ${{r.mgr}}">\u2709</button>
+            </td>
         </tr>`;
     }});
     tbody.innerHTML = html;
+}}
+
+function emailTerminalFSM(fsmName, storeNum, caseName, caseClass, consecDays, pctTerminal) {{
+    const firstName = (fsmName || 'Team').split(' ')[0];
+    const classLabel = caseClass === 'LT' ? 'Low Temp' : caseClass === 'MT' ? 'Medium Temp' : caseClass;
+    const subject = `Store ${{storeNum}} \u2013 ${{caseName}} (${{classLabel}}) Terminal Case Support`;
+    const body = [
+        `Hey ${{firstName}}!`,
+        ``,
+        `Hope you\u2019re doing well! I wanted to reach out about a refrigeration case in terminal state at Store ${{storeNum}}.`,
+        ``,
+        `Case: ${{caseName}} (${{classLabel}})`,
+        `Consecutive Days in Terminal: ${{consecDays}}`,
+        `% Time in Terminal (24h): ${{pctTerminal}}%`,
+        ``,
+        `How can we get this case back up and running? What support do you need from the team to get it resolved?`,
+        ``,
+        `Let me know if there are any parts, labor, or coordination needs I can help with.`,
+        ``,
+        `Thanks!`,
+    ].join('\n');
+    window.open(`mailto:?subject=${{encodeURIComponent(subject)}}&body=${{encodeURIComponent(body)}}`);
 }}
 
 // Search handler
@@ -581,6 +623,20 @@ document.getElementById('termTableSearch').addEventListener('input', function() 
 </script>'''
 
 
+def load_wo_map():
+    """Load store -> [tracking_numbers] map from terminal_wos.csv."""
+    wo_map = {}
+    if not WO_FILE.exists():
+        print('   \u26a0\ufe0f  No terminal_wos.csv found, skipping WO links')
+        return wo_map
+    for r in load_csv(WO_FILE):
+        s = r['sn']
+        if s not in wo_map:
+            wo_map[s] = []
+        wo_map[s].append(r['tn'])
+    return wo_map
+
+
 def main():
     print('\U0001f321\ufe0f  Loading Terminal Cases data...')
     if not DATA_FILE.exists():
@@ -588,8 +644,14 @@ def main():
         sys.exit(1)
 
     rows = load_csv(DATA_FILE)
+    wo_map = load_wo_map()
     data = compress(rows)
+    # Inject WO tracking numbers at store level
+    for d in data:
+        d['wos'] = wo_map.get(d['sn'], [])
     run_stamp = rows[0].get('run_stamp', '') if rows else ''
+    stores_with_wos = sum(1 for s in set(d['sn'] for d in data) if s in wo_map)
+    print(f'   Stores with open Ref WOs: {stores_with_wos}')
 
     total_cases = len(data)
     total_stores = len(set(r['sn'] for r in data))
