@@ -19,10 +19,11 @@
 - Full detail table with sorting, search, color-coded metrics
 - 12 cascading filters: Sr Dir, Director, RM, FSM, Market, Sub Market, Case Class, Consec Days, Open WOs, HVACR Tech, Store, Ops Region
 - Script: `add_terminal_tab.py`
-- Data files: `terminal_cases.csv`, `terminal_wos.csv`
+- Data files: `terminal_cases.csv`, `terminal_wos.csv`, `terminal_sensors.csv`
 - BQ pull: joins Crystal `case_terminal_performance` with `sc_workorder` for open ref WO tracking numbers
+- Crystal links: `case_temp_sensor_id` from `re-ods-prod.us_re_ods_prod_pub.case_score_curr` → 100% coverage
 - Key fix: f-string `\n` → `\\n` escape for JS `.join()` output
-- Commit: `fd7f275`
+- Commit: `0f59efe`
 
 ### 0a. 11-Week TnT Trend Line Chart (NEW)
 - Added multi-line Chart.js line chart showing weekly TnT performance over 11 Walmart weeks
