@@ -131,9 +131,10 @@ def build_terminal_html(total_cases, total_stores, run_stamp):
                     <label class="block text-xs font-medium text-gray-500 mb-1">Consec. Days</label>
                     <select id="termConsecDays" onchange="applyTerminalFilters()" class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm">
                         <option value="">All</option>
+                        <option value="0">0 Days</option>
                         <option value="1">1 Day</option>
                         <option value="2">2 Days</option>
-                        <option value="3+">&gt;3 Days</option>
+                        <option value="3+">&ge;3 Days</option>
                     </select>
                 </div>
                 <div>
@@ -250,10 +251,10 @@ def build_terminal_html(total_cases, total_stores, run_stamp):
                             <th class="px-2 py-2 text-left font-medium text-gray-600 cursor-pointer" onclick="sortTermTable('mgr')">FS Manager</th>
                             <th class="px-2 py-2 text-left font-medium text-gray-600 cursor-pointer" onclick="sortTermTable('tech')">HVACR Tech</th>
                             <th class="px-2 py-2 text-left font-medium text-gray-600 cursor-pointer" onclick="sortTermTable('cn')">Case Name</th>
-                            <th class="px-2 py-2 text-center font-medium text-gray-600" title="View in Crystal Telemetry">🔬</th>
+                            <th class="px-2 py-2 text-center font-medium text-gray-600" title="View in Crystal Telemetry">Crystal</th>
                             <th class="px-2 py-2 text-left font-medium text-gray-600">Class</th>
                             <th class="px-2 py-2 text-center font-medium text-gray-600 cursor-pointer" onclick="sortTermTable('ow')">Open WOs</th>
-                            <th class="px-2 py-2 text-left font-medium text-gray-600">WO Links</th>
+                            <th class="px-2 py-2 text-center font-medium text-gray-600" title="All WOs last 30 days">30d WOs</th>
                             <th class="px-2 py-2 text-center font-medium text-gray-600 cursor-pointer" onclick="sortTermTable('pt')" title="% Time in Terminal State (24h)">% Terminal</th>
                             <th class="px-2 py-2 text-center font-medium text-gray-600 cursor-pointer" onclick="sortTermTable('cd')" title="Consecutive Days in Terminal State">Consec Days</th>
                             <th class="px-2 py-2 text-center font-medium text-gray-600 cursor-pointer" onclick="sortTermTable('dt')" title="Days in Terminal State Last 30">Days/30</th>
@@ -371,7 +372,8 @@ function applyTerminalFilters() {{
     if (v('termOpsRegion')) data = data.filter(r => r.rn === v('termOpsRegion'));
 
     const cd = v('termConsecDays');
-    if (cd === '1') data = data.filter(r => r.cd === 1);
+    if (cd === '0') data = data.filter(r => r.cd === 0);
+    else if (cd === '1') data = data.filter(r => r.cd === 1);
     else if (cd === '2') data = data.filter(r => r.cd === 2);
     else if (cd === '3+') data = data.filter(r => r.cd >= 3);
 
@@ -421,7 +423,7 @@ function updateTerminalKPIs(data) {{
     Object.entries(ccMap).sort((a,b) => b[1]-a[1]).forEach(([k, cnt]) => {{
         const c = colors[k] || colors.Unknown;
         const l = labels[k] || k;
-        cards += `<div class="rounded-lg border-2 p-4 ${{c}} text-center">
+        cards += `<div class="rounded-lg border-2 p-4 ${{c}} text-center cursor-pointer hover:shadow-md transition-shadow" onclick="termFilterByCard('cc','${{k}}')">
             <p class="text-3xl font-bold">${{cnt}}</p>
             <p class="text-sm font-medium">${{l}} (${{k}})</p>
             <p class="text-xs mt-1">${{data.length ? (cnt/data.length*100).toFixed(1) : 0}}%</p>
@@ -432,7 +434,7 @@ function updateTerminalKPIs(data) {{
 
 function updateTerminalCharts(data) {{
     try {{
-    const withWO = data.filter(r => r.ow > 0).length;
+    const withWO = data.filter(r => (r.wos && r.wos.length > 0) || r.ow > 0).length;
     const noWO = data.length - withWO;
 
     // Donut
@@ -466,10 +468,11 @@ function updateTerminalCharts(data) {{
 
     if (termDaysChart) termDaysChart.destroy();
     const bCtx = document.getElementById('termDaysChart').getContext('2d');
+    const dayBuckets = ['0','1','2','3+'];
     termDaysChart = new Chart(bCtx, {{
         type: 'bar',
         data: {{
-            labels: ['0 Days', '1 Day', '2 Days', '>3 Days'],
+            labels: ['0 Days', '1 Day', '2 Days', '3+ Days'],
             datasets: [{{
                 data: [day0, day1, day2, day3p],
                 backgroundColor: ['#d4d4d4', '#b45309', '#c2410c', '#991b1b'],
@@ -478,6 +481,12 @@ function updateTerminalCharts(data) {{
         }},
         options: {{
             responsive: true, maintainAspectRatio: false,
+            onClick: (evt, elements) => {{
+                if (elements.length > 0) {{
+                    const idx = elements[0].index;
+                    termFilterByCard('cd_bucket', dayBuckets[idx]);
+                }}
+            }},
             plugins: {{
                 legend: {{ display: false }},
                 datalabels: {{ display: false }}
@@ -506,6 +515,12 @@ function updateTerminalCharts(data) {{
         options: {{
             responsive: true, maintainAspectRatio: false,
             indexAxis: 'y',
+            onClick: (evt, elements) => {{
+                if (elements.length > 0) {{
+                    const idx = elements[0].index;
+                    termFilterByCard('fsm', smSorted[idx][0]);
+                }}
+            }},
             plugins: {{
                 legend: {{ display: false }},
                 datalabels: {{ display: false }}
@@ -534,6 +549,12 @@ function updateTerminalCharts(data) {{
         options: {{
             responsive: true, maintainAspectRatio: false,
             indexAxis: 'y',
+            onClick: (evt, elements) => {{
+                if (elements.length > 0) {{
+                    const idx = elements[0].index;
+                    termFilterByCard('dir', dirSorted[idx][0]);
+                }}
+            }},
             plugins: {{
                 legend: {{ display: false }},
                 tooltip: {{ callbacks: {{ title: items => dirSorted[items[0].dataIndex][0] }} }},
@@ -549,6 +570,26 @@ function sortTermTable(field) {{
     if (termSort.field === field) termSort.dir = termSort.dir === 'asc' ? 'desc' : 'asc';
     else {{ termSort.field = field; termSort.dir = 'desc'; }}
     updateTerminalTable(termFiltered);
+}}
+
+function termFilterByCard(type, value) {{
+    // Set the matching dropdown filter OR apply custom filter
+    if (type === 'dir') {{
+        const sel = document.getElementById('termDir');
+        if (sel) {{ sel.value = value; }}
+    }} else if (type === 'cc') {{
+        const sel = document.getElementById('termCaseClass');
+        if (sel) {{ sel.value = value; }}
+    }} else if (type === 'fsm') {{
+        const sel = document.getElementById('termSubMkt');
+        if (sel) {{ sel.value = value; }}
+    }} else if (type === 'cd_bucket') {{
+        const sel = document.getElementById('termConsecDays');
+        if (sel) {{ sel.value = value; }}
+    }}
+    applyTerminalFilters();
+    // Scroll to the detail table
+    document.getElementById('termTableBody')?.closest('.bg-white')?.scrollIntoView({{ behavior: 'smooth', block: 'start' }});
 }}
 
 function updateTerminalTable(data) {{
@@ -567,19 +608,39 @@ function updateTerminalTable(data) {{
 
     const SC = 'https://www.servicechannel.com/sc/wo/Workorders/index?id=';
     let html = '';
+    function woDropdown(wos, label, btnClass) {{
+        if (!wos || wos.length === 0) return '<span class="text-gray-300">&mdash;</span>';
+        const csv = wos.map(w => w.t || w).join(', ');
+        return `<div class="relative inline-block">
+            <button onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('hidden')" 
+                class="px-2 py-0.5 border rounded text-xs font-bold hover:shadow ${{btnClass}}">
+                ${{wos.length}} ${{label}} \u25be
+            </button>
+            <div class="hidden absolute z-50 left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl p-2 min-w-[220px]" onclick="event.stopPropagation()">
+                <div class="flex items-center justify-between mb-2 pb-1 border-b border-gray-100">
+                    <span class="text-xs font-semibold text-gray-500">${{label}}</span>
+                    <button onclick="navigator.clipboard.writeText('${{csv}}'); this.textContent='\u2705 Copied'; setTimeout(()=>this.textContent='Copy All',1500)" 
+                        class="text-xs px-2 py-0.5 bg-gray-100 hover:bg-gray-200 rounded text-gray-600">Copy All</button>
+                </div>
+                ${{wos.map(w => {{
+                    const tn = w.t || w;
+                    const age = w.a || '?';
+                    const ageColor = age >= 7 ? 'text-red-500' : age >= 3 ? 'text-amber-500' : 'text-gray-400';
+                    return `<a href="${{SC}}${{tn}}" target="_blank" class="flex items-center justify-between px-2 py-1 text-xs hover:bg-blue-50 rounded">
+                        <span class="text-blue-600 font-mono">#${{tn}}</span>
+                        <span class="${{ageColor}} text-[10px] ml-2">${{age}}d ago</span>
+                    </a>`;
+                }}).join('')}}
+            </div>
+        </div>`;
+    }}
+    let rowIdx = 0;
     sorted.forEach(r => {{
         const variance = (r.mt != null && r.sp != null) ? (r.mt - r.sp).toFixed(1) : '--';
         const varNum = parseFloat(variance);
         const varColor = isNaN(varNum) ? '' : varNum > 10 ? 'text-red-600 font-bold' : varNum > 5 ? 'text-amber-600' : 'text-gray-600';
-        // WO links
-        let woLinks = '<span class="text-gray-300">&mdash;</span>';
-        if (r.wos && r.wos.length > 0) {{
-            woLinks = r.wos.slice(0, 3).map(t =>
-                `<a href="${{SC}}${{t}}" target="_blank" class="text-blue-600 hover:underline font-medium" onclick="event.stopPropagation()">#${{t}}</a>`
-            ).join('<br>');
-            if (r.wos.length > 3) woLinks += `<br><span class="text-gray-400 text-xs">+${{r.wos.length - 3}} more</span>`;
-        }}
-        // Email button
+        const openWoHtml = woDropdown(r.wos, 'Open', 'bg-red-50 border-red-200 text-red-700');
+        const recentWoHtml = woDropdown(r.wos30, 'WOs', 'bg-blue-50 border-blue-200 text-blue-700');
         const firstName = (r.mgr || '').split(' ')[0] || 'Team';
         html += `<tr class="hover:bg-gray-50">
             <td class="px-2 py-1.5 font-medium text-gray-900">${{r.sn}}</td>
@@ -589,10 +650,10 @@ function updateTerminalTable(data) {{
             <td class="px-2 py-1.5 text-gray-600">${{r.mgr || '--'}}</td>
             <td class="px-2 py-1.5 text-gray-600">${{r.tech || '--'}}</td>
             <td class="px-2 py-1.5 font-medium">${{r.cn}}</td>
-            <td class="px-2 py-1.5 text-center">${{r.sid ? `<a href="https://crystal.walmart.com/us/stores/search/${{r.sn}}?view=telemetry&uniqueIds=${{encodeURIComponent(r.sid)}}&fromDate=${{Date.now() - 3*86400000}}&toDate=${{Date.now()}}" target="_blank" class="text-blue-600 hover:text-blue-800" title="View in Crystal Telemetry">\U0001f52c</a>` : ''}}</td>
+            <td class="px-2 py-1.5 text-center">${{r.sid ? `<a href="https://crystal.walmart.com/us/stores/search/${{r.sn}}?view=telemetry&uniqueIds=${{encodeURIComponent(r.sid)}}&fromDate=${{Date.now() - 3*86400000}}&toDate=${{Date.now()}}" target="_blank" class="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded hover:bg-indigo-100 hover:shadow transition-all text-xs font-semibold" title="View ${{r.cn}} telemetry in Crystal">\U0001f52c Crystal</a>` : '<span class="text-gray-300">&mdash;</span>'}}</td>
             <td class="px-2 py-1.5"><span class="px-1.5 py-0.5 rounded text-xs font-medium ${{r.cc === 'LT' ? 'bg-blue-100 text-blue-700' : r.cc === 'MT' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'}}">${{r.cc || '--'}}</span></td>
-            <td class="px-2 py-1.5 text-center ${{r.ow > 0 ? 'text-blue-600 font-bold' : 'text-gray-400'}}">${{r.ow}}</td>
-            <td class="px-2 py-1.5 text-left">${{woLinks}}</td>
+            <td class="px-2 py-1.5 text-center">${{openWoHtml}}</td>
+            <td class="px-2 py-1.5 text-center">${{recentWoHtml}}</td>
             <td class="px-2 py-1.5 text-center ${{pctColor(r.pt)}}">${{r.pt != null ? r.pt.toFixed(1) + '%' : '--'}}</td>
             <td class="px-2 py-1.5 text-center ${{daysColor(r.cd)}}">${{r.cd}}</td>
             <td class="px-2 py-1.5 text-center text-gray-600">${{r.dt}}</td>
@@ -600,34 +661,54 @@ function updateTerminalTable(data) {{
             <td class="px-2 py-1.5 text-center text-gray-500">${{r.sp != null ? r.sp + '\u00b0F' : '--'}}</td>
             <td class="px-2 py-1.5 text-center ${{varColor}}">${{variance !== '--' ? variance + '\u00b0' : '--'}}</td>
             <td class="px-2 py-1.5 text-center">
-                <button onclick="emailTerminalFSM('${{r.mgr}}','${{r.sn}}','${{r.cn}}','${{r.cc}}','${{r.cd}}','${{r.pt}}')" 
+                <button onclick="emailTerminalFSM(${{rowIdx}})" 
                     class="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded" title="Email ${{r.mgr}}">\u2709</button>
             </td>
         </tr>`;
+        rowIdx++;
     }});
     tbody.innerHTML = html;
+    // Store sorted data for email lookup
+    window._termSorted = sorted;
 }}
 
-function emailTerminalFSM(fsmName, storeNum, caseName, caseClass, consecDays, pctTerminal) {{
-    const firstName = (fsmName || 'Team').split(' ')[0];
-    const classLabel = caseClass === 'LT' ? 'Low Temp' : caseClass === 'MT' ? 'Medium Temp' : caseClass;
-    const subject = `Store ${{storeNum}} \u2013 ${{caseName}} (${{classLabel}}) Terminal Case Support`;
+function emailTerminalFSM(idx) {{
+    const r = window._termSorted[idx];
+    if (!r) return;
+    const firstName = (r.mgr || 'Team').split(' ')[0];
+    const classLabel = r.cc === 'LT' ? 'Low Temp' : r.cc === 'MT' ? 'Medium Temp' : r.cc;
+    const subject = `Store ${{r.sn}} \u2013 ${{r.cn}} (${{classLabel}}) Terminal Case Support`;
+    const SC = 'https://www.servicechannel.com/sc/wo/Workorders/index?id=';
+    let woSection = '';
+    if (r.wos && r.wos.length > 0) {{
+        const woLines = r.wos.map(w => '  - ' + SC + (w.t || w)).join('\\n');
+        woSection = '\\nOpen Work Orders (' + r.wos.length + '):\\n' + woLines;
+    }}
+    if (r.wos30 && r.wos30.length > 0 && (!r.wos || r.wos30.length !== r.wos.length)) {{
+        woSection += '\\nTotal WOs (Last 30 Days): ' + r.wos30.length;
+    }}
+    let crystalLink = '';
+    if (r.sid) {{
+        crystalLink = '\\nCrystal Telemetry: https://crystal.walmart.com/us/stores/search/' + r.sn + '?view=telemetry&uniqueIds=' + encodeURIComponent(r.sid) + '&fromDate=' + (Date.now() - 3*86400000) + '&toDate=' + Date.now();
+    }}
     const body = [
-        `Hey ${{firstName}}!`,
-        ``,
-        `Hope you\u2019re doing well! I wanted to reach out about a refrigeration case in terminal state at Store ${{storeNum}}.`,
-        ``,
-        `Case: ${{caseName}} (${{classLabel}})`,
-        `Consecutive Days in Terminal: ${{consecDays}}`,
-        `% Time in Terminal (24h): ${{pctTerminal}}%`,
-        ``,
-        `How can we get this case back up and running? What support do you need from the team to get it resolved?`,
-        ``,
-        `Let me know if there are any parts, labor, or coordination needs I can help with.`,
-        ``,
-        `Thanks!`,
-    ].join('\\n');
-    window.open(`mailto:?subject=${{encodeURIComponent(subject)}}&body=${{encodeURIComponent(body)}}`);
+        'Hey ' + firstName + '!',
+        '',
+        'Hope you\u2019re doing well! I wanted to reach out about a refrigeration case in terminal state at Store ' + r.sn + '.',
+        '',
+        'Case: ' + r.cn + ' (' + classLabel + ')',
+        'Consecutive Days in Terminal: ' + r.cd,
+        '% Time in Terminal (24h): ' + (r.pt != null ? r.pt.toFixed(1) : '--') + '%',
+        woSection,
+        crystalLink,
+        '',
+        'How can we get this case back up and running? What support do you need from the team to get it resolved?',
+        '',
+        'Let me know if there are any parts, labor, or coordination needs I can help with.',
+        '',
+        'Thanks!',
+    ].filter(function(l) {{ return l !== ''; }}).join('\\n');
+    window.open('mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body));
 }}
 
 // Search handler
@@ -639,6 +720,11 @@ if (termSearchEl) {{
 }} else {{
     console.error('termTableSearch element not found!');
 }}
+// Close WO dropdowns when clicking outside
+document.addEventListener('click', function() {{
+    document.querySelectorAll('#termTableBody .relative > div:not(.hidden)').forEach(d => d.classList.add('hidden'));
+}});
+
 console.log('Terminal tab JS loaded, TERMINAL_DATA:', TERMINAL_DATA.length, 'records');
 </script>
 <!-- Terminal JS End -->'''
@@ -708,16 +794,98 @@ def load_sensor_map():
 
 
 def load_wo_map():
-    """Load store -> [tracking_numbers] map from terminal_wos.csv."""
+    """Pull case-level WOs from ODS by matching 'Systems Affected' in problem_desc.
+    Returns dict: 'store|case_name' -> {'open': [tn...], 'recent': [tn...]}
+    'open' = Open/In Progress status, 'recent' = all statuses last 30 days.
+    """
+    if not DATA_FILE.exists():
+        return {}
+    # Get unique store numbers
+    stores = set()
+    for r in load_csv(DATA_FILE):
+        stores.add(r['store_number'])
+    store_list = ','.join(stores)
+    
+    query = f"""
+    SELECT 
+      store_nbr AS sn,
+      CAST(tracking_nbr AS STRING) AS tn,
+      REGEXP_REPLACE(
+        REGEXP_EXTRACT(problem_desc, r'Systems Affected: ([A-Za-z0-9]+)'),
+        r'^([A-Za-z]+)0+(\\d)',
+        r'\\1\\2'
+      ) AS case_ref,
+      status_name,
+      CAST(DATE_DIFF(CURRENT_DATE(), DATE(call_date), DAY) AS STRING) AS age_days
+    FROM `re-ods-prod.us_re_ods_prod_pub.sc_walmart_workorder`
+    WHERE store_nbr IN ({store_list})
+    AND LOWER(sc_trade_name) LIKE '%refrig%'
+    AND problem_desc LIKE '%Systems Affected%'
+    AND call_date >= DATETIME_SUB(CURRENT_DATETIME(), INTERVAL 30 DAY)
+    ORDER BY call_date DESC
+    """
+    try:
+        result = subprocess.run(
+            ['bq', 'query', '--use_legacy_sql=false', '--format=csv', '--max_rows=50000', query],
+            capture_output=True, text=True, timeout=60
+        )
+        if result.returncode != 0:
+            print(f'   \u26a0\ufe0f  BQ case WO query failed, falling back to store-level')
+            return _load_wo_file()
+        lines = [l for l in result.stdout.strip().split('\n')
+                 if l and not l.startswith('WARNING') and 'Python 3.9' not in l
+                 and 'gcloud components' not in l and 'CLOUDSDK' not in l
+                 and 'compatible' not in l and 'reinstall' not in l
+                 and 'officially supported' not in l and 'may not function' not in l
+                 and 'prompt to install' not in l and '$ gcloud' not in l
+                 and 'point to it' not in l and 'Waiting on' not in l]
+        if len(lines) < 2:
+            print('   \u26a0\ufe0f  No case-level WO data, falling back to store-level')
+            return _load_wo_file()
+        
+        # Save updated WO file
+        with open(WO_FILE, 'w') as f:
+            f.write('\n'.join(lines) + '\n')
+        
+        # Build map: store|case -> {open: [{tn, age}...], recent: [{tn, age}...]}
+        wo_map = {}
+        reader = csv.DictReader(lines)
+        for r in reader:
+            case_ref = r.get('case_ref', '')
+            if not case_ref:
+                continue
+            key = f"{r['sn']}|{case_ref}"
+            if key not in wo_map:
+                wo_map[key] = {'open': [], 'recent': []}
+            entry = {'t': r['tn'], 'a': r.get('age_days', '?')}
+            wo_map[key]['recent'].append(entry)
+            if r['status_name'] in ('Open', 'In Progress'):
+                wo_map[key]['open'].append(entry)
+        
+        total_wos = sum(len(v['recent']) for v in wo_map.values())
+        open_wos = sum(len(v['open']) for v in wo_map.values())
+        print(f'   Case-level WOs: {total_wos} total, {open_wos} open/in-progress, {len(wo_map)} case matches')
+        return wo_map
+    except subprocess.TimeoutExpired:
+        print('   \u26a0\ufe0f  BQ case WO query timed out, falling back to store-level')
+        return _load_wo_file()
+    except Exception as e:
+        print(f'   \u26a0\ufe0f  Case WO pull error: {e}, falling back to store-level')
+        return _load_wo_file()
+
+
+def _load_wo_file():
+    """Fallback: load store-level WOs from terminal_wos.csv."""
     wo_map = {}
     if not WO_FILE.exists():
         print('   \u26a0\ufe0f  No terminal_wos.csv found, skipping WO links')
         return wo_map
     for r in load_csv(WO_FILE):
-        s = r['sn']
-        if s not in wo_map:
-            wo_map[s] = []
-        wo_map[s].append(r['tn'])
+        s = r.get('sn', '')
+        key = f"{s}|_store_"  # store-level fallback marker
+        if key not in wo_map:
+            wo_map[key] = {'open': [], 'recent': []}
+        wo_map[key]['recent'].append(r['tn'])
     return wo_map
 
 
@@ -741,16 +909,19 @@ def main():
     data = compress(rows)
     # Inject WO tracking numbers and Crystal sensor IDs
     for d in data:
-        d['wos'] = wo_map.get(d['sn'], [])
-        sid = sensor_map.get(f"{d['sn']}|{d['cn']}", '')
+        case_key = f"{d['sn']}|{d['cn']}"
+        wo_data = wo_map.get(case_key, {'open': [], 'recent': []})
+        d['wos'] = wo_data['open']     # open/in-progress WOs (case-level)
+        d['wos30'] = wo_data['recent']  # all WOs last 30 days (case-level)
+        sid = sensor_map.get(case_key, '')
         if sid:
             d['sid'] = sid
     run_stamp = rows[0].get('run_stamp', '') if rows else ''
-    stores_with_wos = sum(1 for s in set(d['sn'] for d in data) if s in wo_map)
+    cases_with_wos = sum(1 for d in data if d['wos'] or d['wos30'])
     total_cases = len(data)
     total_stores = len(set(r['sn'] for r in data))
     cases_with_crystal = sum(1 for d in data if d.get('sid'))
-    print(f'   Stores with open Ref WOs: {stores_with_wos}')
+    print(f'   Cases with matched WOs: {cases_with_wos}/{total_cases}')
     print(f'   Cases with Crystal link: {cases_with_crystal}/{total_cases}')
 
     print(f'   Cases: {total_cases}')
