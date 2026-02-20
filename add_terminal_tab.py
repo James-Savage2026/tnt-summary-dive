@@ -272,9 +272,13 @@ def build_terminal_html(total_cases, total_stores, run_stamp):
 
 def build_terminal_js(data_json):
     """Build the JS for the Terminal Cases tab."""
-    return f'''<script>
+    return f'''<!-- Terminal JS Start -->
+<script>
 // Terminal Cases Data
 const TERMINAL_DATA = {data_json};
+console.log('TERMINAL_DATA loaded:', TERMINAL_DATA.length, 'records');
+</script>
+<script>
 let termFiltered = [...TERMINAL_DATA];
 let termSort = {{ field: 'cd', dir: 'desc' }};
 let termDonutChart, termDaysChart, termSubMktChart, termDirChart;
@@ -282,8 +286,15 @@ let termDonutChart, termDaysChart, termSubMktChart, termDirChart;
 function initTerminalTab() {{
     if (window._termInit) return;
     window._termInit = true;
-    populateTerminalFilters();
-    applyTerminalFilters();
+    try {{
+        populateTerminalFilters();
+        applyTerminalFilters();
+        console.log('Terminal tab initialized:', TERMINAL_DATA.length, 'cases');
+    }} catch(e) {{
+        console.error('Terminal tab init error:', e);
+        document.getElementById('termTotalCases').textContent = 'ERROR';
+        document.getElementById('termTotalCases').title = e.message;
+    }}
 }}
 
 function populateTerminalFilters() {{
@@ -417,6 +428,7 @@ function updateTerminalKPIs(data) {{
 }}
 
 function updateTerminalCharts(data) {{
+    try {{
     const withWO = data.filter(r => r.ow > 0).length;
     const noWO = data.length - withWO;
 
@@ -426,7 +438,7 @@ function updateTerminalCharts(data) {{
     termDonutChart = new Chart(dCtx, {{
         type: 'doughnut',
         data: {{
-            labels: ['With Open WOs', 'No Open WOs'],
+            labels: ['With Open WOs (' + withWO + ')', 'No Open WOs (' + noWO + ')'],
             datasets: [{{
                 data: [withWO, noWO],
                 backgroundColor: ['#b45309', '#d4d4d4'],
@@ -438,10 +450,7 @@ function updateTerminalCharts(data) {{
             cutout: '55%',
             plugins: {{
                 legend: {{ position: 'bottom', labels: {{ font: {{ size: 11 }} }} }},
-                datalabels: {{
-                    color: '#333', font: {{ weight: 'bold', size: 13 }},
-                    formatter: (v, ctx) => v > 0 ? v + '\\n' + (v / (withWO + noWO) * 100).toFixed(1) + '%' : ''
-                }}
+                datalabels: {{ display: false }}
             }}
         }}
     }});
@@ -468,9 +477,9 @@ function updateTerminalCharts(data) {{
             responsive: true, maintainAspectRatio: false,
             plugins: {{
                 legend: {{ display: false }},
-                datalabels: {{ anchor: 'end', align: 'end', font: {{ weight: 'bold', size: 12 }}, color: '#333' }}
+                datalabels: {{ display: false }}
             }},
-            scales: {{ y: {{ beginAtZero: true, ticks: {{ stepSize: 50 }} }} }}
+            scales: {{ y: {{ beginAtZero: true }} }}
         }}
     }});
 
@@ -496,7 +505,7 @@ function updateTerminalCharts(data) {{
             indexAxis: 'y',
             plugins: {{
                 legend: {{ display: false }},
-                datalabels: {{ anchor: 'end', align: 'end', font: {{ weight: 'bold', size: 10 }}, color: '#333' }}
+                datalabels: {{ display: false }}
             }},
             scales: {{ x: {{ beginAtZero: true }} }}
         }}
@@ -525,11 +534,12 @@ function updateTerminalCharts(data) {{
             plugins: {{
                 legend: {{ display: false }},
                 tooltip: {{ callbacks: {{ title: items => dirSorted[items[0].dataIndex][0] }} }},
-                datalabels: {{ anchor: 'end', align: 'start', offset: 4, color: '#fff', font: {{ weight: 'bold', size: 11 }} }}
+                datalabels: {{ display: false }}
             }},
             scales: {{ x: {{ beginAtZero: true }} }}
         }}
     }});
+    }} catch(e) {{ console.error('Terminal chart error:', e); }}
 }}
 
 function sortTermTable(field) {{
@@ -612,15 +622,22 @@ function emailTerminalFSM(fsmName, storeNum, caseName, caseClass, consecDays, pc
         `Let me know if there are any parts, labor, or coordination needs I can help with.`,
         ``,
         `Thanks!`,
-    ].join('\n');
+    ].join('\\n');
     window.open(`mailto:?subject=${{encodeURIComponent(subject)}}&body=${{encodeURIComponent(body)}}`);
 }}
 
 // Search handler
-document.getElementById('termTableSearch').addEventListener('input', function() {{
-    applyTerminalFilters();
-}});
-</script>'''
+const termSearchEl = document.getElementById('termTableSearch');
+if (termSearchEl) {{
+    termSearchEl.addEventListener('input', function() {{
+        applyTerminalFilters();
+    }});
+}} else {{
+    console.error('termTableSearch element not found!');
+}}
+console.log('Terminal tab JS loaded, TERMINAL_DATA:', TERMINAL_DATA.length, 'records');
+</script>
+<!-- Terminal JS End -->'''
 
 
 def load_wo_map():
@@ -670,6 +687,7 @@ def main():
     if '<!-- Terminal Tab Content -->' in html:
         print('   Removing old Terminal tab...')
         html = re.sub(r'<!-- Terminal Tab Content -->.*?<!-- End Terminal Tab -->', '', html, flags=re.DOTALL)
+        html = re.sub(r'<!-- Terminal JS Start -->.*?<!-- Terminal JS End -->', '', html, flags=re.DOTALL)
         html = re.sub(r'<script>\s*// Terminal Cases Data.*?</script>', '', html, flags=re.DOTALL)
 
     # Add tab button if not present
