@@ -1,8 +1,8 @@
 # HVAC TnT Dashboard — Session Checkpoint
 
-**Last Updated:** 2026-02-20 ~11:00 AM  
-**Last Commit:** `bf2a57f` — "Update checkpoint: Crystal telemetry links added"  
-**Branch:** `main` — clean, NOT yet pushed to remotes  
+**Last Updated:** 2026-02-20 ~12:00 PM  
+**Last Commit:** `6db463a` — "Terminal tab UX: click-to-filter charts, case-level WOs with age, Crystal buttons, enhanced email"  
+**Branch:** `main` — clean, NOT yet pushed to remotes (10 commits ahead)  
 **Session:** Stable
 
 ---
