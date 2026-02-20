@@ -155,11 +155,11 @@ QUERY_WEEKLY_TREND = """
 WITH weekly_store AS (
   SELECT
     store_nbr,
-    CONCAT(CAST(wmt_year_nbr AS STRING), LPAD(CAST(wmt_week_nbr AS STRING), 2, '0')) AS wmt_week,
+    FORMAT_DATE('%Y%W', run_date) AS wmt_week,
     AVG(time_in_target) AS avg_tit
   FROM `re-ods-prod.us_re_ods_prod_pub.store_score`
   WHERE run_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 90 DAY)
-  GROUP BY store_nbr, wmt_year_nbr, wmt_week_nbr
+  GROUP BY store_nbr, FORMAT_DATE('%Y%W', run_date)
 )
 SELECT
   w.wmt_week,

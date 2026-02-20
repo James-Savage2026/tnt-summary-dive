@@ -1,8 +1,8 @@
 # HVAC TnT Dashboard — Session Checkpoint
 
-**Last Updated:** 2026-02-20 ~12:00 PM  
-**Last Commit:** `6db463a` — "Terminal tab UX: click-to-filter charts, case-level WOs with age, Crystal buttons, enhanced email"  
-**Branch:** `main` — clean, NOT yet pushed to remotes (10 commits ahead)  
+**Last Updated:** 2026-02-20 ~7:30 PM  
+**Last Commit:** pending  
+**Branch:** `main`  
 **Session:** Stable
 
 ---
@@ -159,13 +159,25 @@ python3 refresh.py --local
 
 ---
 
+## 📧 Power Automate Email Tracker
+
+- **Flow 1:** "Track Dashboard Emails" — triggers on Sent Items, logs Terminal Case emails to `Email Tracker.xlsx` on OneDrive
+- **Flow 2:** "Track Dashboard Replies" — triggers on Inbox replies, logs with "Reply Received" type
+- **Excel:** `Power Automate/Book.xlsx` on OneDrive, table `Emaillog`
+- **Columns:** Date Sent, Store, Type, Case/Topic, Recipient, Email (subject line), Status, Days Open
+- **Setup guide:** `POWER_AUTOMATE_SETUP.md`
+- **Known issue:** Direct email deep links don't work with Walmart's Outlook; using subject line for manual search
+- **Fix needed:** Duplicate rows — turn off "Split On" in trigger Settings for both flows
+
+---
+
 ## 🐾 Known Issues / Future Ideas
 
 - PDF Bottom 10 table may still have rendering edge cases
 - SVG charts can bleed on very narrow PDF pages (~1012px usable)
 - 90-day trend chart date labels could use more month-boundary markers
 - `share.sh` currently hardcodes Laura's org — could be made dynamic for other Sr. Directors
-- The old `HVAC-TnT-Dashboard-2026-02-16.zip` from the first `share.sh` run is still on Desktop (can delete)
+- Power Automate flows: expand Subject Filter to catch WTW and Store emails when those get auto-generated subjects
 
 ---
 
