@@ -73,6 +73,47 @@ For each phase, show per-director:
 
 ---
 
+## 3. TnT Daily Digest
+
+**File:** `tnt-daily-digest.html`  
+**Subject:** `🌡 TnT Daily Digest — Laura Moore's Org`  
+**Audience:** Laura Moore  
+**Purpose:** Daily Time in Target snapshot with director breakdown + product loss  
+
+### Data Points (from `EMBEDDED_STORE_DATA` in index.html, filtered to `fm_sr_director_name == 'Laura Moore'`)
+
+#### Header Stats
+- Total stores in Laura's org (from store_data.json)
+- Stores with TnT data (where `twt_ref` is not null)
+- Avg Ref TnT (`twt_ref`)
+- Avg HVAC TnT (`twt_hvac`)
+- Passing count: Walmart stores >= 90%, Sam's Club >= 87%
+- Failing count: total - passing
+- Pass rate percentage
+- Total cases (`case_count`)
+- Cases out of target (`cases_out_of_target`)
+
+#### Product Loss Callout (red box)
+- Total estimated loss (`total_loss` summed)
+- Ranked by director, highest loss first
+
+#### Director Table
+Per director (sorted by pass rate descending):
+- Stores (count with data)
+- Ref TnT (average of `twt_ref`)
+- HVAC TnT (average of `twt_hvac`)
+- Passing count
+- Pass Rate (% passing)
+- Cases OOT (`cases_out_of_target` summed)
+- Est. Loss (`total_loss` summed, displayed in $M)
+- Total row at bottom
+- Color-coded badges:
+  - Green: >= 90% TnT or >= 45% pass rate
+  - Amber: 85-89% TnT or 30-44% pass rate
+  - Red: < 85% TnT or < 30% pass rate
+
+---
+
 ## How to Generate & Send
 
 ### Quick send (uses existing HTML template with current data):
