@@ -1,7 +1,7 @@
 # HVAC TnT Dashboard — Session Checkpoint
 
-**Last Updated:** 2026-02-19 ~2:30 PM  
-**Last Commit:** `787068c` — "Add Terminal Cases tab (4th tab) - mirrors Tableau report"  
+**Last Updated:** 2026-02-20 ~3:00 PM  
+**Last Commit:** `fd7f275` — "Clean up Terminal tab debug code from switchTab"  
 **Branch:** `main` — clean, up to date with both remotes  
 **Session:** Stable — no crashes
 
@@ -19,7 +19,10 @@
 - Full detail table with sorting, search, color-coded metrics
 - 12 cascading filters: Sr Dir, Director, RM, FSM, Market, Sub Market, Case Class, Consec Days, Open WOs, HVACR Tech, Store, Ops Region
 - Script: `add_terminal_tab.py`
-- Commit: `787068c`
+- Data files: `terminal_cases.csv`, `terminal_wos.csv`
+- BQ pull: joins Crystal `case_terminal_performance` with `sc_workorder` for open ref WO tracking numbers
+- Key fix: f-string `\n` → `\\n` escape for JS `.join()` output
+- Commit: `fd7f275`
 
 ### 0a. 11-Week TnT Trend Line Chart (NEW)
 - Added multi-line Chart.js line chart showing weekly TnT performance over 11 Walmart weeks
