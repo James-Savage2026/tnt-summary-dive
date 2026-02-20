@@ -16,11 +16,13 @@ import json
 import csv
 import re
 import sys
+import subprocess
 from pathlib import Path
 
 DASHBOARD = Path(__file__).parent / 'index.html'
 DATA_FILE = Path(__file__).parent / 'terminal_cases.csv'
 WO_FILE = Path(__file__).parent / 'terminal_wos.csv'
+SENSOR_FILE = Path(__file__).parent / 'terminal_sensors.csv'
 SC_URL = 'https://www.servicechannel.com/sc/wo/Workorders/index?id='
 
 
@@ -248,6 +250,7 @@ def build_terminal_html(total_cases, total_stores, run_stamp):
                             <th class="px-2 py-2 text-left font-medium text-gray-600 cursor-pointer" onclick="sortTermTable('mgr')">FS Manager</th>
                             <th class="px-2 py-2 text-left font-medium text-gray-600 cursor-pointer" onclick="sortTermTable('tech')">HVACR Tech</th>
                             <th class="px-2 py-2 text-left font-medium text-gray-600 cursor-pointer" onclick="sortTermTable('cn')">Case Name</th>
+                            <th class="px-2 py-2 text-center font-medium text-gray-600" title="View in Crystal Telemetry">🔬</th>
                             <th class="px-2 py-2 text-left font-medium text-gray-600">Class</th>
                             <th class="px-2 py-2 text-center font-medium text-gray-600 cursor-pointer" onclick="sortTermTable('ow')">Open WOs</th>
                             <th class="px-2 py-2 text-left font-medium text-gray-600">WO Links</th>
@@ -586,6 +589,7 @@ function updateTerminalTable(data) {{
             <td class="px-2 py-1.5 text-gray-600">${{r.mgr || '--'}}</td>
             <td class="px-2 py-1.5 text-gray-600">${{r.tech || '--'}}</td>
             <td class="px-2 py-1.5 font-medium">${{r.cn}}</td>
+            <td class="px-2 py-1.5 text-center">${{r.sid ? `<a href="https://crystal.walmart.com/us/stores/search/${{r.sn}}?view=telemetry&uniqueIds=${{encodeURIComponent(r.sid)}}&fromDate=${{Date.now() - 3*86400000}}&toDate=${{Date.now()}}" target="_blank" class="text-blue-600 hover:text-blue-800" title="View in Crystal Telemetry">\U0001f52c</a>` : ''}}</td>
             <td class="px-2 py-1.5"><span class="px-1.5 py-0.5 rounded text-xs font-medium ${{r.cc === 'LT' ? 'bg-blue-100 text-blue-700' : r.cc === 'MT' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'}}">${{r.cc || '--'}}</span></td>
             <td class="px-2 py-1.5 text-center ${{r.ow > 0 ? 'text-blue-600 font-bold' : 'text-gray-400'}}">${{r.ow}}</td>
             <td class="px-2 py-1.5 text-left">${{woLinks}}</td>
@@ -640,6 +644,69 @@ console.log('Terminal tab JS loaded, TERMINAL_DATA:', TERMINAL_DATA.length, 'rec
 <!-- Terminal JS End -->'''
 
 
+def pull_sensor_ids():
+    """Pull case_temp_sensor_id from BQ case_score_curr for terminal cases only."""
+    # Get store numbers from terminal data to limit query scope
+    if not DATA_FILE.exists():
+        return {}
+    stores = set()
+    for r in load_csv(DATA_FILE):
+        stores.add(r['store_number'])
+    store_list = ','.join(stores)
+    query = f"""
+    SELECT CAST(store_nbr AS STRING) as store_number, case_name, case_temp_sensor_id
+    FROM `re-ods-prod.us_re_ods_prod_pub.case_score_curr`
+    WHERE case_temp_sensor_id IS NOT NULL
+    AND store_nbr IN ({store_list})
+    """
+    try:
+        result = subprocess.run(
+            ['bq', 'query', '--use_legacy_sql=false', '--format=csv', '--max_rows=100000', query],
+            capture_output=True, text=True, timeout=30
+        )
+        if result.returncode != 0:
+            print(f'   ⚠️  BQ sensor query failed: {result.stderr[:200]}')
+            return {}
+        lines = [l for l in result.stdout.strip().split('\n')
+                 if l and not l.startswith('WARNING') and 'Python 3.9' not in l
+                 and 'gcloud components' not in l and 'CLOUDSDK' not in l
+                 and 'compatible' not in l and 'reinstall' not in l
+                 and 'officially supported' not in l and 'may not function' not in l
+                 and 'prompt to install' not in l and '$ gcloud' not in l
+                 and 'point to it' not in l]
+        if len(lines) < 2:
+            print('   ⚠️  No sensor data returned from BQ')
+            return {}
+        # Save to CSV
+        with open(SENSOR_FILE, 'w') as f:
+            f.write('\n'.join(lines) + '\n')
+        # Build map: store|case -> sensor_id
+        sensor_map = {}
+        reader = csv.DictReader(lines)
+        for r in reader:
+            key = f"{r['store_number']}|{r['case_name']}"
+            sensor_map[key] = r['case_temp_sensor_id']
+        print(f'   Crystal sensor IDs: {len(sensor_map):,} mappings')
+        return sensor_map
+    except subprocess.TimeoutExpired:
+        print('   ⚠️  BQ sensor query timed out')
+        return {}
+    except Exception as e:
+        print(f'   ⚠️  Sensor pull error: {e}')
+        return {}
+
+
+def load_sensor_map():
+    """Load sensor IDs from cached CSV (fallback if BQ unavailable)."""
+    if not SENSOR_FILE.exists():
+        return {}
+    sensor_map = {}
+    for r in load_csv(SENSOR_FILE):
+        key = f"{r['store_number']}|{r['case_name']}"
+        sensor_map[key] = r['case_temp_sensor_id']
+    return sensor_map
+
+
 def load_wo_map():
     """Load store -> [tracking_numbers] map from terminal_wos.csv."""
     wo_map = {}
@@ -662,16 +729,29 @@ def main():
 
     rows = load_csv(DATA_FILE)
     wo_map = load_wo_map()
+
+    # Pull Crystal sensor IDs (try BQ first, fallback to cached CSV)
+    print('   Pulling Crystal sensor IDs...')
+    sensor_map = pull_sensor_ids()
+    if not sensor_map:
+        sensor_map = load_sensor_map()
+        if sensor_map:
+            print(f'   Using cached sensor IDs: {len(sensor_map):,} mappings')
+
     data = compress(rows)
-    # Inject WO tracking numbers at store level
+    # Inject WO tracking numbers and Crystal sensor IDs
     for d in data:
         d['wos'] = wo_map.get(d['sn'], [])
+        sid = sensor_map.get(f"{d['sn']}|{d['cn']}", '')
+        if sid:
+            d['sid'] = sid
     run_stamp = rows[0].get('run_stamp', '') if rows else ''
     stores_with_wos = sum(1 for s in set(d['sn'] for d in data) if s in wo_map)
-    print(f'   Stores with open Ref WOs: {stores_with_wos}')
-
     total_cases = len(data)
     total_stores = len(set(r['sn'] for r in data))
+    cases_with_crystal = sum(1 for d in data if d.get('sid'))
+    print(f'   Stores with open Ref WOs: {stores_with_wos}')
+    print(f'   Cases with Crystal link: {cases_with_crystal}/{total_cases}')
 
     print(f'   Cases: {total_cases}')
     print(f'   Stores: {total_stores}')
@@ -717,6 +797,9 @@ def main():
     term_js = build_terminal_js(data_json)
     html = html.replace('</body>', term_js + '\n</body>')
 
+    if len(html) < 1000000:  # Safety: dashboard should be >1MB
+        print('   \u274c HTML too small, aborting write to prevent data loss!')
+        sys.exit(1)
     DASHBOARD.write_text(html, encoding='utf-8')
     print(f'\n\u2705 Terminal Cases tab added! ({total_cases} cases, {total_stores} stores)')
     print(f'   index.html: {len(html):,} chars')
