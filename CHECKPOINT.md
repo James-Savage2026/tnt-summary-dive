@@ -1,9 +1,9 @@
 # HVAC TnT Dashboard — Session Checkpoint
 
-**Last Updated:** 2026-02-20 ~3:00 PM  
-**Last Commit:** `fd7f275` — "Clean up Terminal tab debug code from switchTab"  
-**Branch:** `main` — clean, up to date with both remotes  
-**Session:** Stable — no crashes
+**Last Updated:** 2026-02-20 ~11:00 AM  
+**Last Commit:** `bf2a57f` — "Update checkpoint: Crystal telemetry links added"  
+**Branch:** `main` — clean, NOT yet pushed to remotes  
+**Session:** Stable
 
 ---
 
@@ -11,7 +11,7 @@
 
 ### 0b. Terminal Cases Tab (NEW)
 - Added 4th tab: 🌡️ Terminal Cases
-- Data: `re-crystal-mdm-prod.crystal.case_terminal_performance` (513 cases, 325 stores)
+- Data: `re-crystal-mdm-prod.crystal.case_terminal_performance` (451 cases, 294 stores)
 - Mirrors Tableau "Refrigeration Cases Terminal Status Report"
 - KPIs: Total Cases, Total Stores, Cases with/without Open WOs
 - Charts: Open WOs donut, Consecutive Days bar, Sub Market bar, Director bar
@@ -84,7 +84,8 @@
 | `trend_compact.json` | 134KB | Weekly TnT trend data (11 weeks × 29 dirs × RMs) |
 | `add_wtw_tab.py` | 78KB | WTW tab HTML/JS generator |
 | `add_leak_tab.py` | 6.7KB | Leak tab HTML/JS generator |
-| `add_terminal_tab.py` | 12KB | Terminal Cases tab generator |
+| `add_terminal_tab.py` | 28KB | Terminal Cases tab generator (BQ sensor pull + Crystal links) |
+| `terminal_sensors.csv` | 4MB | Crystal sensor ID cache (case_temp_sensor_id mappings) |
 | `leak_tab_js.py` | 21KB | Leak tab JS logic |
 | `leak_tab_html.py` | 15KB | Leak tab HTML structure |
 | `store_detail_js.py` | 13KB | Shared store detail panel |
@@ -100,6 +101,7 @@
 - **Filters:** Sr. Director → Director → RM → FSM → Market (cascading)
 - **Banner filter:** All / Walmart / Sam's Club
 - **Store detail panel** with Ref/HVAC assets, work orders, email button
+- **Crystal telemetry deep links** 🔬 on Terminal Cases tab (100% coverage)
 - **PDF export** with multi-tab, per-person, banner breakout views
 - **Email report** captures screenshot to clipboard + opens mailto
 - **URL hash state** — shareable links with pre-set filters
@@ -150,6 +152,8 @@ python3 refresh.py --local
 | `us_re_ods_prod_pub.sc_walmart_workorder_labor_performed` | `re-ods-prod` | Labor hours |
 | `crystal.ahu_hvac_time_in_target_score` | `re-crystal-mdm-prod` | AHU unit counts |
 | `crystal.rtu_hvac_time_in_target_score` | `re-crystal-mdm-prod` | RTU unit counts |
+| `us_re_ods_prod_pub.case_score_curr` | `re-ods-prod` | Crystal sensor IDs for telemetry links |
+| `crystal.case_terminal_performance` | `re-crystal-mdm-prod` | Terminal Cases tab data |
 
 **🚫 BANNED:** `rack_comprehensive_performance_data` — stale, DO NOT USE.
 
@@ -169,4 +173,4 @@ python3 refresh.py --local
 
 Paste this to Code Puppy:
 
-> I'm working on the HVAC TnT Dashboard in `~/Documents/Projects/hvac-tnt-dashboard`. Read `CHECKPOINT.md` for full context. The dashboard is stable with 3 tabs, email report, PDF export, and `share.sh --laura` for personalized ZIPs. Pick up from the Known Issues section or ask me what to work on next.
+> I'm working on the HVAC TnT Dashboard in `~/Documents/Projects/hvac-tnt-dashboard`. Read `CHECKPOINT.md` for full context. The dashboard is stable with 4 tabs (TnT, WTW, Leak, Terminal Cases), email report, PDF export, Crystal telemetry deep links, and `share.sh --laura` for personalized ZIPs. Pick up from the Known Issues section or ask me what to work on next.
