@@ -1377,47 +1377,64 @@ def main():
     }}
     
     function renderDirSummary() {{
-        const dirMap = {{}};
+        // Build director+region matrix
+        const drMap = {{}};
+        const dirTotals = {{}};
         wtwFilteredData.forEach(wo => {{
             const dir = wo.fm || 'Unknown';
-            if (!dirMap[dir]) {{
-                // Get unique realty regions for this director
-                dirMap[dir] = {{ name: dir, total: 0, completed: 0, ip: 0, stores: new Set(),
-                    regions: new Set(), hours: 0, ready: 0,
-                    ph1: 0, ph1Done: 0, ph2: 0, ph2Done: 0, ph3: 0, ph3Done: 0 }};
-            }}
-            const d = dirMap[dir];
-            d.total++;
-            d.stores.add(wo.s);
             const region = storeRegionMap[wo.s] || '—';
-            d.regions.add(region);
-            if (wo.st === 'COMPLETED') d.completed++;
+            const key = dir + '||' + region;
+            if (!drMap[key]) {{
+                drMap[key] = {{ name: dir, region: region, total: 0, completed: 0, ip: 0, stores: new Set(),
+                    hours: 0, ready: 0, ph1: 0, ph1Done: 0, ph2: 0, ph2Done: 0, ph3: 0, ph3Done: 0 }};
+            }}
+            if (!dirTotals[dir]) {{
+                dirTotals[dir] = {{ name: dir, total: 0, completed: 0, ip: 0, stores: new Set(),
+                    hours: 0, ready: 0, ph1: 0, ph1Done: 0, ph2: 0, ph2Done: 0, ph3: 0, ph3Done: 0, regionCount: 0 }};
+            }}
+            const d = drMap[key];
+            const dt = dirTotals[dir];
+            d.total++; dt.total++;
+            d.stores.add(wo.s); dt.stores.add(wo.s);
+            if (wo.st === 'COMPLETED') {{ d.completed++; dt.completed++; }}
             else if (wo.st === 'IN PROGRESS') {{
-                d.ip++;
-                if (wo.allP === 'PASS') d.ready++;
+                d.ip++; dt.ip++;
+                if (wo.allP === 'PASS') {{ d.ready++; dt.ready++; }}
             }}
             const hrs = parseFloat(wo.totH) || 0;
-            d.hours += hrs;
-            if (wo.ph === 'PH1') {{ d.ph1++; if (wo.st === 'COMPLETED') d.ph1Done++; }}
-            if (wo.ph === 'PH2') {{ d.ph2++; if (wo.st === 'COMPLETED') d.ph2Done++; }}
-            if (wo.ph === 'PH3') {{ d.ph3++; if (wo.st === 'COMPLETED') d.ph3Done++; }}
+            d.hours += hrs; dt.hours += hrs;
+            if (wo.ph === 'PH1') {{ d.ph1++; dt.ph1++; if (wo.st === 'COMPLETED') {{ d.ph1Done++; dt.ph1Done++; }} }}
+            if (wo.ph === 'PH2') {{ d.ph2++; dt.ph2++; if (wo.st === 'COMPLETED') {{ d.ph2Done++; dt.ph2Done++; }} }}
+            if (wo.ph === 'PH3') {{ d.ph3++; dt.ph3++; if (wo.st === 'COMPLETED') {{ d.ph3Done++; dt.ph3Done++; }} }}
         }});
         
-        let rows = Object.values(dirMap).map(d => ({{
-            ...d,
-            pct: d.total > 0 ? (d.completed / d.total * 100) : 0,
-            ph1Pct: d.ph1 > 0 ? (d.ph1Done / d.ph1 * 100) : 0,
-            ph2Pct: d.ph2 > 0 ? (d.ph2Done / d.ph2 * 100) : 0,
-            ph3Pct: d.ph3 > 0 ? (d.ph3Done / d.ph3 * 100) : 0,
-            storeCount: d.stores.size,
-            regionStr: [...d.regions].filter(r => r !== '—').sort().join(', ') || '—'
-        }}));
+        // Count regions per director
+        const dirRegions = {{}};
+        Object.values(drMap).forEach(d => {{
+            if (!dirRegions[d.name]) dirRegions[d.name] = [];
+            dirRegions[d.name].push(d.region);
+        }});
+        Object.keys(dirTotals).forEach(dir => {{
+            dirTotals[dir].regionCount = (dirRegions[dir] || []).length;
+        }});
         
+        // Build flat rows: director total rows + region sub-rows
+        const addPcts = (d) => {{
+            d.pct = d.total > 0 ? (d.completed / d.total * 100) : 0;
+            d.ph1Pct = d.ph1 > 0 ? (d.ph1Done / d.ph1 * 100) : 0;
+            d.ph2Pct = d.ph2 > 0 ? (d.ph2Done / d.ph2 * 100) : 0;
+            d.ph3Pct = d.ph3 > 0 ? (d.ph3Done / d.ph3 * 100) : 0;
+            d.storeCount = d.stores instanceof Set ? d.stores.size : d.stores;
+            return d;
+        }};
+        
+        // Sort directors
+        let dirList = Object.values(dirTotals).map(addPcts);
         const sortKey = dirSummarySortField;
-        rows.sort((a, b) => {{
+        const sortFn = (a, b) => {{
             let av, bv;
             if (sortKey === 'name') {{ av = a.name; bv = b.name; }}
-            else if (sortKey === 'region') {{ av = a.regionStr; bv = b.regionStr; }}
+            else if (sortKey === 'region') {{ av = a.region || ''; bv = b.region || ''; }}
             else if (sortKey === 'stores') {{ av = a.storeCount; bv = b.storeCount; }}
             else if (sortKey === 'total') {{ av = a.total; bv = b.total; }}
             else if (sortKey === 'completed') {{ av = a.completed; bv = b.completed; }}
@@ -1431,61 +1448,85 @@ def main():
             else {{ av = a.pct; bv = b.pct; }}
             if (typeof av === 'string') return dirSummarySortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
             return dirSummarySortAsc ? av - bv : bv - av;
-        }});
+        }};
+        dirList.sort(sortFn);
         
         const pctBadge = (pct) => {{
             const cls = pct >= 40 ? 'bg-green-100 text-green-700' : pct >= 20 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700';
             return `<span class="px-2 py-0.5 rounded text-xs font-semibold ${{cls}}">${{pct.toFixed(1)}}%</span>`;
         }};
         
-        const table = document.getElementById('wtwDirSummaryTable');
-        table.innerHTML = rows.map(r => `
-            <tr class="hover:bg-gray-50">
-                <td class="px-3 py-2 text-sm font-semibold text-gray-900">${{r.name}}</td>
-                <td class="px-3 py-2 text-sm text-center"><span class="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 text-xs font-semibold">${{r.regionStr}}</span></td>
-                <td class="px-3 py-2 text-sm text-center text-gray-600">${{r.storeCount}}</td>
-                <td class="px-3 py-2 text-sm text-center font-semibold">${{r.total}}</td>
-                <td class="px-3 py-2 text-sm text-center text-green-600 font-semibold">${{r.completed}}</td>
-                <td class="px-3 py-2 text-sm text-center text-yellow-600">${{r.ip}}</td>
-                <td class="px-3 py-2 text-sm text-center">${{pctBadge(r.pct)}}</td>
-                <td class="px-3 py-2 text-sm text-center">${{pctBadge(r.ph1Pct)}}</td>
-                <td class="px-3 py-2 text-sm text-center">${{pctBadge(r.ph2Pct)}}</td>
-                <td class="px-3 py-2 text-sm text-center">${{pctBadge(r.ph3Pct)}}</td>
-                <td class="px-3 py-2 text-sm text-center text-indigo-600">${{r.hours.toLocaleString(undefined, {{maximumFractionDigits: 0}})}}</td>
-                <td class="px-3 py-2 text-sm text-center"><span class="px-2 py-0.5 rounded bg-teal-50 text-teal-700 text-xs font-semibold">${{r.ready}}</span></td>
-            </tr>
-        `).join('');
+        const dataCells = (r) => `
+            <td class="px-3 py-2 text-sm text-center text-gray-600">${{r.storeCount}}</td>
+            <td class="px-3 py-2 text-sm text-center font-semibold">${{r.total}}</td>
+            <td class="px-3 py-2 text-sm text-center text-green-600 font-semibold">${{r.completed}}</td>
+            <td class="px-3 py-2 text-sm text-center text-yellow-600">${{r.ip}}</td>
+            <td class="px-3 py-2 text-sm text-center">${{pctBadge(r.pct)}}</td>
+            <td class="px-3 py-2 text-sm text-center">${{pctBadge(r.ph1Pct)}}</td>
+            <td class="px-3 py-2 text-sm text-center">${{pctBadge(r.ph2Pct)}}</td>
+            <td class="px-3 py-2 text-sm text-center">${{pctBadge(r.ph3Pct)}}</td>
+            <td class="px-3 py-2 text-sm text-center text-indigo-600">${{r.hours.toLocaleString(undefined, {{maximumFractionDigits: 0}})}}</td>
+            <td class="px-3 py-2 text-sm text-center"><span class="px-2 py-0.5 rounded bg-teal-50 text-teal-700 text-xs font-semibold">${{r.ready}}</span></td>
+        `;
         
-        // Add total row
-        if (rows.length > 1) {{
-            const totals = rows.reduce((acc, r) => ({{
+        const table = document.getElementById('wtwDirSummaryTable');
+        let html = '';
+        
+        dirList.forEach(dir => {{
+            const regions = (dirRegions[dir.name] || []).sort();
+            const hasMultiple = regions.length > 1;
+            
+            if (hasMultiple) {{
+                // Director total row with rowspan on name
+                html += `<tr class="bg-gray-50 border-t-2 border-gray-300">
+                    <td class="px-3 py-2 text-sm font-bold text-gray-900" rowspan="${{regions.length + 1}}">${{dir.name}}</td>
+                    <td class="px-3 py-2 text-sm text-center font-semibold text-gray-500">All</td>
+                    ${{dataCells(dir)}}
+                </tr>`;
+                // Sub-rows per region
+                regions.forEach(region => {{
+                    const rKey = dir.name + '||' + region;
+                    const rData = addPcts(drMap[rKey]);
+                    html += `<tr class="bg-white hover:bg-blue-50 border-l-4 border-indigo-200">
+                        <td class="px-3 py-2 text-sm text-center"><span class="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 text-xs font-semibold">${{region}}</span></td>
+                        ${{dataCells(rData)}}
+                    </tr>`;
+                }});
+            }} else {{
+                // Single region — one row
+                const region = regions[0] || '—';
+                html += `<tr class="hover:bg-gray-50">
+                    <td class="px-3 py-2 text-sm font-semibold text-gray-900">${{dir.name}}</td>
+                    <td class="px-3 py-2 text-sm text-center"><span class="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 text-xs font-semibold">${{region}}</span></td>
+                    ${{dataCells(dir)}}
+                </tr>`;
+            }}
+        }});
+        
+        // Grand total row
+        if (dirList.length > 1) {{
+            const totals = dirList.reduce((acc, r) => ({{
                 total: acc.total + r.total, completed: acc.completed + r.completed, ip: acc.ip + r.ip,
-                hours: acc.hours + r.hours, ready: acc.ready + r.ready, stores: acc.stores + r.storeCount,
+                hours: acc.hours + r.hours, ready: acc.ready + r.ready, storeCount: acc.storeCount + r.storeCount,
                 ph1: acc.ph1 + r.ph1, ph1Done: acc.ph1Done + r.ph1Done,
                 ph2: acc.ph2 + r.ph2, ph2Done: acc.ph2Done + r.ph2Done,
                 ph3: acc.ph3 + r.ph3, ph3Done: acc.ph3Done + r.ph3Done
-            }}), {{ total: 0, completed: 0, ip: 0, hours: 0, ready: 0, stores: 0, ph1: 0, ph1Done: 0, ph2: 0, ph2Done: 0, ph3: 0, ph3Done: 0 }});
-            const tPct = totals.total > 0 ? (totals.completed / totals.total * 100) : 0;
-            const p1Pct = totals.ph1 > 0 ? (totals.ph1Done / totals.ph1 * 100) : 0;
-            const p2Pct = totals.ph2 > 0 ? (totals.ph2Done / totals.ph2 * 100) : 0;
-            const p3Pct = totals.ph3 > 0 ? (totals.ph3Done / totals.ph3 * 100) : 0;
-            table.innerHTML += `
+            }}), {{ total: 0, completed: 0, ip: 0, hours: 0, ready: 0, storeCount: 0, ph1: 0, ph1Done: 0, ph2: 0, ph2Done: 0, ph3: 0, ph3Done: 0 }});
+            addPcts({{...totals, stores: totals.storeCount}});
+            totals.pct = totals.total > 0 ? (totals.completed / totals.total * 100) : 0;
+            totals.ph1Pct = totals.ph1 > 0 ? (totals.ph1Done / totals.ph1 * 100) : 0;
+            totals.ph2Pct = totals.ph2 > 0 ? (totals.ph2Done / totals.ph2 * 100) : 0;
+            totals.ph3Pct = totals.ph3 > 0 ? (totals.ph3Done / totals.ph3 * 100) : 0;
+            html += `
                 <tr class="bg-blue-50 font-bold border-t-2 border-blue-300">
                     <td class="px-3 py-2 text-sm text-blue-800">Total</td>
                     <td class="px-3 py-2 text-sm text-center"></td>
-                    <td class="px-3 py-2 text-sm text-center">${{totals.stores}}</td>
-                    <td class="px-3 py-2 text-sm text-center">${{totals.total}}</td>
-                    <td class="px-3 py-2 text-sm text-center text-green-600">${{totals.completed}}</td>
-                    <td class="px-3 py-2 text-sm text-center text-yellow-600">${{totals.ip}}</td>
-                    <td class="px-3 py-2 text-sm text-center">${{pctBadge(tPct)}}</td>
-                    <td class="px-3 py-2 text-sm text-center">${{pctBadge(p1Pct)}}</td>
-                    <td class="px-3 py-2 text-sm text-center">${{pctBadge(p2Pct)}}</td>
-                    <td class="px-3 py-2 text-sm text-center">${{pctBadge(p3Pct)}}</td>
-                    <td class="px-3 py-2 text-sm text-center text-indigo-600">${{totals.hours.toLocaleString(undefined, {{maximumFractionDigits: 0}})}}</td>
-                    <td class="px-3 py-2 text-sm text-center"><span class="px-2 py-0.5 rounded bg-teal-50 text-teal-700 text-xs font-semibold">${{totals.ready}}</span></td>
+                    ${{dataCells(totals)}}
                 </tr>
             `;
         }}
+        
+        table.innerHTML = html;
     }}
     
     // Charts
