@@ -418,6 +418,36 @@ def main():
                 </div>
             </div>
             
+            <!-- Director Summary Table -->
+            <div class="bg-white rounded-lg shadow mb-6">
+                <div class="p-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-800">\U0001F4CB Director Summary</h3>
+                    <p class="text-sm text-gray-500">Completion by director with OPS Realty Region. Click headers to sort.</p>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50 sticky top-0">
+                            <tr>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortDirSummary('name')">Director \u21C5</th>
+                                <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortDirSummary('region')">Realty Region \u21C5</th>
+                                <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortDirSummary('stores')">Stores \u21C5</th>
+                                <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortDirSummary('total')">WOs \u21C5</th>
+                                <th class="px-3 py-2 text-center text-xs font-medium text-green-600 uppercase cursor-pointer hover:bg-green-50" onclick="sortDirSummary('completed')">Done \u21C5</th>
+                                <th class="px-3 py-2 text-center text-xs font-medium text-yellow-600 uppercase cursor-pointer hover:bg-yellow-50" onclick="sortDirSummary('ip')">IP \u21C5</th>
+                                <th class="px-3 py-2 text-center text-xs font-medium text-gray-600 uppercase cursor-pointer hover:bg-gray-100" onclick="sortDirSummary('pct')">% Done \u21C5</th>
+                                <th class="px-3 py-2 text-center text-xs font-medium text-blue-600 uppercase cursor-pointer hover:bg-blue-50" onclick="sortDirSummary('ph1')">PH1 % \u21C5</th>
+                                <th class="px-3 py-2 text-center text-xs font-medium text-green-600 uppercase cursor-pointer hover:bg-green-50" onclick="sortDirSummary('ph2')">PH2 % \u21C5</th>
+                                <th class="px-3 py-2 text-center text-xs font-medium text-purple-600 uppercase cursor-pointer hover:bg-purple-50" onclick="sortDirSummary('ph3')">PH3 % \u21C5</th>
+                                <th class="px-3 py-2 text-center text-xs font-medium text-indigo-600 uppercase cursor-pointer hover:bg-indigo-50" onclick="sortDirSummary('hours')">Hours \u21C5</th>
+                                <th class="px-3 py-2 text-center text-xs font-medium text-teal-600 uppercase cursor-pointer hover:bg-teal-50" onclick="sortDirSummary('ready')">Ready \u21C5</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200" id="wtwDirSummaryTable">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
             <!-- Work Order Table -->
             <div class="bg-white rounded-lg shadow">
                 <div class="p-4 border-b border-gray-200">
@@ -780,6 +810,9 @@ def main():
         
         // Update completion tables (only responds to Sr Dir & FM Dir filters)
         updateCompletionTables();
+        
+        // Update director summary table
+        updateDirSummary();
     }}
     
     // Update KPIs
@@ -1313,6 +1346,146 @@ def main():
                 <td class="px-3 py-2 text-sm text-center ${{getCompletionColor(r.overallPct)}}">${{r.overallPct}}% <span class="text-gray-400 text-xs">(${{r.totalCompleted}}/${{r.total}})</span></td>
             </tr>
         `).join('');
+    }}
+    
+    // Director Summary
+    let dirSummarySortField = 'pct';
+    let dirSummarySortAsc = false;
+    
+    // Build store -> realty region map from EMBEDDED_STORE_DATA
+    const storeRegionMap = {{}};
+    if (typeof EMBEDDED_STORE_DATA !== 'undefined') {{
+        EMBEDDED_STORE_DATA.forEach(s => {{
+            if (s.store_number && s.realty_ops_region) {{
+                storeRegionMap[String(s.store_number)] = String(s.realty_ops_region);
+            }}
+        }});
+    }}
+    
+    function sortDirSummary(field) {{
+        if (dirSummarySortField === field) {{
+            dirSummarySortAsc = !dirSummarySortAsc;
+        }} else {{
+            dirSummarySortField = field;
+            dirSummarySortAsc = field === 'name' || field === 'region';
+        }}
+        renderDirSummary();
+    }}
+    
+    function updateDirSummary() {{
+        renderDirSummary();
+    }}
+    
+    function renderDirSummary() {{
+        const dirMap = {{}};
+        wtwFilteredData.forEach(wo => {{
+            const dir = wo.fm || 'Unknown';
+            if (!dirMap[dir]) {{
+                // Get unique realty regions for this director
+                dirMap[dir] = {{ name: dir, total: 0, completed: 0, ip: 0, stores: new Set(),
+                    regions: new Set(), hours: 0, ready: 0,
+                    ph1: 0, ph1Done: 0, ph2: 0, ph2Done: 0, ph3: 0, ph3Done: 0 }};
+            }}
+            const d = dirMap[dir];
+            d.total++;
+            d.stores.add(wo.s);
+            const region = storeRegionMap[wo.s] || '—';
+            d.regions.add(region);
+            if (wo.st === 'COMPLETED') d.completed++;
+            else if (wo.st === 'IN PROGRESS') {{
+                d.ip++;
+                if (wo.allP === 'PASS') d.ready++;
+            }}
+            const hrs = parseFloat(wo.totH) || 0;
+            d.hours += hrs;
+            if (wo.ph === 'PH1') {{ d.ph1++; if (wo.st === 'COMPLETED') d.ph1Done++; }}
+            if (wo.ph === 'PH2') {{ d.ph2++; if (wo.st === 'COMPLETED') d.ph2Done++; }}
+            if (wo.ph === 'PH3') {{ d.ph3++; if (wo.st === 'COMPLETED') d.ph3Done++; }}
+        }});
+        
+        let rows = Object.values(dirMap).map(d => ({{
+            ...d,
+            pct: d.total > 0 ? (d.completed / d.total * 100) : 0,
+            ph1Pct: d.ph1 > 0 ? (d.ph1Done / d.ph1 * 100) : 0,
+            ph2Pct: d.ph2 > 0 ? (d.ph2Done / d.ph2 * 100) : 0,
+            ph3Pct: d.ph3 > 0 ? (d.ph3Done / d.ph3 * 100) : 0,
+            storeCount: d.stores.size,
+            regionStr: [...d.regions].filter(r => r !== '—').sort().join(', ') || '—'
+        }}));
+        
+        const sortKey = dirSummarySortField;
+        rows.sort((a, b) => {{
+            let av, bv;
+            if (sortKey === 'name') {{ av = a.name; bv = b.name; }}
+            else if (sortKey === 'region') {{ av = a.regionStr; bv = b.regionStr; }}
+            else if (sortKey === 'stores') {{ av = a.storeCount; bv = b.storeCount; }}
+            else if (sortKey === 'total') {{ av = a.total; bv = b.total; }}
+            else if (sortKey === 'completed') {{ av = a.completed; bv = b.completed; }}
+            else if (sortKey === 'ip') {{ av = a.ip; bv = b.ip; }}
+            else if (sortKey === 'pct') {{ av = a.pct; bv = b.pct; }}
+            else if (sortKey === 'ph1') {{ av = a.ph1Pct; bv = b.ph1Pct; }}
+            else if (sortKey === 'ph2') {{ av = a.ph2Pct; bv = b.ph2Pct; }}
+            else if (sortKey === 'ph3') {{ av = a.ph3Pct; bv = b.ph3Pct; }}
+            else if (sortKey === 'hours') {{ av = a.hours; bv = b.hours; }}
+            else if (sortKey === 'ready') {{ av = a.ready; bv = b.ready; }}
+            else {{ av = a.pct; bv = b.pct; }}
+            if (typeof av === 'string') return dirSummarySortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+            return dirSummarySortAsc ? av - bv : bv - av;
+        }});
+        
+        const pctBadge = (pct) => {{
+            const cls = pct >= 40 ? 'bg-green-100 text-green-700' : pct >= 20 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700';
+            return `<span class="px-2 py-0.5 rounded text-xs font-semibold ${{cls}}">${{pct.toFixed(1)}}%</span>`;
+        }};
+        
+        const table = document.getElementById('wtwDirSummaryTable');
+        table.innerHTML = rows.map(r => `
+            <tr class="hover:bg-gray-50">
+                <td class="px-3 py-2 text-sm font-semibold text-gray-900">${{r.name}}</td>
+                <td class="px-3 py-2 text-sm text-center"><span class="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 text-xs font-semibold">${{r.regionStr}}</span></td>
+                <td class="px-3 py-2 text-sm text-center text-gray-600">${{r.storeCount}}</td>
+                <td class="px-3 py-2 text-sm text-center font-semibold">${{r.total}}</td>
+                <td class="px-3 py-2 text-sm text-center text-green-600 font-semibold">${{r.completed}}</td>
+                <td class="px-3 py-2 text-sm text-center text-yellow-600">${{r.ip}}</td>
+                <td class="px-3 py-2 text-sm text-center">${{pctBadge(r.pct)}}</td>
+                <td class="px-3 py-2 text-sm text-center">${{pctBadge(r.ph1Pct)}}</td>
+                <td class="px-3 py-2 text-sm text-center">${{pctBadge(r.ph2Pct)}}</td>
+                <td class="px-3 py-2 text-sm text-center">${{pctBadge(r.ph3Pct)}}</td>
+                <td class="px-3 py-2 text-sm text-center text-indigo-600">${{r.hours.toLocaleString(undefined, {{maximumFractionDigits: 0}})}}</td>
+                <td class="px-3 py-2 text-sm text-center"><span class="px-2 py-0.5 rounded bg-teal-50 text-teal-700 text-xs font-semibold">${{r.ready}}</span></td>
+            </tr>
+        `).join('');
+        
+        // Add total row
+        if (rows.length > 1) {{
+            const totals = rows.reduce((acc, r) => ({{
+                total: acc.total + r.total, completed: acc.completed + r.completed, ip: acc.ip + r.ip,
+                hours: acc.hours + r.hours, ready: acc.ready + r.ready, stores: acc.stores + r.storeCount,
+                ph1: acc.ph1 + r.ph1, ph1Done: acc.ph1Done + r.ph1Done,
+                ph2: acc.ph2 + r.ph2, ph2Done: acc.ph2Done + r.ph2Done,
+                ph3: acc.ph3 + r.ph3, ph3Done: acc.ph3Done + r.ph3Done
+            }}), {{ total: 0, completed: 0, ip: 0, hours: 0, ready: 0, stores: 0, ph1: 0, ph1Done: 0, ph2: 0, ph2Done: 0, ph3: 0, ph3Done: 0 }});
+            const tPct = totals.total > 0 ? (totals.completed / totals.total * 100) : 0;
+            const p1Pct = totals.ph1 > 0 ? (totals.ph1Done / totals.ph1 * 100) : 0;
+            const p2Pct = totals.ph2 > 0 ? (totals.ph2Done / totals.ph2 * 100) : 0;
+            const p3Pct = totals.ph3 > 0 ? (totals.ph3Done / totals.ph3 * 100) : 0;
+            table.innerHTML += `
+                <tr class="bg-blue-50 font-bold border-t-2 border-blue-300">
+                    <td class="px-3 py-2 text-sm text-blue-800">Total</td>
+                    <td class="px-3 py-2 text-sm text-center"></td>
+                    <td class="px-3 py-2 text-sm text-center">${{totals.stores}}</td>
+                    <td class="px-3 py-2 text-sm text-center">${{totals.total}}</td>
+                    <td class="px-3 py-2 text-sm text-center text-green-600">${{totals.completed}}</td>
+                    <td class="px-3 py-2 text-sm text-center text-yellow-600">${{totals.ip}}</td>
+                    <td class="px-3 py-2 text-sm text-center">${{pctBadge(tPct)}}</td>
+                    <td class="px-3 py-2 text-sm text-center">${{pctBadge(p1Pct)}}</td>
+                    <td class="px-3 py-2 text-sm text-center">${{pctBadge(p2Pct)}}</td>
+                    <td class="px-3 py-2 text-sm text-center">${{pctBadge(p3Pct)}}</td>
+                    <td class="px-3 py-2 text-sm text-center text-indigo-600">${{totals.hours.toLocaleString(undefined, {{maximumFractionDigits: 0}})}}</td>
+                    <td class="px-3 py-2 text-sm text-center"><span class="px-2 py-0.5 rounded bg-teal-50 text-teal-700 text-xs font-semibold">${{totals.ready}}</span></td>
+                </tr>
+            `;
+        }}
     }}
     
     // Charts
