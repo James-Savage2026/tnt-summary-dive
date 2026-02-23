@@ -513,7 +513,7 @@ def print_stats(rows: list[dict]):
 
 def run_tab_scripts():
     """Run add_wtw_tab.py and add_leak_tab.py to rebuild index.html."""
-    for script in ['add_wtw_tab.py', 'add_leak_tab.py']:
+    for script in ['add_wtw_tab.py', 'add_leak_tab.py', 'add_terminal_tab.py', 'add_projects_tab.py']:
         path = PROJECT / script
         if path.exists():
             print(f"   Running {script}...")
