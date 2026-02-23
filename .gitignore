@@ -14,3 +14,10 @@ Thumbs.db
 *.tmp
 *.log
 logs/
+.wrike_tokens.json
+
+# Cached API/BQ data
+lx_projects.json
+wrike_projects.json
+wrike_preview_data.json
+walkoff_data.json
