@@ -355,6 +355,16 @@ def embed_data_in_html():
             html = html[:js] + td_json + html[i+1:]
             print("   \u2705 Embedded TREND_DATA")
 
+    # Update "Last Updated" timestamp
+    stamp = datetime.now().strftime('%Y-%m-%d %H:%M')
+    import re
+    html = re.sub(
+        r"document\.getElementById\('lastUpdated'\)\.textContent\s*=\s*'[^']*'",
+        f"document.getElementById('lastUpdated').textContent = 'Data as of {stamp}'",
+        html
+    )
+    print(f"   \u2705 Timestamp set to {stamp}")
+
     html_path.write_text(html)
     print(f"   \u2705 index.html updated ({len(html):,} chars)")
 

@@ -1,248 +1,309 @@
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><style>
-body { font-family: Calibri, Arial, sans-serif; color: #333; max-width: 660px; margin: 0 auto; padding: 0; background: #F4F4F4; }
-.wrapper { background: #FFFFFF; border-radius: 12px; overflow: hidden; margin: 20px auto; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
-.header { background: linear-gradient(135deg, #0071CE, #004C91); padding: 28px 32px; color: white; }
-.header h1 { margin: 0; font-size: 20px; font-weight: 600; }
-.header .date { font-size: 12px; opacity: 0.8; margin-top: 6px; }
-.content { padding: 28px 32px; }
-.greeting { font-size: 15px; margin-bottom: 16px; line-height: 1.6; }
-.section-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #0071CE; margin-bottom: 8px; }
-.section-title { font-size: 18px; font-weight: 700; color: #1A1A1A; margin: 0 0 14px 0; }
-.divider { border: none; border-top: 1px solid #E8E8E8; margin: 24px 0; }
-.stat-row { display: flex; gap: 10px; margin: 14px 0 10px 0; }
-.stat-box { background: #F7FAFF; border: 1px solid #DCE8F5; border-radius: 8px; padding: 10px 14px; text-align: center; flex: 1; }
-.stat-box .num { font-size: 22px; font-weight: 700; color: #0071CE; }
-.stat-box .label { font-size: 10px; color: #888; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
-.stat-box.red .num { color: #DC2626; }
-table.t { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 12px; }
-table.t th { background: #F7FAFF; color: #555; font-size: 9px; text-transform: uppercase; letter-spacing: 0.8px; padding: 8px 8px; text-align: center; border-bottom: 2px solid #DCE8F5; }
-table.t th:first-child { text-align: left; }
-table.t td { padding: 10px 8px; border-bottom: 1px solid #F0F0F0; text-align: center; }
-table.t td:first-child { text-align: left; font-weight: 600; color: #1A1A1A; }
-table.t tr:last-child td { border-bottom: none; }
-.total-row td { background: #F0F7FF; font-weight: 700 !important; border-top: 2px solid #0071CE !important; }
-.fleet-row td { background: #F9F9F9; font-weight: 600 !important; border-top: 1px solid #DDD !important; font-style: italic; }
-.badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
-.bg { background: #DCFCE7; color: #16A34A; }
-.ba { background: #FEF3C7; color: #92400E; }
-.br { background: #FEE2E2; color: #DC2626; }
-.rank-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
-.rank-top { background: #DCFCE7; color: #16A34A; }
-.rank-mid { background: #F3F4F6; color: #6B7280; }
-.rank-low { background: #FEF3C7; color: #92400E; }
-.up { color: #16A34A; font-weight: 700; }
-.trend-box { background: linear-gradient(135deg, #F0FFF4, #ECFDF5); border: 1px solid #BBF7D0; border-radius: 10px; padding: 20px 24px; margin: 16px 0; }
-.trend-box h3 { margin: 0 0 12px 0; font-size: 16px; color: #16A34A; }
-.trend-row { display: flex; gap: 16px; margin: 10px 0; }
-.trend-card { flex: 1; background: white; border: 1px solid #BBF7D0; border-radius: 8px; padding: 14px; text-align: center; }
-.trend-card .delta { font-size: 24px; font-weight: 800; color: #16A34A; }
-.trend-card .period { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
-.trend-card .detail { font-size: 11px; color: #555; margin-top: 6px; }
-.compare-box { background: linear-gradient(135deg, #F0F7FF, #EFF6FF); border: 1px solid #BFDBFE; border-radius: 10px; padding: 20px 24px; margin: 16px 0; }
-.compare-box h3 { margin: 0 0: 12px 0; font-size: 16px; color: #0071CE; }
-.loss-box { background: linear-gradient(135deg, #FFF5F5, #FEF2F2); border: 1px solid #FECACA; border-radius: 10px; padding: 20px 24px; margin: 16px 0; }
-.loss-box h3 { margin: 0 0 6px 0; font-size: 16px; color: #DC2626; }
-.loss-box .big-num { font-size: 32px; font-weight: 800; color: #DC2626; }
-.loss-box .sub { font-size: 13px; color: #555; margin-top: 4px; }
-.loss-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
-.loss-chip { background: white; border: 1px solid #FECACA; border-radius: 6px; padding: 6px 12px; font-size: 12px; }
-.loss-chip b { color: #DC2626; }
-.insight-list { padding: 0; margin: 12px 0; list-style: none; }
-.insight-list li { padding: 8px 0 8px 24px; position: relative; font-size: 13px; line-height: 1.5; border-bottom: 1px solid #F0F0F0; }
-.insight-list li:last-child { border-bottom: none; }
-.insight-list li::before { content: '\2714'; position: absolute; left: 0; color: #16A34A; font-weight: 700; }
-.footer { padding: 20px 32px; background: #F9F9F9; border-top: 1px solid #EEE; font-size: 12px; color: #999; text-align: center; }
-.footer a { color: #0071CE; text-decoration: none; }
-</style></head>
-<body>
+<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="font-family:Calibri,Arial,sans-serif;color:#333;max-width:680px;margin:0 auto;padding:0;background:#F4F4F4;">
+<div style="background:#FFF;border-radius:12px;overflow:hidden;margin:20px auto;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
 
-<div class="wrapper">
-
-<div class="header">
-  <h1>&#128202; TnT Daily Digest</h1>
-  <div class="date">Laura Moore's Org &bull; February 20, 2026</div>
+<div style="background:linear-gradient(135deg,#0071CE,#004C91);padding:28px 32px;color:white;">
+<h1 style="margin:0;font-size:22px;font-weight:600;">📊 North BU Daily Digest</h1>
+<div style="font-size:12px;opacity:0.8;margin-top:6px;">Laura Moore's Org &bull; February 23, 2026</div>
 </div>
 
-<div class="content">
+<div style="padding:28px 32px;">
+<p style="font-size:15px;margin-bottom:16px;line-height:1.6;">Hey Laura — here's today's snapshot across all four dashboard tabs.</p>
 
-<p class="greeting">Hey Laura, here's today's Time in Target snapshot.</p>
-
-<!-- ORG OVERVIEW -->
-<div class="section-label">Laura Moore's Org</div>
-<div class="section-title">1,099 Stores &bull; 1,000 Reporting</div>
-
-<div class="stat-row">
-  <div class="stat-box"><div class="num">87.8%</div><div class="label">Ref TnT</div></div>
-  <div class="stat-box"><div class="num">94.5%</div><div class="label">HVAC TnT</div></div>
-  <div class="stat-box"><div class="num">122,355</div><div class="label">Total Cases</div></div>
-  <div class="stat-box red"><div class="num">53,874</div><div class="label">Cases Out of Target</div></div>
+<!-- ═══ 1. TnT ═══ -->
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+<div style="background:#0071CE;color:white;font-size:10px;font-weight:800;padding:4px 10px;border-radius:4px;letter-spacing:1px;">1</div>
+<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#0071CE;">Time in Target</div>
 </div>
+<div style="font-size:18px;font-weight:700;color:#1A1A1A;margin:0 0 14px 0;">1,099 Stores &bull; 1,000 Reporting</div>
 
-<hr class="divider">
+<table width="100%" cellpadding="0" cellspacing="0" style="margin:14px 0;"><tr>
+<td style="padding:4px;" width="25%"><div style="background:#F7FAFF;border:1px solid #DCE8F5;border-radius:8px;padding:10px;text-align:center;"><div style="font-size:22px;font-weight:700;color:#0071CE;">87.33%</div><div style="font-size:9px;color:#888;text-transform:uppercase;margin-top:2px;">Ref TnT</div></div></td>
+<td style="padding:4px;" width="25%"><div style="background:#F7FAFF;border:1px solid #DCE8F5;border-radius:8px;padding:10px;text-align:center;"><div style="font-size:22px;font-weight:700;color:#0071CE;">91.42%</div><div style="font-size:9px;color:#888;text-transform:uppercase;margin-top:2px;">HVAC TnT</div></div></td>
+<td style="padding:4px;" width="25%"><div style="background:#F7FAFF;border:1px solid #DCE8F5;border-radius:8px;padding:10px;text-align:center;"><div style="font-size:22px;font-weight:700;color:#0071CE;">122,372</div><div style="font-size:9px;color:#888;text-transform:uppercase;margin-top:2px;">Total Cases</div></div></td>
+<td style="padding:4px;" width="25%"><div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:10px;text-align:center;"><div style="font-size:22px;font-weight:700;color:#DC2626;">54,931</div><div style="font-size:9px;color:#888;text-transform:uppercase;margin-top:2px;">Out of Target</div></div></td>
+</tr></table>
 
-<!-- TRENDING UP -->
-<div class="section-label">Momentum</div>
-<div class="section-title">&#128640; Your Org is Trending Up</div>
+<div style="background:linear-gradient(135deg,#FFF7ED,#FFFBEB);border:1px solid #FDE68A;border-radius:10px;padding:16px 20px;margin:16px 0;">
+<div style="font-size:14px;font-weight:700;color:#555;margin-bottom:10px;">Ref TnT Momentum</div>
+<table width="100%" cellpadding="0" cellspacing="8"><tr>
+<td style="padding:12px;text-align:center;background:white;border:1px solid #FECACA;border-radius:8px;"><div style="font-size:22px;font-weight:800;color:#DC2626;">▼ -0.06%</div><div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;">vs Last Week</div><div style="font-size:11px;color:#555;margin-top:4px;">87.39% → 87.33%</div></td>
+<td style="padding:12px;text-align:center;background:white;border:1px solid #BBF7D0;border-radius:8px;"><div style="font-size:22px;font-weight:800;color:#16A34A;">▲ +1.98%</div><div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;">vs Last Month</div><div style="font-size:11px;color:#555;margin-top:4px;">85.35% → 87.33%</div></td>
+<td style="padding:12px;text-align:center;background:white;border:1px solid #BBF7D0;border-radius:8px;"><div style="font-size:22px;font-weight:800;color:#16A34A;">▲ +1.16%</div><div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;">vs 90-Day Avg</div><div style="font-size:11px;color:#555;margin-top:4px;">86.17% → 87.33%</div></td>
+</tr></table></div>
 
-<div class="trend-box">
-  <h3>&#9650; Ref TnT Improvement</h3>
-  <div class="trend-row">
-    <div class="trend-card">
-      <div class="delta">+0.67%</div>
-      <div class="period">vs Last Week</div>
-      <div class="detail">87.14% &#8594; 87.81%</div>
-    </div>
-    <div class="trend-card">
-      <div class="delta">+2.20%</div>
-      <div class="period">vs Last Month</div>
-      <div class="detail">85.61% &#8594; 87.81%</div>
-    </div>
-    <div class="trend-card">
-      <div class="delta">+1.50%</div>
-      <div class="period">vs 90-Day Avg</div>
-      <div class="detail">86.31% &#8594; 87.81%</div>
-    </div>
-  </div>
-</div>
+<ul style="padding:0;margin:12px 0;list-style:none;"><li style="padding:6px 0 6px 24px;position:relative;font-size:13px;line-height:1.5;border-bottom:1px solid #F0F0F0;">✅ <b>Josh Thaxton</b> climbed the most this week (<span style="color:#16A34A;font-weight:700;">+0.87%</span>), now at 86.01%</li>
+<li style="padding:6px 0 6px 24px;position:relative;font-size:13px;line-height:1.5;border-bottom:1px solid #F0F0F0;">✅ <b>Josh Thaxton</b> biggest 30-day jump (<span style="color:#16A34A;font-weight:700;">+2.56%</span>)</li>
+<li style="padding:6px 0 6px 24px;position:relative;font-size:13px;line-height:1.5;border-bottom:1px solid #F0F0F0;">✅ <b>Month-over-month up +1.98%</b> — strong 30-day trend</li>
+<li style="padding:6px 0 6px 24px;position:relative;font-size:13px;line-height:1.5;border-bottom:1px solid #F0F0F0;">✅ <b>Lowest product loss</b> among all Sr. Directors at $42.4M</li></ul>
 
-<div class="section-label">Key Wins</div>
-<ul class="insight-list">
-  <li><b>Every director improved</b> from last week &mdash; no one went backward</li>
-  <li><b>Brian Conover</b> climbed the most this week (<span class="up">+0.97%</span>), now at 89.5% Ref TnT</li>
-  <li><b>Jack Grahek</b> made the biggest 30-day jump (<span class="up">+2.31%</span>), from 85.6% to 87.9%</li>
-  <li><b>HVAC TnT up +2.39%</b> from last week (92.1% &#8594; 94.5%) &mdash; strong across the board</li>
-  <li><b>Lowest product loss</b> among all Sr. Directors at $42.3M</li>
-</ul>
+<div style="font-size:13px;font-weight:700;color:#555;margin:16px 0 8px 0;">Your Directors</div>
+<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:12px;">
+<tr><th style="background:#F7FAFF;color:#555;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;padding:8px;text-align:left;border-bottom:2px solid #DCE8F5;">Director</th><th style="background:#F7FAFF;color:#555;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;padding:8px;text-align:center;border-bottom:2px solid #DCE8F5;">Stores</th><th style="background:#F7FAFF;color:#555;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;padding:8px;text-align:center;border-bottom:2px solid #DCE8F5;">Ref TnT</th><th style="background:#F7FAFF;color:#555;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;padding:8px;text-align:center;border-bottom:2px solid #DCE8F5;">Rank</th><th style="background:#F7FAFF;color:#555;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;padding:8px;text-align:center;border-bottom:2px solid #DCE8F5;">vs Wk</th><th style="background:#F7FAFF;color:#555;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;padding:8px;text-align:center;border-bottom:2px solid #DCE8F5;">vs Mo</th><th style="background:#F7FAFF;color:#555;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;padding:8px;text-align:center;border-bottom:2px solid #DCE8F5;">HVAC</th></tr>
+<tr>
+<td style="padding:10px 8px;border-bottom:1px solid #F0F0F0;font-weight:600;color:#1A1A1A;">Brian Conover</td>
+<td style="padding:10px 8px;border-bottom:1px solid #F0F0F0;text-align:center;">266</td>
+<td style="padding:10px 8px;border-bottom:1px solid #F0F0F0;text-align:center;"><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:#FEF3C7;color:#92400E;">88.99%</span></td>
+<td style="padding:10px 8px;border-bottom:1px solid #F0F0F0;text-align:center;"><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:#DCFCE7;color:#16A34A;">#5</span></td>
+<td style="padding:10px 8px;border-bottom:1px solid #F0F0F0;text-align:center;"><span style="color:#16A34A;font-weight:700;">+0.15%</span></td>
+<td style="padding:10px 8px;border-bottom:1px solid #F0F0F0;text-align:center;"><span style="color:#16A34A;font-weight:700;">+1.94%</span></td>
+<td style="padding:10px 8px;border-bottom:1px solid #F0F0F0;text-align:center;">91.19%</td>
+</tr>
+<tr>
+<td style="padding:10px 8px;border-bottom:1px solid #F0F0F0;font-weight:600;color:#1A1A1A;">Donnie Chester</td>
+<td style="padding:10px 8px;border-bottom:1px solid #F0F0F0;text-align:center;">284</td>
+<td style="padding:10px 8px;border-bottom:1px solid #F0F0F0;text-align:center;"><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:#FEF3C7;color:#92400E;">87.57%</span></td>
+<td style="padding:10px 8px;border-bottom:1px solid #F0F0F0;text-align:center;"><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:#F3F4F6;color:#6B7280;">#11</span></td>
+<td style="padding:10px 8px;border-bottom:1px solid #F0F0F0;text-align:center;"><span style="color:#DC2626;font-weight:700;">-0.04%</span></td>
+<td style="padding:10px 8px;border-bottom:1px solid #F0F0F0;text-align:center;"><span style="color:#16A34A;font-weight:700;">+1.85%</span></td>
+<td style="padding:10px 8px;border-bottom:1px solid #F0F0F0;text-align:center;">90.92%</td>
+</tr>
+<tr>
+<td style="padding:10px 8px;border-bottom:1px solid #F0F0F0;font-weight:600;color:#1A1A1A;">Jack Grahek</td>
+<td style="padding:10px 8px;border-bottom:1px solid #F0F0F0;text-align:center;">158</td>
+<td style="padding:10px 8px;border-bottom:1px solid #F0F0F0;text-align:center;"><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:#FEF3C7;color:#92400E;">86.53%</span></td>
+<td style="padding:10px 8px;border-bottom:1px solid #F0F0F0;text-align:center;"><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:#FEF3C7;color:#92400E;">#23</span></td>
+<td style="padding:10px 8px;border-bottom:1px solid #F0F0F0;text-align:center;"><span style="color:#DC2626;font-weight:700;">-1.06%</span></td>
+<td style="padding:10px 8px;border-bottom:1px solid #F0F0F0;text-align:center;"><span style="color:#16A34A;font-weight:700;">+1.42%</span></td>
+<td style="padding:10px 8px;border-bottom:1px solid #F0F0F0;text-align:center;">92.25%</td>
+</tr>
+<tr>
+<td style="padding:10px 8px;border-bottom:1px solid #F0F0F0;font-weight:600;color:#1A1A1A;">Josh Thaxton</td>
+<td style="padding:10px 8px;border-bottom:1px solid #F0F0F0;text-align:center;">140</td>
+<td style="padding:10px 8px;border-bottom:1px solid #F0F0F0;text-align:center;"><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:#FEF3C7;color:#92400E;">86.01%</span></td>
+<td style="padding:10px 8px;border-bottom:1px solid #F0F0F0;text-align:center;"><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:#FEF3C7;color:#92400E;">#25</span></td>
+<td style="padding:10px 8px;border-bottom:1px solid #F0F0F0;text-align:center;"><span style="color:#16A34A;font-weight:700;">+0.87%</span></td>
+<td style="padding:10px 8px;border-bottom:1px solid #F0F0F0;text-align:center;"><span style="color:#16A34A;font-weight:700;">+2.56%</span></td>
+<td style="padding:10px 8px;border-bottom:1px solid #F0F0F0;text-align:center;">92.21%</td>
+</tr>
+<tr>
+<td style="padding:10px 8px;border-bottom:1px solid #F0F0F0;font-weight:600;color:#1A1A1A;">Sonya Webster</td>
+<td style="padding:10px 8px;border-bottom:1px solid #F0F0F0;text-align:center;">152</td>
+<td style="padding:10px 8px;border-bottom:1px solid #F0F0F0;text-align:center;"><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:#FEF3C7;color:#92400E;">85.99%</span></td>
+<td style="padding:10px 8px;border-bottom:1px solid #F0F0F0;text-align:center;"><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:#FEF3C7;color:#92400E;">#26</span></td>
+<td style="padding:10px 8px;border-bottom:1px solid #F0F0F0;text-align:center;"><span style="color:#DC2626;font-weight:700;">-0.34%</span></td>
+<td style="padding:10px 8px;border-bottom:1px solid #F0F0F0;text-align:center;"><span style="color:#16A34A;font-weight:700;">+2.30%</span></td>
+<td style="padding:10px 8px;border-bottom:1px solid #F0F0F0;text-align:center;">91.14%</td>
+</tr>
+<tr><td style="padding:10px 8px;background:#F0F7FF;font-weight:700;border-top:2px solid #0071CE;">Laura Moore Total</td>
+<td style="padding:10px 8px;background:#F0F7FF;text-align:center;font-weight:700;border-top:2px solid #0071CE;">1,000</td>
+<td style="padding:10px 8px;background:#F0F7FF;text-align:center;font-weight:700;border-top:2px solid #0071CE;"><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:#FEF3C7;color:#92400E;">87.33%</span></td>
+<td style="padding:10px 8px;background:#F0F7FF;text-align:center;font-weight:700;border-top:2px solid #0071CE;"><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:#DCFCE7;color:#16A34A;">#4</span></td>
+<td style="padding:10px 8px;background:#F0F7FF;text-align:center;font-weight:700;border-top:2px solid #0071CE;"><span style="color:#DC2626;font-weight:700;">-0.06%</span></td>
+<td style="padding:10px 8px;background:#F0F7FF;text-align:center;font-weight:700;border-top:2px solid #0071CE;"><span style="color:#16A34A;font-weight:700;">+1.98%</span></td>
+<td style="padding:10px 8px;background:#F0F7FF;text-align:center;font-weight:700;border-top:2px solid #0071CE;">91.42%</td></tr><tr><td style="padding:10px 8px;background:#F9F9F9;font-weight:600;font-style:italic;border-top:1px solid #DDD;">Fleet Average</td>
+<td style="padding:10px 8px;background:#F9F9F9;text-align:center;font-style:italic;border-top:1px solid #DDD;">5,067</td>
+<td style="padding:10px 8px;background:#F9F9F9;text-align:center;font-style:italic;border-top:1px solid #DDD;">87.46%</td>
+<td style="padding:10px 8px;background:#F9F9F9;border-top:1px solid #DDD;"></td>
+<td style="padding:10px 8px;background:#F9F9F9;border-top:1px solid #DDD;"></td>
+<td style="padding:10px 8px;background:#F9F9F9;border-top:1px solid #DDD;"></td>
+<td style="padding:10px 8px;background:#F9F9F9;text-align:center;font-style:italic;border-top:1px solid #DDD;">93.0%</td></tr></table>
 
-<hr class="divider">
-
-<!-- SR DIRECTOR RANKINGS -->
-<div class="section-label">Where You Stand</div>
-<div class="section-title">Sr. Director Rankings</div>
-
-<table class="t">
-<tr><th>#</th><th>Sr. Director</th><th>Stores</th><th>Ref TnT</th><th>HVAC TnT</th><th>Est. Loss</th></tr>
-<tr><td>1</td><td>Nick Paladino</td><td>966</td><td>88.1%</td><td>94.8%</td><td>$55.0M</td></tr>
-<tr><td>2</td><td>B.A. Glass</td><td>1,019</td><td>88.1%</td><td>94.5%</td><td>$55.4M</td></tr>
-<tr><td>3</td><td>Monique Brennan</td><td>1,101</td><td>88.1%</td><td>94.3%</td><td>$64.6M</td></tr>
-<tr style="background:#FFFBEB;"><td>4</td><td style="color:#0071CE; font-weight:700;">&#11088; Laura Moore</td><td>1,000</td><td><b>87.8%</b></td><td><b>94.5%</b></td><td><b>$42.3M</b></td></tr>
-<tr><td>5</td><td>Whitney Box</td><td>982</td><td>86.9%</td><td>94.3%</td><td>$51.9M</td></tr>
+<div style="font-size:13px;font-weight:700;color:#555;margin:20px 0 8px 0;">Where You Stand</div>
+<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:12px;">
+<tr><th style="background:#F7FAFF;color:#555;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;padding:8px;text-align:center;border-bottom:2px solid #DCE8F5;">#</th><th style="background:#F7FAFF;color:#555;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;padding:8px;text-align:left;border-bottom:2px solid #DCE8F5;">Sr. Director</th><th style="background:#F7FAFF;color:#555;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;padding:8px;text-align:center;border-bottom:2px solid #DCE8F5;">Stores</th><th style="background:#F7FAFF;color:#555;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;padding:8px;text-align:center;border-bottom:2px solid #DCE8F5;">Ref TnT</th><th style="background:#F7FAFF;color:#555;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;padding:8px;text-align:center;border-bottom:2px solid #DCE8F5;">HVAC</th><th style="background:#F7FAFF;color:#555;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;padding:8px;text-align:center;border-bottom:2px solid #DCE8F5;">Loss</th></tr>
+<tr style=""><td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;">1</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;font-weight:600;">B.A. Glass</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;">1,019</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;font-weight:400;">87.97%</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;">94.88%</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;color:#DC2626;">$55.6M</td></tr>
+<tr style=""><td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;">2</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;font-weight:600;">Monique Brennan</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;">1,101</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;font-weight:400;">87.79%</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;">95.63%</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;color:#DC2626;">$64.9M</td></tr>
+<tr style=""><td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;">3</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;font-weight:600;">Nick Paladino</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;">965</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;font-weight:400;">87.6%</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;">89.6%</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;color:#DC2626;">$54.7M</td></tr>
+<tr style="background:#FFFBEB;"><td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;">4</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;font-weight:600;color:#0071CE;font-weight:700;">⭐ Laura Moore</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;">1,000</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;font-weight:700;">87.33%</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;">91.42%</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;color:#DC2626;">$42.4M</td></tr>
+<tr style=""><td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;">5</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;font-weight:600;">Whitney Box</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;">982</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;font-weight:400;">86.57%</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;">92.88%</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;color:#DC2626;">$51.9M</td></tr>
 </table>
 
-<hr class="divider">
+<hr style="border:none;border-top:2px solid #E5E7EB;margin:28px 0;">
 
-<!-- DIRECTOR TABLE -->
-<div class="section-label">Director Breakdown</div>
-<div class="section-title">Laura's Directors</div>
+<!-- ═══ 2. WTW ═══ -->
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+<div style="background:#2563EB;color:white;font-size:10px;font-weight:800;padding:4px 10px;border-radius:4px;letter-spacing:1px;">2</div>
+<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#2563EB;">❄️ Win-the-Winter PMs</div>
+</div>
+<div style="font-size:18px;font-weight:700;color:#1A1A1A;margin:0 0 14px 0;">1,045 Work Orders &bull; 24.3% Complete</div>
 
-<table class="t">
-<tr>
-  <th>Director</th>
-  <th>Stores</th>
-  <th>Ref TnT</th>
-  <th>Rank</th>
-  <th>vs Last Wk</th>
-  <th>vs Last Mo</th>
-  <th>HVAC TnT</th>
-</tr>
-<tr>
-  <td>Brian Conover</td>
-  <td>266</td>
-  <td><span class="badge bg">89.5%</span></td>
-  <td><span class="rank-badge rank-top">#4</span></td>
-  <td><span class="up">+0.97%</span></td>
-  <td><span class="up">+2.29%</span></td>
-  <td>94.2%</td>
-</tr>
-<tr>
-  <td>Donnie Chester</td>
-  <td>284</td>
-  <td><span class="badge ba">87.9%</span></td>
-  <td><span class="rank-badge rank-mid">#11</span></td>
-  <td><span class="up">+0.80%</span></td>
-  <td><span class="up">+2.14%</span></td>
-  <td>94.8%</td>
-</tr>
-<tr>
-  <td>Jack Grahek</td>
-  <td>158</td>
-  <td><span class="badge ba">87.9%</span></td>
-  <td><span class="rank-badge rank-mid">#13</span></td>
-  <td><span class="up">+0.41%</span></td>
-  <td><span class="up">+2.31%</span></td>
-  <td>95.1%</td>
-</tr>
-<tr>
-  <td>Sonya Webster</td>
-  <td>152</td>
-  <td><span class="badge ba">86.3%</span></td>
-  <td><span class="rank-badge rank-low">#25</span></td>
-  <td><span class="up">+0.15%</span></td>
-  <td><span class="up">+2.19%</span></td>
-  <td>94.3%</td>
-</tr>
-<tr>
-  <td>Josh Thaxton</td>
-  <td>140</td>
-  <td><span class="badge ba">85.9%</span></td>
-  <td><span class="rank-badge rank-low">#27</span></td>
-  <td><span class="up">+0.66%</span></td>
-  <td><span class="up">+1.99%</span></td>
-  <td>94.2%</td>
-</tr>
-<tr class="total-row">
-  <td>Laura Moore Total</td>
-  <td>1,000</td>
-  <td><span class="badge ba">87.8%</span></td>
-  <td><span class="rank-badge rank-mid">#4</span></td>
-  <td><span class="up">+0.67%</span></td>
-  <td><span class="up">+2.20%</span></td>
-  <td>94.5%</td>
-</tr>
-<tr class="fleet-row">
-  <td>Fleet Average</td>
-  <td>5,068</td>
-  <td>87.8%</td>
-  <td></td>
-  <td></td>
-  <td></td>
-  <td>94.5%</td>
-</tr>
+<table width="100%" cellpadding="0" cellspacing="0" style="margin:14px 0;"><tr>
+<td style="padding:4px;" width="33%"><div style="background:#F0FFF4;border:1px solid #BBF7D0;border-radius:8px;padding:10px;text-align:center;"><div style="font-size:22px;font-weight:700;color:#16A34A;">254</div><div style="font-size:9px;color:#888;text-transform:uppercase;margin-top:2px;">Completed</div></div></td>
+<td style="padding:4px;" width="33%"><div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;padding:10px;text-align:center;"><div style="font-size:22px;font-weight:700;color:#D97706;">780</div><div style="font-size:9px;color:#888;text-transform:uppercase;margin-top:2px;">In Progress</div></div></td>
+<td style="padding:4px;" width="33%"><div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:10px;text-align:center;"><div style="font-size:22px;font-weight:700;color:#6B7280;">11</div><div style="font-size:9px;color:#888;text-transform:uppercase;margin-top:2px;">Open</div></div></td>
+</tr></table>
+
+<div style="font-size:13px;font-weight:700;color:#555;margin:16px 0 8px 0;">By Director</div>
+<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:12px;">
+<tr><th style="background:#F7FAFF;color:#555;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;padding:8px;text-align:left;border-bottom:2px solid #DCE8F5;">Director</th><th style="background:#F7FAFF;color:#555;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;padding:8px;text-align:center;border-bottom:2px solid #DCE8F5;">WOs</th><th style="background:#F7FAFF;color:#555;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;padding:8px;text-align:center;border-bottom:2px solid #DCE8F5;">Done</th><th style="background:#F7FAFF;color:#555;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;padding:8px;text-align:center;border-bottom:2px solid #DCE8F5;">%</th><th style="background:#F7FAFF;color:#555;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;padding:8px;text-align:center;border-bottom:2px solid #DCE8F5;">In Prog</th></tr>
+<tr><td style="padding:8px;border-bottom:1px solid #F0F0F0;font-weight:600;">Josh Thaxton</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;">153</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;color:#16A34A;font-weight:600;">47</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;font-weight:700;color:#16A34A;">30.7%</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;">106</td></tr>
+<tr><td style="padding:8px;border-bottom:1px solid #F0F0F0;font-weight:600;">Brian Conover</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;">268</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;color:#16A34A;font-weight:600;">68</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;font-weight:700;color:#D97706;">25.4%</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;">192</td></tr>
+<tr><td style="padding:8px;border-bottom:1px solid #F0F0F0;font-weight:600;">Donnie Chester</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;">287</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;color:#16A34A;font-weight:600;">70</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;font-weight:700;color:#D97706;">24.4%</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;">216</td></tr>
+<tr><td style="padding:8px;border-bottom:1px solid #F0F0F0;font-weight:600;">Jack Grahek</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;">177</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;color:#16A34A;font-weight:600;">42</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;font-weight:700;color:#D97706;">23.7%</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;">133</td></tr>
+<tr><td style="padding:8px;border-bottom:1px solid #F0F0F0;font-weight:600;">Sonya Webster</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;">160</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;color:#16A34A;font-weight:600;">27</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;font-weight:700;color:#DC2626;">16.9%</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;">133</td></tr>
 </table>
 
-<hr class="divider">
+<div style="font-size:13px;font-weight:700;color:#555;margin:16px 0 8px 0;">By Phase</div>
+<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:12px;">
+<tr><th style="background:#F7FAFF;color:#555;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;padding:8px;text-align:left;border-bottom:2px solid #DCE8F5;">Phase</th><th style="background:#F7FAFF;color:#555;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;padding:8px;text-align:center;border-bottom:2px solid #DCE8F5;">Total</th><th style="background:#F7FAFF;color:#555;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;padding:8px;text-align:center;border-bottom:2px solid #DCE8F5;">Done</th><th style="background:#F7FAFF;color:#555;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;padding:8px;text-align:center;border-bottom:2px solid #DCE8F5;">%</th><th style="background:#F7FAFF;color:#555;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;padding:8px;text-align:center;border-bottom:2px solid #DCE8F5;">In Prog</th><th style="background:#F7FAFF;color:#555;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;padding:8px;text-align:center;border-bottom:2px solid #DCE8F5;">Open</th></tr>
+<tr><td style="padding:8px;border-bottom:1px solid #F0F0F0;font-weight:700;color:#2563EB;">PH1</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;font-weight:600;">353</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;color:#16A34A;font-weight:600;">155</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;font-weight:700;">43.9%</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;">196</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;">2</td></tr>
+<tr><td style="padding:8px;border-bottom:1px solid #F0F0F0;font-weight:700;color:#16A34A;">PH2</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;font-weight:600;">359</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;color:#16A34A;font-weight:600;">53</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;font-weight:700;">14.8%</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;">301</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;">5</td></tr>
+<tr><td style="padding:8px;border-bottom:1px solid #F0F0F0;font-weight:700;color:#7C3AED;">PH3</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;font-weight:600;">333</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;color:#16A34A;font-weight:600;">46</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;font-weight:700;">13.8%</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;">283</td>
+<td style="padding:8px;border-bottom:1px solid #F0F0F0;text-align:center;">4</td></tr>
+</table>
 
-<!-- LOSS CALLOUT -->
-<div class="loss-box">
-  <h3>&#128176; Estimated Product Loss</h3>
-  <div class="big-num">$42.3M</div>
-  <div class="sub">Lowest among all Sr. Directors</div>
-  <div class="loss-row">
-    <div class="loss-chip">Donnie Chester: <b>$11.9M</b></div>
-    <div class="loss-chip">Brian Conover: <b>$9.6M</b></div>
-    <div class="loss-chip">Josh Thaxton: <b>$8.1M</b></div>
-  </div>
-  <div class="loss-row">
-    <div class="loss-chip">Sonya Webster: <b>$6.6M</b></div>
-    <div class="loss-chip">Jack Grahek: <b>$6.0M</b></div>
-  </div>
+<hr style="border:none;border-top:2px solid #E5E7EB;margin:28px 0;">
+
+<!-- ═══ 3. Projects ═══ -->
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+<div style="background:#7C3AED;color:white;font-size:10px;font-weight:800;padding:4px 10px;border-radius:4px;letter-spacing:1px;">3</div>
+<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#7C3AED;">🏗️ Capital Projects</div>
+</div>
+<div style="font-size:18px;font-weight:700;color:#1A1A1A;margin:0 0 14px 0;">295 Projects in Your Org</div>
+
+<table width="100%" cellpadding="0" cellspacing="0" style="margin:14px 0;"><tr>
+<td style="padding:4px;" width="33%"><div style="background:#F5F3FF;border:1px solid #DDD6FE;border-radius:8px;padding:10px;text-align:center;"><div style="font-size:22px;font-weight:700;color:#7C3AED;">295</div><div style="font-size:9px;color:#888;text-transform:uppercase;margin-top:2px;">Total</div></div></td>
+<td style="padding:4px;" width="33%"><div style="background:#F0FFF4;border:1px solid #BBF7D0;border-radius:8px;padding:10px;text-align:center;"><div style="font-size:22px;font-weight:700;color:#16A34A;">121</div><div style="font-size:9px;color:#888;text-transform:uppercase;margin-top:2px;">Active</div></div></td>
+<td style="padding:4px;" width="33%"><div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:10px;text-align:center;"><div style="font-size:22px;font-weight:700;color:#DC2626;">53</div><div style="font-size:9px;color:#888;text-transform:uppercase;margin-top:2px;">Overdue</div></div></td>
+</tr></table>
+
+<table width="100%" cellpadding="0" cellspacing="0"><tr>
+<td width="48%" valign="top" style="padding-right:12px;">
+<div style="font-size:13px;font-weight:700;color:#555;margin:8px 0;">By Director</div>
+<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:12px;">
+<tr><th style="background:#F7FAFF;color:#555;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;padding:8px;text-align:left;border-bottom:2px solid #DCE8F5;">Director</th><th style="background:#F7FAFF;color:#555;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;padding:8px;text-align:center;border-bottom:2px solid #DCE8F5;">Projects</th></tr>
+<tr><td style="padding:6px 8px;border-bottom:1px solid #F0F0F0;font-weight:600;">Donnie Chester</td>
+<td style="padding:6px 8px;border-bottom:1px solid #F0F0F0;text-align:center;font-weight:700;">70</td></tr>
+<tr><td style="padding:6px 8px;border-bottom:1px solid #F0F0F0;font-weight:600;">Jack Grahek</td>
+<td style="padding:6px 8px;border-bottom:1px solid #F0F0F0;text-align:center;font-weight:700;">58</td></tr>
+<tr><td style="padding:6px 8px;border-bottom:1px solid #F0F0F0;font-weight:600;">Brian Conover</td>
+<td style="padding:6px 8px;border-bottom:1px solid #F0F0F0;text-align:center;font-weight:700;">57</td></tr>
+<tr><td style="padding:6px 8px;border-bottom:1px solid #F0F0F0;font-weight:600;">Josh Thaxton</td>
+<td style="padding:6px 8px;border-bottom:1px solid #F0F0F0;text-align:center;font-weight:700;">55</td></tr>
+<tr><td style="padding:6px 8px;border-bottom:1px solid #F0F0F0;font-weight:600;">Sonya Webster</td>
+<td style="padding:6px 8px;border-bottom:1px solid #F0F0F0;text-align:center;font-weight:700;">55</td></tr>
+</table></td>
+<td width="4%"></td>
+<td width="48%" valign="top">
+<div style="font-size:13px;font-weight:700;color:#555;margin:8px 0;">By Type</div>
+<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:12px;">
+<tr><th style="background:#F7FAFF;color:#555;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;padding:8px;text-align:left;border-bottom:2px solid #DCE8F5;">Type</th><th style="background:#F7FAFF;color:#555;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;padding:8px;text-align:center;border-bottom:2px solid #DCE8F5;">Count</th></tr>
+<tr><td style="padding:6px 8px;border-bottom:1px solid #F0F0F0;font-weight:600;">Refrigeration</td>
+<td style="padding:6px 8px;border-bottom:1px solid #F0F0F0;text-align:center;font-weight:700;">200</td></tr>
+<tr><td style="padding:6px 8px;border-bottom:1px solid #F0F0F0;font-weight:600;">HVAC</td>
+<td style="padding:6px 8px;border-bottom:1px solid #F0F0F0;text-align:center;font-weight:700;">64</td></tr>
+<tr><td style="padding:6px 8px;border-bottom:1px solid #F0F0F0;font-weight:600;">EMS/Controls</td>
+<td style="padding:6px 8px;border-bottom:1px solid #F0F0F0;text-align:center;font-weight:700;">28</td></tr>
+<tr><td style="padding:6px 8px;border-bottom:1px solid #F0F0F0;font-weight:600;">Zero Emission</td>
+<td style="padding:6px 8px;border-bottom:1px solid #F0F0F0;text-align:center;font-weight:700;">2</td></tr>
+<tr><td style="padding:6px 8px;border-bottom:1px solid #F0F0F0;font-weight:600;">Special</td>
+<td style="padding:6px 8px;border-bottom:1px solid #F0F0F0;text-align:center;font-weight:700;">1</td></tr>
+</table></td>
+</tr></table>
+
+<hr style="border:none;border-top:2px solid #E5E7EB;margin:28px 0;">
+
+<!-- ═══ 4. Terminal ═══ -->
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+<div style="background:#DC2626;color:white;font-size:10px;font-weight:800;padding:4px 10px;border-radius:4px;letter-spacing:1px;">4</div>
+<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#DC2626;">🌡️ Terminal Cases</div>
+</div>
+<div style="font-size:18px;font-weight:700;color:#1A1A1A;margin:0 0 14px 0;">62 Cases &bull; 44 Stores</div>
+
+<table width="100%" cellpadding="0" cellspacing="0" style="margin:14px 0;"><tr>
+<td style="padding:4px;" width="25%"><div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:10px;text-align:center;"><div style="font-size:22px;font-weight:700;color:#DC2626;">62</div><div style="font-size:9px;color:#888;text-transform:uppercase;margin-top:2px;">Total</div></div></td>
+<td style="padding:4px;" width="25%"><div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:10px;text-align:center;"><div style="font-size:22px;font-weight:700;color:#2563EB;">21</div><div style="font-size:9px;color:#888;text-transform:uppercase;margin-top:2px;">Low Temp</div></div></td>
+<td style="padding:4px;" width="25%"><div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;padding:10px;text-align:center;"><div style="font-size:22px;font-weight:700;color:#D97706;">35</div><div style="font-size:9px;color:#888;text-transform:uppercase;margin-top:2px;">Med Temp</div></div></td>
+<td style="padding:4px;" width="25%"><div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:10px;text-align:center;"><div style="font-size:22px;font-weight:700;color:#DC2626;">2</div><div style="font-size:9px;color:#888;text-transform:uppercase;margin-top:2px;">3+ Days</div></div></td>
+</tr></table>
+
+<div style="font-size:13px;font-weight:700;color:#555;margin:16px 0 8px 0;">By Director</div>
+<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:12px;">
+<tr><th style="background:#F7FAFF;color:#555;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;padding:8px;text-align:left;border-bottom:2px solid #DCE8F5;">Director</th><th style="background:#F7FAFF;color:#555;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;padding:8px;text-align:center;border-bottom:2px solid #DCE8F5;">Cases</th><th style="background:#F7FAFF;color:#555;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;padding:8px;text-align:center;border-bottom:2px solid #DCE8F5;">3+ Days</th></tr>
+<tr><td style="padding:6px 8px;border-bottom:1px solid #F0F0F0;font-weight:600;">Brian Conover</td>
+<td style="padding:6px 8px;border-bottom:1px solid #F0F0F0;text-align:center;font-weight:700;">23</td>
+<td style="padding:6px 8px;border-bottom:1px solid #F0F0F0;text-align:center;color:#DC2626;font-weight:700;">0</td></tr>
+<tr><td style="padding:6px 8px;border-bottom:1px solid #F0F0F0;font-weight:600;">Donnie Chester</td>
+<td style="padding:6px 8px;border-bottom:1px solid #F0F0F0;text-align:center;font-weight:700;">17</td>
+<td style="padding:6px 8px;border-bottom:1px solid #F0F0F0;text-align:center;color:#DC2626;font-weight:700;">1</td></tr>
+<tr><td style="padding:6px 8px;border-bottom:1px solid #F0F0F0;font-weight:600;">Sonya Webster</td>
+<td style="padding:6px 8px;border-bottom:1px solid #F0F0F0;text-align:center;font-weight:700;">12</td>
+<td style="padding:6px 8px;border-bottom:1px solid #F0F0F0;text-align:center;color:#DC2626;font-weight:700;">0</td></tr>
+<tr><td style="padding:6px 8px;border-bottom:1px solid #F0F0F0;font-weight:600;">Josh Thaxton</td>
+<td style="padding:6px 8px;border-bottom:1px solid #F0F0F0;text-align:center;font-weight:700;">7</td>
+<td style="padding:6px 8px;border-bottom:1px solid #F0F0F0;text-align:center;color:#DC2626;font-weight:700;">0</td></tr>
+<tr><td style="padding:6px 8px;border-bottom:1px solid #F0F0F0;font-weight:600;">Jack Grahek</td>
+<td style="padding:6px 8px;border-bottom:1px solid #F0F0F0;text-align:center;font-weight:700;">3</td>
+<td style="padding:6px 8px;border-bottom:1px solid #F0F0F0;text-align:center;color:#DC2626;font-weight:700;">1</td></tr>
+</table>
+
+<hr style="border:none;border-top:2px solid #E5E7EB;margin:28px 0;">
+
+<!-- Loss -->
+<div style="background:linear-gradient(135deg,#FFF5F5,#FEF2F2);border:1px solid #FECACA;border-radius:10px;padding:20px 24px;margin:16px 0;">
+<div style="font-size:16px;font-weight:700;color:#DC2626;margin:0 0 6px 0;">💰 Estimated Product Loss</div>
+<div style="font-size:32px;font-weight:800;color:#DC2626;">$42.4M</div>
+<div style="font-size:13px;color:#555;margin-top:4px;">Lowest among all Sr. Directors ✨</div>
+<div style="margin-top:10px;"><span style="display:inline-block;background:white;border:1px solid #FECACA;border-radius:6px;padding:5px 10px;font-size:12px;margin:3px 4px;">Donnie Chester: <b style="color:#DC2626;">$12.0M</b></span><span style="display:inline-block;background:white;border:1px solid #FECACA;border-radius:6px;padding:5px 10px;font-size:12px;margin:3px 4px;">Brian Conover: <b style="color:#DC2626;">$9.6M</b></span><span style="display:inline-block;background:white;border:1px solid #FECACA;border-radius:6px;padding:5px 10px;font-size:12px;margin:3px 4px;">Josh Thaxton: <b style="color:#DC2626;">$8.1M</b></span><span style="display:inline-block;background:white;border:1px solid #FECACA;border-radius:6px;padding:5px 10px;font-size:12px;margin:3px 4px;">Sonya Webster: <b style="color:#DC2626;">$6.7M</b></span><span style="display:inline-block;background:white;border:1px solid #FECACA;border-radius:6px;padding:5px 10px;font-size:12px;margin:3px 4px;">Jack Grahek: <b style="color:#DC2626;">$6.0M</b></span></div>
 </div>
 
-<hr class="divider">
-
-<div class="section-label">Quick Link</div>
-<p><b>&#10148; Open Dashboard:</b> <a href="https://gecgithub01.walmart.com/pages/j0s028j/north-bu-hvacr-report-hub/">https://gecgithub01.walmart.com/pages/j0s028j/north-bu-hvacr-report-hub/</a></p>
-
+<hr style="border:none;border-top:1px solid #E8E8E8;margin:24px 0;">
+<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#0071CE;margin-bottom:8px;">Quick Link</div>
+<p style="font-size:13px;"><b>➤ Open Dashboard:</b> <a href="https://gecgithub01.walmart.com/pages/j0s028j/north-bu-hvacr-report-hub/" style="color:#0071CE;">gecgithub01.walmart.com/pages/j0s028j/north-bu-hvacr-report-hub</a></p>
 </div>
 
-<div class="footer">
-  <a href="https://gecgithub01.walmart.com/pages/j0s028j/north-bu-hvacr-report-hub/">Open Dashboard</a> &nbsp;&bull;&nbsp; Data refreshes daily at 6:00 AM CT<br>
-  Questions? Reply to this email &mdash; James Savage &bull; 918-308-0662
+<div style="padding:20px 32px;background:#F9F9F9;border-top:1px solid #EEE;font-size:12px;color:#999;text-align:center;">
+<a href="https://gecgithub01.walmart.com/pages/j0s028j/north-bu-hvacr-report-hub/" style="color:#0071CE;text-decoration:none;">Open Dashboard</a> &nbsp;&bull;&nbsp; Data refreshes daily at 6:00 AM CT<br>
+Questions? Reply to this email — James Savage &bull; 918-308-0662
 </div>
-
-</div>
-
-</body>
-</html>
+</div></body></html>
