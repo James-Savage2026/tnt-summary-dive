@@ -76,7 +76,7 @@ def pull_lx_projects():
       SELECT store_number, store_name, fm_sr_director_name, fm_director_name,
              fm_regional_manager_name, fs_manager_name, CAST(fs_market AS STRING) as market, banner_desc
       FROM `re-crystal-mdm-prod.crystal.store_tabular_view`
-      WHERE fm_sr_director_name IN ('Laura Moore','Nick Paladino','Whitney Box','Monique Brennan')
+      WHERE fm_sr_director_name IN ('Laura Moore','Nick Paladino','Whitney Box','Monique Brennan','B.A. Glass')
     )
     SELECT
       l.ProjectID as project_id,
