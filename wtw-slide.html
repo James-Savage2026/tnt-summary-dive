@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; background: white; color: #1E293B; }
+  .slide { width: 1280px; height: 720px; margin: 0 auto; display: flex; flex-direction: column; overflow: hidden; background: white; }
+  .banner { background: linear-gradient(135deg, #0071CE 0%, #004C91 100%); padding: 14px 32px; display: flex; justify-content: space-between; align-items: center; }
+  .banner-left { display: flex; align-items: center; gap: 14px; }
+  .banner h1 { font-size: 22px; font-weight: 800; color: white; }
+  .banner .divider { width: 2px; height: 24px; background: rgba(255,194,32,0.5); border-radius: 1px; }
+  .banner .sub { font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.9); }
+  .banner-right { text-align: right; }
+  .banner-org { font-size: 12px; font-weight: 600; color: #FFC220; }
+  .banner-date { font-size: 10px; color: rgba(255,255,255,0.6); margin-top: 2px; }
+  .gold-bar { height: 4px; background: linear-gradient(90deg, #FFC220 0%, #FFD860 50%, #FFC220 100%); }
+  .body { flex: 1; padding: 12px 28px 8px; display: flex; flex-direction: column; min-height: 0; }
+  .kpi-strip { display: flex; gap: 10px; margin-bottom: 10px; }
+  .kpi { flex: 1; border-radius: 8px; padding: 8px 14px; text-align: center; }
+  .kpi.hero { background: #0071CE; }
+  .kpi.hero .kv { color: white; font-size: 26px; }
+  .kpi.hero .kl { color: rgba(255,255,255,0.7); }
+  .kpi.hero .ks { color: rgba(255,255,255,0.55); }
+  .kpi.std { background: #F7F9FC; border: 1.5px solid #E2E8F0; }
+  .kv { font-size: 22px; font-weight: 900; color: #0071CE; line-height: 1; }
+  .kl { font-size: 8px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; color: #94A3B8; margin-bottom: 2px; }
+  .ks { font-size: 9px; color: #64748B; margin-top: 2px; font-weight: 500; }
+  .legend { display: flex; gap: 16px; margin-bottom: 8px; justify-content: center; align-items: center; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 600; color: #64748B; }
+  .ldot { width: 12px; height: 12px; border-radius: 3px; }
+  .lbar { width: 4px; height: 14px; border-radius: 2px; }
+  .lsep { width: 1px; height: 14px; background: #E2E8F0; margin: 0 4px; }
+  .directors { display: flex; gap: 8px; flex: 1; min-height: 0; }
+  .dir-col { flex: 1; border-radius: 8px; display: flex; flex-direction: column; background: #FAFBFE; border: 1.5px solid #E2E8F0; overflow: hidden; }
+  .dir-top { background: linear-gradient(135deg, #0071CE, #005BA1); padding: 8px 10px; text-align: center; }
+  .dir-name { font-size: 12px; font-weight: 800; color: white; letter-spacing: 0.3px; }
+  .dir-stats { display: flex; justify-content: center; align-items: baseline; gap: 6px; margin-top: 2px; }
+  .dir-pct { font-size: 20px; font-weight: 900; color: #FFC220; }
+  .dir-sub { font-size: 9px; color: rgba(255,255,255,0.6); }
+  .rm-list { flex: 1; display: flex; flex-direction: column; gap: 3px; padding: 6px 6px 4px; }
+  .rm-row { padding: 4px 6px; border-radius: 6px; background: white; border: 1px solid #EEF0F4; }
+  .rm-row.top { border-left: 4px solid #FFC220; background: #FFFDF5; }
+  .rm-row.mid { border-left: 4px solid #D1D9E6; }
+  .rm-row.grow { border-left: 4px solid #E8ECF0; opacity: 0.8; }
+  .rm-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
+  .rm-name { font-size: 11px; font-weight: 700; color: #1E293B; }
+  .badge { font-size: 7px; padding: 2px 5px; border-radius: 3px; font-weight: 800; letter-spacing: 0.3px; margin-left: 5px; vertical-align: 1px; }
+  .badge.star { background: #FFC220; color: #78350F; }
+  .badge.opp { background: #F1F5F9; color: #94A3B8; }
+  .rm-pct { font-size: 12px; font-weight: 800; }
+  .rm-bar-row { display: flex; align-items: center; gap: 4px; }
+  .bar { flex: 1; display: flex; height: 16px; border-radius: 3px; overflow: hidden; background: #E8ECF0; }
+  .bar-seg { height: 100%; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 800; color: white; min-width: 0; overflow: hidden; }
+  .bar-seg.has-label { min-width: 16px; }
+  .bar-seg .num { text-shadow: 0 0 2px rgba(0,0,0,0.3); }
+  .bar-seg.gold .num { color: #78350F; text-shadow: none; }
+  .bar-remain { height: 100%; background: #E8ECF0; display: flex; align-items: center; justify-content: center; }
+  .rm-ct { font-size: 9px; color: #94A3B8; font-weight: 600; min-width: 30px; text-align: right; }
+  .footer { text-align: center; font-size: 9px; color: #B0B8C4; margin-top: 4px; padding-top: 4px; border-top: 1px solid #EEF0F4; }
+  .footer span { color: #FFC220; font-weight: 700; }
+</style>
+</head><body>
+<div class="slide">
+  <div class="banner">
+    <div class="banner-left">
+      <svg width="36" height="36" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <polygon points="50,5 54,40 50,48 46,40" fill="#FFC220"/>
+  <polygon points="50,95 46,60 50,52 54,60" fill="#FFC220"/>
+  <polygon points="5,50 40,46 48,50 40,54" fill="#FFC220"/>
+  <polygon points="95,50 60,54 52,50 60,46" fill="#FFC220"/>
+  <polygon points="17,17 42,38 38,42 38,38" fill="#FFC220"/>
+  <polygon points="83,17 62,38 58,38 62,42" fill="#FFC220"/>
+  <polygon points="17,83 38,58 42,62 38,62" fill="#FFC220"/>
+  <polygon points="83,83 62,62 62,58 58,62" fill="#FFC220"/>
+</svg>
+      <h1>Win-the-Winter</h1>
+      <div class="divider"></div>
+      <div class="sub">Phase Completion by RFMS</div>
+    </div>
+    <div class="banner-right">
+      <div class="banner-org">Laura Moore — North BU</div>
+      <div class="banner-date">Upstream Facilities Management &nbsp;•&nbsp; Feb 26, 2026</div>
+    </div>
+  </div>
+  <div class="gold-bar"></div>
+  <div class="body">
+    <div class="kpi-strip">
+      <div class="kpi hero">
+        <div class="kl">Overall</div>
+        <div class="kv">25.9%</div>
+        <div class="ks">271 / 1047 WOs</div>
+      </div>
+      <div class="kpi std">
+        <div class="kl">Phase 1</div>
+        <div class="kv">45.4%</div>
+        <div class="ks">161 / 355</div>
+      </div>
+      <div class="kpi std">
+        <div class="kv" style="color:#D97706;">15.6%</div>
+        <div class="kl">Phase 2</div>
+        <div class="ks">56 / 359</div>
+      </div>
+      <div class="kpi std">
+        <div class="kv" style="color:#004C91;">16.2%</div>
+        <div class="kl">Phase 3</div>
+        <div class="ks">54 / 333</div>
+      </div>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="ldot" style="background:#0071CE;"></div>PH1</div>
+      <div class="legend-item"><div class="ldot" style="background:#FFC220;"></div>PH2</div>
+      <div class="legend-item"><div class="ldot" style="background:#004C91;"></div>PH3</div>
+      <div class="legend-item"><div class="ldot" style="background:#E8ECF0;"></div>Remaining</div>
+      <div class="lsep"></div>
+      <div class="legend-item"><div class="lbar" style="background:#FFC220;"></div>Top Performer</div>
+      <div class="legend-item"><div class="lbar" style="background:#E8ECF0;"></div>Growth Opportunity</div>
+    </div>
+    <div class="directors">
+      <div class="dir-col">
+        <div class="dir-top">
+          <div class="dir-name">Brian Conover</div>
+          <div class="dir-stats">
+            <div class="dir-pct">25.4%</div>
+            <div class="dir-sub">68/268</div>
+          </div>
+        </div>
+        <div class="rm-list">
+          <div class="rm-row top">
+            <div class="rm-header">
+              <div class="rm-name">Joseph Stockwell<span class="badge star">★ TOP</span></div>
+              <div class="rm-pct" style="color:#0071CE;">52.2%</div>
+            </div>
+            <div class="rm-bar-row">
+              <div class="bar">
+                <div class="bar-seg has-label" style="width:10.9%;background:#0071CE;"><span class="num">5</span></div>
+                <div class="bar-seg gold has-label" style="width:19.6%;background:#FFC220;"><span class="num">9</span></div>
+                <div class="bar-seg has-label" style="width:21.7%;background:#004C91;"><span class="num">10</span></div>
+                <div class="bar-remain" style="width:47.8%;"><span style="font-size:8px;font-weight:700;color:#94A3B8;">22</span></div>
+              </div>
+              <div class="rm-ct">24/46</div>
+            </div>
+          </div>
+          <div class="rm-row mid">
+            <div class="rm-header">
+              <div class="rm-name">Bill Bee</div>
+              <div class="rm-pct" style="color:#334155;">28.6%</div>
+            </div>
+            <div class="rm-bar-row">
+              <div class="bar">
+                <div class="bar-seg has-label" style="width:22.4%;background:#0071CE;"><span class="num">11</span></div>
+                <div class="bar-seg gold has-label" style="width:4.1%;background:#FFC220;"></div>
+                <div class="bar-seg has-label" style="width:2.0%;background:#004C91;"></div>
+                <div class="bar-remain" style="width:71.5%;"><span style="font-size:8px;font-weight:700;color:#94A3B8;">35</span></div>
+              </div>
+              <div class="rm-ct">14/49</div>
+            </div>
+          </div>
+          <div class="rm-row mid">
+            <div class="rm-header">
+              <div class="rm-name">Steven Watkins</div>
+              <div class="rm-pct" style="color:#334155;">23.9%</div>
+            </div>
+            <div class="rm-bar-row">
+              <div class="bar">
+                <div class="bar-seg has-label" style="width:15.2%;background:#0071CE;"><span class="num">7</span></div>
+                <div class="bar-seg gold has-label" style="width:8.7%;background:#FFC220;"><span class="num">4</span></div>
+                <div class="bar-seg" style="width:0.0%;background:#004C91;"></div>
+                <div class="bar-remain" style="width:76.1%;"><span style="font-size:8px;font-weight:700;color:#94A3B8;">35</span></div>
+              </div>
+              <div class="rm-ct">11/46</div>
+            </div>
+          </div>
+          <div class="rm-row mid">
+            <div class="rm-header">
+              <div class="rm-name">Justin Miller</div>
+              <div class="rm-pct" style="color:#334155;">22.9%</div>
+            </div>
+            <div class="rm-bar-row">
+              <div class="bar">
+                <div class="bar-seg has-label" style="width:18.8%;background:#0071CE;"><span class="num">9</span></div>
+                <div class="bar-seg" style="width:0.0%;background:#FFC220;"></div>
+                <div class="bar-seg has-label" style="width:4.2%;background:#004C91;"></div>
+                <div class="bar-remain" style="width:77.0%;"><span style="font-size:8px;font-weight:700;color:#94A3B8;">37</span></div>
+              </div>
+              <div class="rm-ct">11/48</div>
+            </div>
+          </div>
+          <div class="rm-row mid">
+            <div class="rm-header">
+              <div class="rm-name">Chadwick Nowak</div>
+              <div class="rm-pct" style="color:#334155;">14.7%</div>
+            </div>
+            <div class="rm-bar-row">
+              <div class="bar">
+                <div class="bar-seg has-label" style="width:8.8%;background:#0071CE;"><span class="num">3</span></div>
+                <div class="bar-seg gold has-label" style="width:2.9%;background:#FFC220;"></div>
+                <div class="bar-seg has-label" style="width:2.9%;background:#004C91;"></div>
+                <div class="bar-remain" style="width:85.4%;"><span style="font-size:8px;font-weight:700;color:#94A3B8;">29</span></div>
+              </div>
+              <div class="rm-ct">5/34</div>
+            </div>
+          </div>
+          <div class="rm-row grow">
+            <div class="rm-header">
+              <div class="rm-name">DJ Czizek<span class="badge opp">↗ GROW</span></div>
+              <div class="rm-pct" style="color:#B0B8C4;">6.7%</div>
+            </div>
+            <div class="rm-bar-row">
+              <div class="bar">
+                <div class="bar-seg has-label" style="width:4.4%;background:#0071CE;"></div>
+                <div class="bar-seg gold has-label" style="width:2.2%;background:#FFC220;"></div>
+                <div class="bar-seg" style="width:0.0%;background:#004C91;"></div>
+                <div class="bar-remain" style="width:93.4%;"><span style="font-size:8px;font-weight:700;color:#94A3B8;">42</span></div>
+              </div>
+              <div class="rm-ct">3/45</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="dir-col">
+        <div class="dir-top">
+          <div class="dir-name">Donnie Chester</div>
+          <div class="dir-stats">
+            <div class="dir-pct">26.8%</div>
+            <div class="dir-sub">77/287</div>
+          </div>
+        </div>
+        <div class="rm-list">
+          <div class="rm-row top">
+            <div class="rm-header">
+              <div class="rm-name">Terry White<span class="badge star">★ TOP</span></div>
+              <div class="rm-pct" style="color:#0071CE;">51.0%</div>
+            </div>
+            <div class="rm-bar-row">
+              <div class="bar">
+                <div class="bar-seg has-label" style="width:23.5%;background:#0071CE;"><span class="num">12</span></div>
+                <div class="bar-seg gold has-label" style="width:15.7%;background:#FFC220;"><span class="num">8</span></div>
+                <div class="bar-seg has-label" style="width:11.8%;background:#004C91;"><span class="num">6</span></div>
+                <div class="bar-remain" style="width:49.0%;"><span style="font-size:8px;font-weight:700;color:#94A3B8;">25</span></div>
+              </div>
+              <div class="rm-ct">26/51</div>
+            </div>
+          </div>
+          <div class="rm-row mid">
+            <div class="rm-header">
+              <div class="rm-name">Brandon Williams</div>
+              <div class="rm-pct" style="color:#334155;">39.0%</div>
+            </div>
+            <div class="rm-bar-row">
+              <div class="bar">
+                <div class="bar-seg has-label" style="width:22.0%;background:#0071CE;"><span class="num">9</span></div>
+                <div class="bar-seg gold has-label" style="width:14.6%;background:#FFC220;"><span class="num">6</span></div>
+                <div class="bar-seg has-label" style="width:2.4%;background:#004C91;"></div>
+                <div class="bar-remain" style="width:61.0%;"><span style="font-size:8px;font-weight:700;color:#94A3B8;">25</span></div>
+              </div>
+              <div class="rm-ct">16/41</div>
+            </div>
+          </div>
+          <div class="rm-row mid">
+            <div class="rm-header">
+              <div class="rm-name">Robert Peck</div>
+              <div class="rm-pct" style="color:#334155;">27.0%</div>
+            </div>
+            <div class="rm-bar-row">
+              <div class="bar">
+                <div class="bar-seg has-label" style="width:13.5%;background:#0071CE;"><span class="num">5</span></div>
+                <div class="bar-seg gold has-label" style="width:5.4%;background:#FFC220;"></div>
+                <div class="bar-seg has-label" style="width:8.1%;background:#004C91;"><span class="num">3</span></div>
+                <div class="bar-remain" style="width:73.0%;"><span style="font-size:8px;font-weight:700;color:#94A3B8;">27</span></div>
+              </div>
+              <div class="rm-ct">10/37</div>
+            </div>
+          </div>
+          <div class="rm-row mid">
+            <div class="rm-header">
+              <div class="rm-name">Derrick Sharp</div>
+              <div class="rm-pct" style="color:#334155;">24.3%</div>
+            </div>
+            <div class="rm-bar-row">
+              <div class="bar">
+                <div class="bar-seg has-label" style="width:21.6%;background:#0071CE;"><span class="num">8</span></div>
+                <div class="bar-seg" style="width:0.0%;background:#FFC220;"></div>
+                <div class="bar-seg has-label" style="width:2.7%;background:#004C91;"></div>
+                <div class="bar-remain" style="width:75.7%;"><span style="font-size:8px;font-weight:700;color:#94A3B8;">28</span></div>
+              </div>
+              <div class="rm-ct">9/37</div>
+            </div>
+          </div>
+          <div class="rm-row mid">
+            <div class="rm-header">
+              <div class="rm-name">Richard Varela</div>
+              <div class="rm-pct" style="color:#334155;">18.9%</div>
+            </div>
+            <div class="rm-bar-row">
+              <div class="bar">
+                <div class="bar-seg has-label" style="width:13.2%;background:#0071CE;"><span class="num">7</span></div>
+                <div class="bar-seg gold has-label" style="width:5.7%;background:#FFC220;"></div>
+                <div class="bar-seg" style="width:0.0%;background:#004C91;"></div>
+                <div class="bar-remain" style="width:81.1%;"><span style="font-size:8px;font-weight:700;color:#94A3B8;">43</span></div>
+              </div>
+              <div class="rm-ct">10/53</div>
+            </div>
+          </div>
+          <div class="rm-row grow">
+            <div class="rm-header">
+              <div class="rm-name">Scott Cameron<span class="badge opp">↗ GROW</span></div>
+              <div class="rm-pct" style="color:#B0B8C4;">11.4%</div>
+            </div>
+            <div class="rm-bar-row">
+              <div class="bar">
+                <div class="bar-seg has-label" style="width:8.6%;background:#0071CE;"><span class="num">3</span></div>
+                <div class="bar-seg gold has-label" style="width:2.9%;background:#FFC220;"></div>
+                <div class="bar-seg" style="width:0.0%;background:#004C91;"></div>
+                <div class="bar-remain" style="width:88.5%;"><span style="font-size:8px;font-weight:700;color:#94A3B8;">31</span></div>
+              </div>
+              <div class="rm-ct">4/35</div>
+            </div>
+          </div>
+          <div class="rm-row grow">
+            <div class="rm-header">
+              <div class="rm-name">Scottie Starr<span class="badge opp">↗ GROW</span></div>
+              <div class="rm-pct" style="color:#B0B8C4;">6.1%</div>
+            </div>
+            <div class="rm-bar-row">
+              <div class="bar">
+                <div class="bar-seg has-label" style="width:6.1%;background:#0071CE;"><span class="num">2</span></div>
+                <div class="bar-seg" style="width:0.0%;background:#FFC220;"></div>
+                <div class="bar-seg" style="width:0.0%;background:#004C91;"></div>
+                <div class="bar-remain" style="width:93.9%;"><span style="font-size:8px;font-weight:700;color:#94A3B8;">31</span></div>
+              </div>
+              <div class="rm-ct">2/33</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="dir-col">
+        <div class="dir-top">
+          <div class="dir-name">Jack Grahek</div>
+          <div class="dir-stats">
+            <div class="dir-pct">29.1%</div>
+            <div class="dir-sub">52/179</div>
+          </div>
+        </div>
+        <div class="rm-list">
+          <div class="rm-row top">
+            <div class="rm-header">
+              <div class="rm-name">Ken Christensen<span class="badge star">★ TOP</span></div>
+              <div class="rm-pct" style="color:#0071CE;">51.4%</div>
+            </div>
+            <div class="rm-bar-row">
+              <div class="bar">
+                <div class="bar-seg has-label" style="width:18.9%;background:#0071CE;"><span class="num">7</span></div>
+                <div class="bar-seg gold has-label" style="width:18.9%;background:#FFC220;"><span class="num">7</span></div>
+                <div class="bar-seg has-label" style="width:13.5%;background:#004C91;"><span class="num">5</span></div>
+                <div class="bar-remain" style="width:48.7%;"><span style="font-size:8px;font-weight:700;color:#94A3B8;">18</span></div>
+              </div>
+              <div class="rm-ct">19/37</div>
+            </div>
+          </div>
+          <div class="rm-row top">
+            <div class="rm-header">
+              <div class="rm-name">Tony Frankovic<span class="badge star">★ TOP</span></div>
+              <div class="rm-pct" style="color:#0071CE;">39.6%</div>
+            </div>
+            <div class="rm-bar-row">
+              <div class="bar">
+                <div class="bar-seg has-label" style="width:20.8%;background:#0071CE;"><span class="num">10</span></div>
+                <div class="bar-seg gold has-label" style="width:10.4%;background:#FFC220;"><span class="num">5</span></div>
+                <div class="bar-seg has-label" style="width:8.3%;background:#004C91;"><span class="num">4</span></div>
+                <div class="bar-remain" style="width:60.5%;"><span style="font-size:8px;font-weight:700;color:#94A3B8;">29</span></div>
+              </div>
+              <div class="rm-ct">19/48</div>
+            </div>
+          </div>
+          <div class="rm-row mid">
+            <div class="rm-header">
+              <div class="rm-name">TJ Evans</div>
+              <div class="rm-pct" style="color:#334155;">19.4%</div>
+            </div>
+            <div class="rm-bar-row">
+              <div class="bar">
+                <div class="bar-seg has-label" style="width:16.1%;background:#0071CE;"><span class="num">5</span></div>
+                <div class="bar-seg" style="width:0.0%;background:#FFC220;"></div>
+                <div class="bar-seg has-label" style="width:3.2%;background:#004C91;"></div>
+                <div class="bar-remain" style="width:80.7%;"><span style="font-size:8px;font-weight:700;color:#94A3B8;">25</span></div>
+              </div>
+              <div class="rm-ct">6/31</div>
+            </div>
+          </div>
+          <div class="rm-row mid">
+            <div class="rm-header">
+              <div class="rm-name">Justin Burner</div>
+              <div class="rm-pct" style="color:#334155;">14.3%</div>
+            </div>
+            <div class="rm-bar-row">
+              <div class="bar">
+                <div class="bar-seg has-label" style="width:14.3%;background:#0071CE;"><span class="num">4</span></div>
+                <div class="bar-seg" style="width:0.0%;background:#FFC220;"></div>
+                <div class="bar-seg" style="width:0.0%;background:#004C91;"></div>
+                <div class="bar-remain" style="width:85.7%;"><span style="font-size:8px;font-weight:700;color:#94A3B8;">24</span></div>
+              </div>
+              <div class="rm-ct">4/28</div>
+            </div>
+          </div>
+          <div class="rm-row grow">
+            <div class="rm-header">
+              <div class="rm-name">Thomas Miller<span class="badge opp">↗ GROW</span></div>
+              <div class="rm-pct" style="color:#B0B8C4;">11.4%</div>
+            </div>
+            <div class="rm-bar-row">
+              <div class="bar">
+                <div class="bar-seg has-label" style="width:8.6%;background:#0071CE;"><span class="num">3</span></div>
+                <div class="bar-seg gold has-label" style="width:2.9%;background:#FFC220;"></div>
+                <div class="bar-seg" style="width:0.0%;background:#004C91;"></div>
+                <div class="bar-remain" style="width:88.5%;"><span style="font-size:8px;font-weight:700;color:#94A3B8;">31</span></div>
+              </div>
+              <div class="rm-ct">4/35</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="dir-col">
+        <div class="dir-top">
+          <div class="dir-name">Josh Thaxton</div>
+          <div class="dir-stats">
+            <div class="dir-pct">30.7%</div>
+            <div class="dir-sub">47/153</div>
+          </div>
+        </div>
+        <div class="rm-list">
+          <div class="rm-row top">
+            <div class="rm-header">
+              <div class="rm-name">Jeff Mikesell<span class="badge star">★ TOP</span></div>
+              <div class="rm-pct" style="color:#0071CE;">47.4%</div>
+            </div>
+            <div class="rm-bar-row">
+              <div class="bar">
+                <div class="bar-seg has-label" style="width:34.2%;background:#0071CE;"><span class="num">13</span></div>
+                <div class="bar-seg gold has-label" style="width:5.3%;background:#FFC220;"></div>
+                <div class="bar-seg has-label" style="width:7.9%;background:#004C91;"><span class="num">3</span></div>
+                <div class="bar-remain" style="width:52.6%;"><span style="font-size:8px;font-weight:700;color:#94A3B8;">20</span></div>
+              </div>
+              <div class="rm-ct">18/38</div>
+            </div>
+          </div>
+          <div class="rm-row mid">
+            <div class="rm-header">
+              <div class="rm-name">Mark Boatwright</div>
+              <div class="rm-pct" style="color:#334155;">32.6%</div>
+            </div>
+            <div class="rm-bar-row">
+              <div class="bar">
+                <div class="bar-seg has-label" style="width:18.6%;background:#0071CE;"><span class="num">8</span></div>
+                <div class="bar-seg" style="width:0.0%;background:#FFC220;"></div>
+                <div class="bar-seg has-label" style="width:14.0%;background:#004C91;"><span class="num">6</span></div>
+                <div class="bar-remain" style="width:67.4%;"><span style="font-size:8px;font-weight:700;color:#94A3B8;">29</span></div>
+              </div>
+              <div class="rm-ct">14/43</div>
+            </div>
+          </div>
+          <div class="rm-row mid">
+            <div class="rm-header">
+              <div class="rm-name">Chad Pennington</div>
+              <div class="rm-pct" style="color:#334155;">28.9%</div>
+            </div>
+            <div class="rm-bar-row">
+              <div class="bar">
+                <div class="bar-seg has-label" style="width:21.1%;background:#0071CE;"><span class="num">8</span></div>
+                <div class="bar-seg gold has-label" style="width:2.6%;background:#FFC220;"></div>
+                <div class="bar-seg has-label" style="width:5.3%;background:#004C91;"></div>
+                <div class="bar-remain" style="width:71.0%;"><span style="font-size:8px;font-weight:700;color:#94A3B8;">27</span></div>
+              </div>
+              <div class="rm-ct">11/38</div>
+            </div>
+          </div>
+          <div class="rm-row mid">
+            <div class="rm-header">
+              <div class="rm-name">Bryan Archer</div>
+              <div class="rm-pct" style="color:#334155;">11.8%</div>
+            </div>
+            <div class="rm-bar-row">
+              <div class="bar">
+                <div class="bar-seg has-label" style="width:8.8%;background:#0071CE;"><span class="num">3</span></div>
+                <div class="bar-seg" style="width:0.0%;background:#FFC220;"></div>
+                <div class="bar-seg has-label" style="width:2.9%;background:#004C91;"></div>
+                <div class="bar-remain" style="width:88.3%;"><span style="font-size:8px;font-weight:700;color:#94A3B8;">30</span></div>
+              </div>
+              <div class="rm-ct">4/34</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="dir-col">
+        <div class="dir-top">
+          <div class="dir-name">Sonya Webster</div>
+          <div class="dir-stats">
+            <div class="dir-pct">16.9%</div>
+            <div class="dir-sub">27/160</div>
+          </div>
+        </div>
+        <div class="rm-list">
+          <div class="rm-row mid">
+            <div class="rm-header">
+              <div class="rm-name">Vincent Copcutt</div>
+              <div class="rm-pct" style="color:#334155;">20.9%</div>
+            </div>
+            <div class="rm-bar-row">
+              <div class="bar">
+                <div class="bar-seg has-label" style="width:11.6%;background:#0071CE;"><span class="num">5</span></div>
+                <div class="bar-seg gold has-label" style="width:4.7%;background:#FFC220;"></div>
+                <div class="bar-seg has-label" style="width:4.7%;background:#004C91;"></div>
+                <div class="bar-remain" style="width:79.0%;"><span style="font-size:8px;font-weight:700;color:#94A3B8;">34</span></div>
+              </div>
+              <div class="rm-ct">9/43</div>
+            </div>
+          </div>
+          <div class="rm-row mid">
+            <div class="rm-header">
+              <div class="rm-name">Christian Campbell</div>
+              <div class="rm-pct" style="color:#334155;">20.0%</div>
+            </div>
+            <div class="rm-bar-row">
+              <div class="bar">
+                <div class="bar-seg has-label" style="width:11.1%;background:#0071CE;"><span class="num">5</span></div>
+                <div class="bar-seg" style="width:0.0%;background:#FFC220;"></div>
+                <div class="bar-seg has-label" style="width:8.9%;background:#004C91;"><span class="num">4</span></div>
+                <div class="bar-remain" style="width:80.0%;"><span style="font-size:8px;font-weight:700;color:#94A3B8;">36</span></div>
+              </div>
+              <div class="rm-ct">9/45</div>
+            </div>
+          </div>
+          <div class="rm-row mid">
+            <div class="rm-header">
+              <div class="rm-name">Rob Beahl</div>
+              <div class="rm-pct" style="color:#334155;">14.7%</div>
+            </div>
+            <div class="rm-bar-row">
+              <div class="bar">
+                <div class="bar-seg has-label" style="width:11.8%;background:#0071CE;"><span class="num">4</span></div>
+                <div class="bar-seg gold has-label" style="width:2.9%;background:#FFC220;"></div>
+                <div class="bar-seg" style="width:0.0%;background:#004C91;"></div>
+                <div class="bar-remain" style="width:85.3%;"><span style="font-size:8px;font-weight:700;color:#94A3B8;">29</span></div>
+              </div>
+              <div class="rm-ct">5/34</div>
+            </div>
+          </div>
+          <div class="rm-row grow">
+            <div class="rm-header">
+              <div class="rm-name">Bradley Stotts<span class="badge opp">↗ GROW</span></div>
+              <div class="rm-pct" style="color:#B0B8C4;">10.5%</div>
+            </div>
+            <div class="rm-bar-row">
+              <div class="bar">
+                <div class="bar-seg has-label" style="width:7.9%;background:#0071CE;"><span class="num">3</span></div>
+                <div class="bar-seg" style="width:0.0%;background:#FFC220;"></div>
+                <div class="bar-seg has-label" style="width:2.6%;background:#004C91;"></div>
+                <div class="bar-remain" style="width:89.5%;"><span style="font-size:8px;font-weight:700;color:#94A3B8;">34</span></div>
+              </div>
+              <div class="rm-ct">4/38</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="footer"><span>★</span> Upstream Facilities Management &nbsp;•&nbsp; North BU HVAC/R &nbsp;•&nbsp; TnT Dashboard</div>
+  </div>
+</div>
+</body></html>

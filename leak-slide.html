@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; background: white; color: #1E293B; }
+  .slide { width: 1280px; height: 720px; margin: 0 auto; display: flex; flex-direction: column; overflow: hidden; background: white; }
+  .banner { background: linear-gradient(135deg, #0071CE 0%, #004C91 100%); padding: 12px 32px; display: flex; justify-content: space-between; align-items: center; }
+  .banner-left { display: flex; align-items: center; gap: 14px; }
+  .banner h1 { font-size: 22px; font-weight: 800; color: white; }
+  .banner .divider { width: 2px; height: 24px; background: rgba(255,194,32,0.5); border-radius: 1px; }
+  .banner .sub { font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.9); }
+  .banner-right { text-align: right; }
+  .banner-org { font-size: 12px; font-weight: 600; color: #FFC220; }
+  .banner-date { font-size: 10px; color: rgba(255,255,255,0.6); margin-top: 2px; }
+  .gold-bar { height: 3px; background: linear-gradient(90deg, #FFC220 0%, #FFD860 50%, #FFC220 100%); }
+  .body { flex: 1; padding: 10px 28px 0; display: flex; flex-direction: column; min-height: 0; }
+
+  .kpi-strip { display: flex; gap: 8px; margin-bottom: 8px; }
+  .kpi { flex: 1; border-radius: 8px; padding: 7px 10px; text-align: center; }
+  .kpi.hero { background: #0071CE; }
+  .kpi.hero .kv { color: white; font-size: 26px; }
+  .kpi.hero .kl { color: rgba(255,255,255,0.7); }
+  .kpi.hero .ks { color: rgba(255,255,255,0.55); }
+  .kpi.good { background: #F0FDF4; border: 1.5px solid #BBF7D0; }
+  .kpi.bad { background: #FEF2F2; border: 1.5px solid #FECACA; }
+  .kpi.info { background: #F0F9FF; border: 1.5px solid #BAE6FD; }
+  .kpi.warn { background: #FFF7ED; border: 1.5px solid #FED7AA; }
+  .kv { font-size: 22px; font-weight: 900; color: #0071CE; line-height: 1; }
+  .kl { font-size: 7px; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 700; color: #94A3B8; margin-bottom: 2px; }
+  .ks { font-size: 8px; color: #64748B; margin-top: 2px; font-weight: 500; }
+
+  .legend { display: flex; gap: 14px; margin-bottom: 6px; justify-content: center; align-items: center; }
+  .legend-item { display: flex; align-items: center; gap: 4px; font-size: 9px; font-weight: 600; color: #64748B; }
+  .ldot { width: 10px; height: 10px; border-radius: 2px; }
+  .lline { width: 2px; height: 12px; border-radius: 1px; }
+
+  .directors { display: flex; gap: 6px; flex: 1; min-height: 0; }
+  .dir-col { flex: 1; border-radius: 8px; display: flex; flex-direction: column; background: #FAFBFE; border: 1.5px solid #E2E8F0; overflow: hidden; }
+  .dir-top { background: linear-gradient(135deg, #0071CE, #005BA1); padding: 6px 8px; text-align: center; }
+  .dir-name { font-size: 11px; font-weight: 800; color: white; }
+  .dir-stats { display: flex; justify-content: center; align-items: baseline; gap: 5px; margin-top: 1px; }
+  .dir-pct { font-size: 18px; font-weight: 900; color: #FFC220; }
+  .dir-sub { font-size: 8px; color: rgba(255,255,255,0.6); }
+
+  .rm-list { flex: 1; display: flex; flex-direction: column; gap: 3px; padding: 5px 5px 3px; }
+  .rm-row { padding: 4px 6px; border-radius: 5px; background: white; border: 1px solid #EEF0F4; border-left: 4px solid #D1D9E6; }
+  .rm-row.safe { border-left-color: #16A34A; }
+  .rm-row.danger { border-left-color: #DC2626; background: #FEF2F2; }
+
+  .rm-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; }
+  .rm-name { font-size: 10px; font-weight: 700; color: #1E293B; }
+  .rm-nums { font-size: 10px; font-weight: 800; display: flex; gap: 4px; align-items: baseline; }
+  .hot-badge { font-size: 7px; padding: 1px 4px; border-radius: 3px; font-weight: 800; background: #FEE2E2; color: #DC2626; margin-left: 4px; vertical-align: 1px; }
+
+  .dual-bar { display: flex; flex-direction: column; gap: 2px; }
+  .bar-wrap { display: flex; align-items: center; gap: 3px; }
+  .bar-label { font-size: 7px; font-weight: 700; color: #94A3B8; width: 28px; text-align: right; text-transform: uppercase; }
+  .bar-track { flex: 1; height: 10px; border-radius: 2px; background: #F1F5F9; position: relative; overflow: visible; }
+  .bar-fill { height: 100%; border-radius: 2px; display: flex; align-items: center; justify-content: flex-end; padding-right: 3px; font-size: 7px; font-weight: 800; color: white; min-width: 0; }
+  .bar-fill .val { text-shadow: 0 0 2px rgba(0,0,0,0.3); white-space: nowrap; }
+  .bar-fill.actual { background: #0071CE; }
+  .bar-fill.burn-ok { background: linear-gradient(90deg, #0071CE 0%, #60A5FA 40%, #FFC220 100%); }
+  .bar-fill.burn-warn { background: linear-gradient(90deg, #0071CE 0%, #F59E0B 40%, #EA580C 100%); }
+  .bar-fill.burn-danger { background: linear-gradient(90deg, #0071CE 0%, #EA580C 40%, #DC2626 100%); }
+  /* Threshold line */
+  .thresh { position: absolute; left: 62.5%; top: -2px; bottom: -2px; width: 1.5px; background: #1E293B; z-index: 2; }
+  .thresh::after { content: ''; position: absolute; top: -3px; left: -2px; width: 5px; height: 5px; background: #1E293B; border-radius: 50%; }
+  .bar-val { font-size: 8px; font-weight: 800; min-width: 28px; text-align: left; }
+
+  .callout {
+    background: linear-gradient(135deg, #FEF2F2 0%, #FFF7ED 100%);
+    border: 1.5px solid #FECACA;
+    border-radius: 8px;
+    padding: 6px 20px;
+    margin-top: 6px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .callout-label { font-size: 10px; font-weight: 800; color: #DC2626; text-transform: uppercase; letter-spacing: 1px; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+  .callout-label .icon { font-size: 14px; }
+  .callout-desc { font-size: 9px; color: #64748B; font-weight: 500; margin-right: auto; }
+  .callout-chips { display: flex; gap: 4px; flex-wrap: wrap; }
+  .callout-chip { background: white; border: 1.5px solid #FECACA; border-radius: 5px; padding: 2px 6px; font-size: 8px; font-weight: 700; color: #1E293B; display: flex; align-items: center; gap: 3px; }
+  .callout-chip .rate { color: #DC2626; font-weight: 900; }
+  .callout-chip .dir-tag { font-size: 7px; color: #94A3B8; font-weight: 600; }
+
+  .footer { text-align: center; font-size: 8px; color: #B0B8C4; margin-top: 4px; padding-top: 3px; border-top: 1px solid #EEF0F4; }
+  .footer span { color: #FFC220; font-weight: 700; }
+</style>
+</head><body>
+<div class="slide">
+  <div class="banner">
+    <div class="banner-left">
+      <svg width="36" height="36" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <polygon points="50,5 54,40 50,48 46,40" fill="#FFC220"/>
+  <polygon points="50,95 46,60 50,52 54,60" fill="#FFC220"/>
+  <polygon points="5,50 40,46 48,50 40,54" fill="#FFC220"/>
+  <polygon points="95,50 60,54 52,50 60,46" fill="#FFC220"/>
+  <polygon points="17,17 42,38 38,42 38,38" fill="#FFC220"/>
+  <polygon points="83,17 62,38 58,38 62,42" fill="#FFC220"/>
+  <polygon points="17,83 38,58 42,62 38,62" fill="#FFC220"/>
+  <polygon points="83,83 62,62 62,58 58,62" fill="#FFC220"/>
+</svg>
+      <h1>Leak Management</h1>
+      <div class="divider"></div>
+      <div class="sub">CY2026 Actual vs Burn Rate by RFMS</div>
+    </div>
+    <div class="banner-right">
+      <div class="banner-org">Laura Moore — North BU</div>
+      <div class="banner-date">Threshold: 9% &nbsp;•&nbsp; Day 53 of 365 &nbsp;•&nbsp; <span style="color:#FFC220;font-weight:700;">308 days left in CY</span></div>
+    </div>
+  </div>
+  <div class="gold-bar"></div>
+  <div class="body">
+    <div class="kpi-strip">
+      <div class="kpi hero">
+        <div class="kl">CY Leak Rate</div>
+        <div class="kv" style="color:white;">0.88%</div>
+        <div class="ks" style="color:rgba(255,255,255,0.55);">vs 9% threshold</div>
+      </div>
+      <div class="kpi info">
+        <div class="kl">📈 Burn Rate (EOY)</div>
+        <div class="kv" style="color:#16A34A;">6.06%</div>
+        <div class="ks">Projected at current pace</div>
+      </div>
+      <div class="kpi good">
+        <div class="kl">✅ Below 9%</div>
+        <div class="kv" style="color:#16A34A;">1041</div>
+        <div class="ks">Stores Compliant</div>
+      </div>
+      <div class="kpi bad">
+        <div class="kl">🔴 Above 9%</div>
+        <div class="kv" style="color:#DC2626;">22</div>
+        <div class="ks">Stores Exceeding</div>
+      </div>
+      <div class="kpi warn">
+        <div class="kl">⚠️ RMs On Pace to Exceed</div>
+        <div class="kv" style="color:#EA580C;">5</div>
+        <div class="ks">Burn rate ≥9%</div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item"><div class="ldot" style="background:#0071CE;"></div>Actual (YTD)</div>
+      <div class="legend-item"><div class="ldot" style="background:linear-gradient(90deg,#0071CE,#FFC220);border:none;"></div>Burn → EOY Projection</div>
+      <div class="legend-item"><div class="lline" style="background:#1E293B;"></div>9% Threshold</div>
+      <div class="legend-item" style="color:#94A3B8;font-size:8px;">Bars scaled to 14%</div>
+    </div>
+
+    <div class="directors">
+      <div class="dir-col">
+        <div class="dir-top">
+          <div class="dir-name">Brian Conover</div>
+          <div class="dir-stats">
+            <div class="dir-pct">0.69%</div>
+            <div class="dir-sub">burn: 4.77% · 3 hot</div>
+          </div>
+        </div>
+        <div class="rm-list">
+          <div class="rm-row danger">
+            <div class="rm-header">
+              <div class="rm-name">DJ Czizek<span class="hot-badge">2 &gt;9%</span></div>
+              <div class="rm-nums">
+                <span style="color:#EA580C;">1.42%</span>
+                <span style="color:#CBD5E1;">→</span>
+                <span style="color:#DC2626;">9.75%</span>
+              </div>
+            </div>
+            <div class="dual-bar">
+              <div class="bar-wrap">
+                <div class="bar-label">Now</div>
+                <div class="bar-track">
+                  <div class="bar-fill actual" style="width:9.9%;"><span class="val">1.42%</span></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+              <div class="bar-wrap">
+                <div class="bar-label">EOY</div>
+                <div class="bar-track">
+                  <div class="bar-fill burn-danger" style="width:67.7%;"><span class="val">9.75%</span></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="rm-row safe">
+            <div class="rm-header">
+              <div class="rm-name">Chadwick Nowak<span class="hot-badge">1 &gt;9%</span></div>
+              <div class="rm-nums">
+                <span style="color:#16A34A;">0.91%</span>
+                <span style="color:#CBD5E1;">→</span>
+                <span style="color:#16A34A;">6.29%</span>
+              </div>
+            </div>
+            <div class="dual-bar">
+              <div class="bar-wrap">
+                <div class="bar-label">Now</div>
+                <div class="bar-track">
+                  <div class="bar-fill actual" style="width:6.3%;"></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+              <div class="bar-wrap">
+                <div class="bar-label">EOY</div>
+                <div class="bar-track">
+                  <div class="bar-fill burn-ok" style="width:43.7%;"><span class="val">6.29%</span></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="rm-row safe">
+            <div class="rm-header">
+              <div class="rm-name">Justin Miller</div>
+              <div class="rm-nums">
+                <span style="color:#16A34A;">0.64%</span>
+                <span style="color:#CBD5E1;">→</span>
+                <span style="color:#16A34A;">4.43%</span>
+              </div>
+            </div>
+            <div class="dual-bar">
+              <div class="bar-wrap">
+                <div class="bar-label">Now</div>
+                <div class="bar-track">
+                  <div class="bar-fill actual" style="width:4.4%;"></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+              <div class="bar-wrap">
+                <div class="bar-label">EOY</div>
+                <div class="bar-track">
+                  <div class="bar-fill burn-ok" style="width:30.8%;"><span class="val">4.43%</span></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="rm-row safe">
+            <div class="rm-header">
+              <div class="rm-name">Steven Watkins</div>
+              <div class="rm-nums">
+                <span style="color:#16A34A;">0.55%</span>
+                <span style="color:#CBD5E1;">→</span>
+                <span style="color:#16A34A;">3.79%</span>
+              </div>
+            </div>
+            <div class="dual-bar">
+              <div class="bar-wrap">
+                <div class="bar-label">Now</div>
+                <div class="bar-track">
+                  <div class="bar-fill actual" style="width:3.8%;"></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+              <div class="bar-wrap">
+                <div class="bar-label">EOY</div>
+                <div class="bar-track">
+                  <div class="bar-fill burn-ok" style="width:26.3%;"><span class="val">3.79%</span></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="rm-row safe">
+            <div class="rm-header">
+              <div class="rm-name">Joseph Stockwell</div>
+              <div class="rm-nums">
+                <span style="color:#16A34A;">0.37%</span>
+                <span style="color:#CBD5E1;">→</span>
+                <span style="color:#16A34A;">2.55%</span>
+              </div>
+            </div>
+            <div class="dual-bar">
+              <div class="bar-wrap">
+                <div class="bar-label">Now</div>
+                <div class="bar-track">
+                  <div class="bar-fill actual" style="width:2.6%;"></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+              <div class="bar-wrap">
+                <div class="bar-label">EOY</div>
+                <div class="bar-track">
+                  <div class="bar-fill burn-ok" style="width:17.7%;"><span class="val">2.55%</span></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="rm-row safe">
+            <div class="rm-header">
+              <div class="rm-name">Bill Bee</div>
+              <div class="rm-nums">
+                <span style="color:#16A34A;">0.33%</span>
+                <span style="color:#CBD5E1;">→</span>
+                <span style="color:#16A34A;">2.28%</span>
+              </div>
+            </div>
+            <div class="dual-bar">
+              <div class="bar-wrap">
+                <div class="bar-label">Now</div>
+                <div class="bar-track">
+                  <div class="bar-fill actual" style="width:2.3%;"></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+              <div class="bar-wrap">
+                <div class="bar-label">EOY</div>
+                <div class="bar-track">
+                  <div class="bar-fill burn-ok" style="width:15.8%;"><span class="val">2.28%</span></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="dir-col">
+        <div class="dir-top">
+          <div class="dir-name">Donnie Chester</div>
+          <div class="dir-stats">
+            <div class="dir-pct">0.8%</div>
+            <div class="dir-sub">burn: 5.53% · 5 hot</div>
+          </div>
+        </div>
+        <div class="rm-list">
+          <div class="rm-row danger">
+            <div class="rm-header">
+              <div class="rm-name">Brandon Williams<span class="hot-badge">3 &gt;9%</span></div>
+              <div class="rm-nums">
+                <span style="color:#EA580C;">2.0%</span>
+                <span style="color:#CBD5E1;">→</span>
+                <span style="color:#DC2626;">13.75%</span>
+              </div>
+            </div>
+            <div class="dual-bar">
+              <div class="bar-wrap">
+                <div class="bar-label">Now</div>
+                <div class="bar-track">
+                  <div class="bar-fill actual" style="width:13.9%;"><span class="val">2.0%</span></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+              <div class="bar-wrap">
+                <div class="bar-label">EOY</div>
+                <div class="bar-track">
+                  <div class="bar-fill burn-danger" style="width:95.5%;"><span class="val">13.75%</span></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="rm-row ">
+            <div class="rm-header">
+              <div class="rm-name">Terry White<span class="hot-badge">1 &gt;9%</span></div>
+              <div class="rm-nums">
+                <span style="color:#16A34A;">0.92%</span>
+                <span style="color:#CBD5E1;">→</span>
+                <span style="color:#EA580C;">6.36%</span>
+              </div>
+            </div>
+            <div class="dual-bar">
+              <div class="bar-wrap">
+                <div class="bar-label">Now</div>
+                <div class="bar-track">
+                  <div class="bar-fill actual" style="width:6.4%;"></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+              <div class="bar-wrap">
+                <div class="bar-label">EOY</div>
+                <div class="bar-track">
+                  <div class="bar-fill burn-warn" style="width:44.2%;"><span class="val">6.36%</span></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="rm-row safe">
+            <div class="rm-header">
+              <div class="rm-name">Scottie Starr</div>
+              <div class="rm-nums">
+                <span style="color:#16A34A;">0.8%</span>
+                <span style="color:#CBD5E1;">→</span>
+                <span style="color:#16A34A;">5.49%</span>
+              </div>
+            </div>
+            <div class="dual-bar">
+              <div class="bar-wrap">
+                <div class="bar-label">Now</div>
+                <div class="bar-track">
+                  <div class="bar-fill actual" style="width:5.6%;"></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+              <div class="bar-wrap">
+                <div class="bar-label">EOY</div>
+                <div class="bar-track">
+                  <div class="bar-fill burn-ok" style="width:38.1%;"><span class="val">5.49%</span></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="rm-row safe">
+            <div class="rm-header">
+              <div class="rm-name">Richard Varela<span class="hot-badge">1 &gt;9%</span></div>
+              <div class="rm-nums">
+                <span style="color:#16A34A;">0.7%</span>
+                <span style="color:#CBD5E1;">→</span>
+                <span style="color:#16A34A;">4.82%</span>
+              </div>
+            </div>
+            <div class="dual-bar">
+              <div class="bar-wrap">
+                <div class="bar-label">Now</div>
+                <div class="bar-track">
+                  <div class="bar-fill actual" style="width:4.9%;"></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+              <div class="bar-wrap">
+                <div class="bar-label">EOY</div>
+                <div class="bar-track">
+                  <div class="bar-fill burn-ok" style="width:33.5%;"><span class="val">4.82%</span></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="rm-row safe">
+            <div class="rm-header">
+              <div class="rm-name">Scott Cameron</div>
+              <div class="rm-nums">
+                <span style="color:#16A34A;">0.46%</span>
+                <span style="color:#CBD5E1;">→</span>
+                <span style="color:#16A34A;">3.16%</span>
+              </div>
+            </div>
+            <div class="dual-bar">
+              <div class="bar-wrap">
+                <div class="bar-label">Now</div>
+                <div class="bar-track">
+                  <div class="bar-fill actual" style="width:3.2%;"></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+              <div class="bar-wrap">
+                <div class="bar-label">EOY</div>
+                <div class="bar-track">
+                  <div class="bar-fill burn-ok" style="width:21.9%;"><span class="val">3.16%</span></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="rm-row safe">
+            <div class="rm-header">
+              <div class="rm-name">Derrick Sharp</div>
+              <div class="rm-nums">
+                <span style="color:#16A34A;">0.43%</span>
+                <span style="color:#CBD5E1;">→</span>
+                <span style="color:#16A34A;">2.98%</span>
+              </div>
+            </div>
+            <div class="dual-bar">
+              <div class="bar-wrap">
+                <div class="bar-label">Now</div>
+                <div class="bar-track">
+                  <div class="bar-fill actual" style="width:3.0%;"></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+              <div class="bar-wrap">
+                <div class="bar-label">EOY</div>
+                <div class="bar-track">
+                  <div class="bar-fill burn-ok" style="width:20.7%;"><span class="val">2.98%</span></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="rm-row safe">
+            <div class="rm-header">
+              <div class="rm-name">Robert Peck</div>
+              <div class="rm-nums">
+                <span style="color:#16A34A;">0.29%</span>
+                <span style="color:#CBD5E1;">→</span>
+                <span style="color:#16A34A;">1.98%</span>
+              </div>
+            </div>
+            <div class="dual-bar">
+              <div class="bar-wrap">
+                <div class="bar-label">Now</div>
+                <div class="bar-track">
+                  <div class="bar-fill actual" style="width:2.0%;"></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+              <div class="bar-wrap">
+                <div class="bar-label">EOY</div>
+                <div class="bar-track">
+                  <div class="bar-fill burn-ok" style="width:13.8%;"><span class="val">1.98%</span></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="dir-col">
+        <div class="dir-top">
+          <div class="dir-name">Jack Grahek</div>
+          <div class="dir-stats">
+            <div class="dir-pct">1.17%</div>
+            <div class="dir-sub">burn: 8.03% · 9 hot</div>
+          </div>
+        </div>
+        <div class="rm-list">
+          <div class="rm-row danger">
+            <div class="rm-header">
+              <div class="rm-name">TJ Evans<span class="hot-badge">3 &gt;9%</span></div>
+              <div class="rm-nums">
+                <span style="color:#EA580C;">1.82%</span>
+                <span style="color:#CBD5E1;">→</span>
+                <span style="color:#DC2626;">12.55%</span>
+              </div>
+            </div>
+            <div class="dual-bar">
+              <div class="bar-wrap">
+                <div class="bar-label">Now</div>
+                <div class="bar-track">
+                  <div class="bar-fill actual" style="width:12.6%;"><span class="val">1.82%</span></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+              <div class="bar-wrap">
+                <div class="bar-label">EOY</div>
+                <div class="bar-track">
+                  <div class="bar-fill burn-danger" style="width:87.2%;"><span class="val">12.55%</span></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="rm-row ">
+            <div class="rm-header">
+              <div class="rm-name">Tony Frankovic<span class="hot-badge">2 &gt;9%</span></div>
+              <div class="rm-nums">
+                <span style="color:#EA580C;">1.2%</span>
+                <span style="color:#CBD5E1;">→</span>
+                <span style="color:#EA580C;">8.24%</span>
+              </div>
+            </div>
+            <div class="dual-bar">
+              <div class="bar-wrap">
+                <div class="bar-label">Now</div>
+                <div class="bar-track">
+                  <div class="bar-fill actual" style="width:8.3%;"><span class="val">1.2%</span></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+              <div class="bar-wrap">
+                <div class="bar-label">EOY</div>
+                <div class="bar-track">
+                  <div class="bar-fill burn-warn" style="width:57.2%;"><span class="val">8.24%</span></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="rm-row ">
+            <div class="rm-header">
+              <div class="rm-name">Justin Burner<span class="hot-badge">2 &gt;9%</span></div>
+              <div class="rm-nums">
+                <span style="color:#EA580C;">1.12%</span>
+                <span style="color:#CBD5E1;">→</span>
+                <span style="color:#EA580C;">7.74%</span>
+              </div>
+            </div>
+            <div class="dual-bar">
+              <div class="bar-wrap">
+                <div class="bar-label">Now</div>
+                <div class="bar-track">
+                  <div class="bar-fill actual" style="width:7.8%;"></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+              <div class="bar-wrap">
+                <div class="bar-label">EOY</div>
+                <div class="bar-track">
+                  <div class="bar-fill burn-warn" style="width:53.8%;"><span class="val">7.74%</span></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="rm-row safe">
+            <div class="rm-header">
+              <div class="rm-name">Ken Christensen<span class="hot-badge">1 &gt;9%</span></div>
+              <div class="rm-nums">
+                <span style="color:#16A34A;">0.83%</span>
+                <span style="color:#CBD5E1;">→</span>
+                <span style="color:#16A34A;">5.7%</span>
+              </div>
+            </div>
+            <div class="dual-bar">
+              <div class="bar-wrap">
+                <div class="bar-label">Now</div>
+                <div class="bar-track">
+                  <div class="bar-fill actual" style="width:5.8%;"></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+              <div class="bar-wrap">
+                <div class="bar-label">EOY</div>
+                <div class="bar-track">
+                  <div class="bar-fill burn-ok" style="width:39.6%;"><span class="val">5.7%</span></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="rm-row safe">
+            <div class="rm-header">
+              <div class="rm-name">Thomas Miller<span class="hot-badge">1 &gt;9%</span></div>
+              <div class="rm-nums">
+                <span style="color:#16A34A;">0.81%</span>
+                <span style="color:#CBD5E1;">→</span>
+                <span style="color:#16A34A;">5.55%</span>
+              </div>
+            </div>
+            <div class="dual-bar">
+              <div class="bar-wrap">
+                <div class="bar-label">Now</div>
+                <div class="bar-track">
+                  <div class="bar-fill actual" style="width:5.6%;"></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+              <div class="bar-wrap">
+                <div class="bar-label">EOY</div>
+                <div class="bar-track">
+                  <div class="bar-fill burn-ok" style="width:38.5%;"><span class="val">5.55%</span></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="dir-col">
+        <div class="dir-top">
+          <div class="dir-name">Josh Thaxton</div>
+          <div class="dir-stats">
+            <div class="dir-pct">0.86%</div>
+            <div class="dir-sub">burn: 5.91% · 1 hot</div>
+          </div>
+        </div>
+        <div class="rm-list">
+          <div class="rm-row danger">
+            <div class="rm-header">
+              <div class="rm-name">Jeff Mikesell<span class="hot-badge">1 &gt;9%</span></div>
+              <div class="rm-nums">
+                <span style="color:#EA580C;">1.38%</span>
+                <span style="color:#CBD5E1;">→</span>
+                <span style="color:#DC2626;">9.52%</span>
+              </div>
+            </div>
+            <div class="dual-bar">
+              <div class="bar-wrap">
+                <div class="bar-label">Now</div>
+                <div class="bar-track">
+                  <div class="bar-fill actual" style="width:9.6%;"><span class="val">1.38%</span></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+              <div class="bar-wrap">
+                <div class="bar-label">EOY</div>
+                <div class="bar-track">
+                  <div class="bar-fill burn-danger" style="width:66.1%;"><span class="val">9.52%</span></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="rm-row ">
+            <div class="rm-header">
+              <div class="rm-name">Bryan Archer</div>
+              <div class="rm-nums">
+                <span style="color:#EA580C;">1.08%</span>
+                <span style="color:#CBD5E1;">→</span>
+                <span style="color:#EA580C;">7.47%</span>
+              </div>
+            </div>
+            <div class="dual-bar">
+              <div class="bar-wrap">
+                <div class="bar-label">Now</div>
+                <div class="bar-track">
+                  <div class="bar-fill actual" style="width:7.5%;"></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+              <div class="bar-wrap">
+                <div class="bar-label">EOY</div>
+                <div class="bar-track">
+                  <div class="bar-fill burn-warn" style="width:51.9%;"><span class="val">7.47%</span></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="rm-row safe">
+            <div class="rm-header">
+              <div class="rm-name">Chad Pennington</div>
+              <div class="rm-nums">
+                <span style="color:#16A34A;">0.54%</span>
+                <span style="color:#CBD5E1;">→</span>
+                <span style="color:#16A34A;">3.72%</span>
+              </div>
+            </div>
+            <div class="dual-bar">
+              <div class="bar-wrap">
+                <div class="bar-label">Now</div>
+                <div class="bar-track">
+                  <div class="bar-fill actual" style="width:3.8%;"></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+              <div class="bar-wrap">
+                <div class="bar-label">EOY</div>
+                <div class="bar-track">
+                  <div class="bar-fill burn-ok" style="width:25.8%;"><span class="val">3.72%</span></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="rm-row safe">
+            <div class="rm-header">
+              <div class="rm-name">Mark Boatwright</div>
+              <div class="rm-nums">
+                <span style="color:#16A34A;">0.43%</span>
+                <span style="color:#CBD5E1;">→</span>
+                <span style="color:#16A34A;">2.95%</span>
+              </div>
+            </div>
+            <div class="dual-bar">
+              <div class="bar-wrap">
+                <div class="bar-label">Now</div>
+                <div class="bar-track">
+                  <div class="bar-fill actual" style="width:3.0%;"></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+              <div class="bar-wrap">
+                <div class="bar-label">EOY</div>
+                <div class="bar-track">
+                  <div class="bar-fill burn-ok" style="width:20.5%;"><span class="val">2.95%</span></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="dir-col">
+        <div class="dir-top">
+          <div class="dir-name">Sonya Webster</div>
+          <div class="dir-stats">
+            <div class="dir-pct">1.1%</div>
+            <div class="dir-sub">burn: 7.56% · 4 hot</div>
+          </div>
+        </div>
+        <div class="rm-list">
+          <div class="rm-row danger">
+            <div class="rm-header">
+              <div class="rm-name">Rob Beahl<span class="hot-badge">2 &gt;9%</span></div>
+              <div class="rm-nums">
+                <span style="color:#EA580C;">1.47%</span>
+                <span style="color:#CBD5E1;">→</span>
+                <span style="color:#DC2626;">10.13%</span>
+              </div>
+            </div>
+            <div class="dual-bar">
+              <div class="bar-wrap">
+                <div class="bar-label">Now</div>
+                <div class="bar-track">
+                  <div class="bar-fill actual" style="width:10.2%;"><span class="val">1.47%</span></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+              <div class="bar-wrap">
+                <div class="bar-label">EOY</div>
+                <div class="bar-track">
+                  <div class="bar-fill burn-danger" style="width:70.3%;"><span class="val">10.13%</span></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="rm-row ">
+            <div class="rm-header">
+              <div class="rm-name">Bradley Stotts<span class="hot-badge">1 &gt;9%</span></div>
+              <div class="rm-nums">
+                <span style="color:#EA580C;">1.12%</span>
+                <span style="color:#CBD5E1;">→</span>
+                <span style="color:#EA580C;">7.69%</span>
+              </div>
+            </div>
+            <div class="dual-bar">
+              <div class="bar-wrap">
+                <div class="bar-label">Now</div>
+                <div class="bar-track">
+                  <div class="bar-fill actual" style="width:7.8%;"></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+              <div class="bar-wrap">
+                <div class="bar-label">EOY</div>
+                <div class="bar-track">
+                  <div class="bar-fill burn-warn" style="width:53.4%;"><span class="val">7.69%</span></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="rm-row ">
+            <div class="rm-header">
+              <div class="rm-name">Vincent Copcutt<span class="hot-badge">1 &gt;9%</span></div>
+              <div class="rm-nums">
+                <span style="color:#EA580C;">1.0%</span>
+                <span style="color:#CBD5E1;">→</span>
+                <span style="color:#EA580C;">6.86%</span>
+              </div>
+            </div>
+            <div class="dual-bar">
+              <div class="bar-wrap">
+                <div class="bar-label">Now</div>
+                <div class="bar-track">
+                  <div class="bar-fill actual" style="width:6.9%;"></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+              <div class="bar-wrap">
+                <div class="bar-label">EOY</div>
+                <div class="bar-track">
+                  <div class="bar-fill burn-warn" style="width:47.6%;"><span class="val">6.86%</span></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="rm-row safe">
+            <div class="rm-header">
+              <div class="rm-name">Christian Campbell</div>
+              <div class="rm-nums">
+                <span style="color:#16A34A;">0.87%</span>
+                <span style="color:#CBD5E1;">→</span>
+                <span style="color:#16A34A;">5.98%</span>
+              </div>
+            </div>
+            <div class="dual-bar">
+              <div class="bar-wrap">
+                <div class="bar-label">Now</div>
+                <div class="bar-track">
+                  <div class="bar-fill actual" style="width:6.0%;"></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+              <div class="bar-wrap">
+                <div class="bar-label">EOY</div>
+                <div class="bar-track">
+                  <div class="bar-fill burn-ok" style="width:41.5%;"><span class="val">5.98%</span></div>
+                  <div class="thresh"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="callout">
+      <div class="callout-label"><span class="icon">🔥</span>HOT STORES</div>
+      <div class="callout-desc">Top 10 highest leak rate stores — prioritize for repair dispatches</div>
+      <div class="callout-chips"><div class="callout-chip"><span class="rate">33.35%</span>#6489 CALUMET CITY<span class="dir-tag">(Brandon Williams)</span></div><div class="callout-chip"><span class="rate">18.97%</span>#8174 MERRILLVILLE<span class="dir-tag">(DJ Czizek)</span></div><div class="callout-chip"><span class="rate">16.02%</span>#6678 PITTSBURGH<span class="dir-tag">(Jeff Mikesell)</span></div><div class="callout-chip"><span class="rate">15.46%</span>#4529 NEW LENOX<span class="dir-tag">(Brandon Williams)</span></div><div class="callout-chip"><span class="rate">14.42%</span>#8205 SAINT LOUIS<span class="dir-tag">(TJ Evans)</span></div><div class="callout-chip"><span class="rate">14.26%</span>#1210 NICHOLASVILLE<span class="dir-tag">(Bradley Stotts)</span></div><div class="callout-chip"><span class="rate">14.03%</span>#1998 SKOKIE<span class="dir-tag">(Richard Varela)</span></div><div class="callout-chip"><span class="rate">13.64%</span>#51 FULTON<span class="dir-tag">(Tony Frankovic)</span></div><div class="callout-chip"><span class="rate">12.38%</span>#2215 DARIEN<span class="dir-tag">(Brandon Williams)</span></div><div class="callout-chip"><span class="rate">12.29%</span>#1265 SAINT LOUIS<span class="dir-tag">(Justin Burner)</span></div></div>
+    </div>
+    <div class="footer"><span>★</span> Actual = CY Trigger Qty ÷ Static Charge &nbsp;•&nbsp; Burn Rate = annualized projection at current daily pace (661 lbs/day) &nbsp;•&nbsp; Threshold: 9%</div>
+  </div>
+</div>
+</body></html>
