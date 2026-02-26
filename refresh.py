@@ -63,7 +63,8 @@ SELECT
 FROM `re-crystal-mdm-prod.crystal.sc_workorder` w
 LEFT JOIN `re-crystal-mdm-prod.crystal.store_tabular_view` s
   ON SAFE_CAST(w.store_nbr AS INT64) = s.store_number
-WHERE w.problem_code_desc LIKE '%WIN THE WINTER%'
+WHERE (w.problem_code_desc LIKE '%WIN THE WINTER%'
+       OR w.tracking_nbr IN (326227454, 326227462))  -- Manual adds: stores 295 & 2694 (missing problem code)
   AND SAFE_CAST(w.store_nbr AS INT64) IS NOT NULL
   AND w.created_date >= '2025-06-01'
 ORDER BY SAFE_CAST(w.store_nbr AS INT64)
@@ -106,7 +107,8 @@ FROM `re-ods-prod.us_re_ods_prod_pub.sc_walmart_workorder_labor_performed` lp
 INNER JOIN (
   SELECT tracking_nbr
   FROM `re-crystal-mdm-prod.crystal.sc_workorder`
-  WHERE problem_code_desc LIKE '%WIN THE WINTER%'
+  WHERE (problem_code_desc LIKE '%WIN THE WINTER%'
+         OR tracking_nbr IN (326227454, 326227462))  -- Manual adds: stores 295 & 2694
     AND created_date >= '2025-06-01'
 ) wtw ON lp.tracking_number = wtw.tracking_nbr
 GROUP BY lp.tracking_number
