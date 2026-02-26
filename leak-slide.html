@@ -63,9 +63,11 @@
   .bar-fill.burn-ok { background: linear-gradient(90deg, #0071CE 0%, #60A5FA 40%, #FFC220 100%); }
   .bar-fill.burn-warn { background: linear-gradient(90deg, #0071CE 0%, #F59E0B 40%, #EA580C 100%); }
   .bar-fill.burn-danger { background: linear-gradient(90deg, #0071CE 0%, #EA580C 40%, #DC2626 100%); }
-  /* Threshold line */
-  .thresh { position: absolute; left: 62.5%; top: -2px; bottom: -2px; width: 1.5px; background: #1E293B; z-index: 2; }
-  .thresh::after { content: ''; position: absolute; top: -3px; left: -2px; width: 5px; height: 5px; background: #1E293B; border-radius: 50%; }
+  /* Threshold marker — only on EOY bars */
+  .thresh { display: none; }
+  .thresh::after { display: none; }
+  .burn-thresh { position: absolute; left: 62.5%; top: 0; bottom: 0; width: 0; border-left: 1.5px dashed #DC2626; z-index: 2; opacity: 0.5; }
+  .burn-thresh::after { content: '9%'; position: absolute; top: -8px; left: -6px; font-size: 6px; font-weight: 800; color: #DC2626; opacity: 0.8; }
   .bar-val { font-size: 8px; font-weight: 800; min-width: 28px; text-align: left; }
 
   .callout {
@@ -119,7 +121,7 @@
         <div class="ks" style="color:rgba(255,255,255,0.55);">vs 9% threshold</div>
       </div>
       <div class="kpi info">
-        <div class="kl">📈 Burn Rate (EOY)</div>
+        <div class="kl">📈 Burn Rate (EOY CY26)</div>
         <div class="kv" style="color:#16A34A;">6.06%</div>
         <div class="ks">Projected at current pace</div>
       </div>
@@ -142,7 +144,7 @@
 
     <div class="legend">
       <div class="legend-item"><div class="ldot" style="background:#0071CE;"></div>Actual (YTD)</div>
-      <div class="legend-item"><div class="ldot" style="background:linear-gradient(90deg,#0071CE,#FFC220);border:none;"></div>Burn → EOY Projection</div>
+      <div class="legend-item"><div class="ldot" style="background:linear-gradient(90deg,#0071CE,#FFC220);border:none;"></div>Burn → EOY CY26 Projection</div>
       <div class="legend-item"><div class="lline" style="background:#1E293B;"></div>9% Threshold</div>
       <div class="legend-item" style="color:#94A3B8;font-size:8px;">Bars scaled to 14%</div>
     </div>
@@ -171,15 +173,15 @@
                 <div class="bar-label">Now</div>
                 <div class="bar-track">
                   <div class="bar-fill actual" style="width:9.9%;"><span class="val">1.42%</span></div>
-                  <div class="thresh"></div>
-                </div>
+                  <div class="burn-thresh"></div>
+                                  </div>
               </div>
               <div class="bar-wrap">
-                <div class="bar-label">EOY</div>
+                <div class="bar-label">EOY CY26</div>
                 <div class="bar-track">
                   <div class="bar-fill burn-danger" style="width:67.7%;"><span class="val">9.75%</span></div>
-                  <div class="thresh"></div>
-                </div>
+                  <div class="burn-thresh"></div>
+                                  </div>
               </div>
             </div>
           </div>
@@ -197,15 +199,14 @@
                 <div class="bar-label">Now</div>
                 <div class="bar-track">
                   <div class="bar-fill actual" style="width:6.3%;"></div>
-                  <div class="thresh"></div>
-                </div>
+                                  </div>
               </div>
               <div class="bar-wrap">
-                <div class="bar-label">EOY</div>
+                <div class="bar-label">EOY CY26</div>
                 <div class="bar-track">
                   <div class="bar-fill burn-ok" style="width:43.7%;"><span class="val">6.29%</span></div>
-                  <div class="thresh"></div>
-                </div>
+                  <div class="burn-thresh"></div>
+                                  </div>
               </div>
             </div>
           </div>
@@ -223,15 +224,14 @@
                 <div class="bar-label">Now</div>
                 <div class="bar-track">
                   <div class="bar-fill actual" style="width:4.4%;"></div>
-                  <div class="thresh"></div>
-                </div>
+                                  </div>
               </div>
               <div class="bar-wrap">
-                <div class="bar-label">EOY</div>
+                <div class="bar-label">EOY CY26</div>
                 <div class="bar-track">
                   <div class="bar-fill burn-ok" style="width:30.8%;"><span class="val">4.43%</span></div>
-                  <div class="thresh"></div>
-                </div>
+                  <div class="burn-thresh"></div>
+                                  </div>
               </div>
             </div>
           </div>
@@ -249,15 +249,14 @@
                 <div class="bar-label">Now</div>
                 <div class="bar-track">
                   <div class="bar-fill actual" style="width:3.8%;"></div>
-                  <div class="thresh"></div>
-                </div>
+                                  </div>
               </div>
               <div class="bar-wrap">
-                <div class="bar-label">EOY</div>
+                <div class="bar-label">EOY CY26</div>
                 <div class="bar-track">
                   <div class="bar-fill burn-ok" style="width:26.3%;"><span class="val">3.79%</span></div>
-                  <div class="thresh"></div>
-                </div>
+                  <div class="burn-thresh"></div>
+                                  </div>
               </div>
             </div>
           </div>
@@ -275,15 +274,14 @@
                 <div class="bar-label">Now</div>
                 <div class="bar-track">
                   <div class="bar-fill actual" style="width:2.6%;"></div>
-                  <div class="thresh"></div>
-                </div>
+                                  </div>
               </div>
               <div class="bar-wrap">
-                <div class="bar-label">EOY</div>
+                <div class="bar-label">EOY CY26</div>
                 <div class="bar-track">
                   <div class="bar-fill burn-ok" style="width:17.7%;"><span class="val">2.55%</span></div>
-                  <div class="thresh"></div>
-                </div>
+                  <div class="burn-thresh"></div>
+                                  </div>
               </div>
             </div>
           </div>
@@ -301,15 +299,14 @@
                 <div class="bar-label">Now</div>
                 <div class="bar-track">
                   <div class="bar-fill actual" style="width:2.3%;"></div>
-                  <div class="thresh"></div>
-                </div>
+                                  </div>
               </div>
               <div class="bar-wrap">
-                <div class="bar-label">EOY</div>
+                <div class="bar-label">EOY CY26</div>
                 <div class="bar-track">
                   <div class="bar-fill burn-ok" style="width:15.8%;"><span class="val">2.28%</span></div>
-                  <div class="thresh"></div>
-                </div>
+                  <div class="burn-thresh"></div>
+                                  </div>
               </div>
             </div>
           </div>
@@ -338,15 +335,14 @@
                 <div class="bar-label">Now</div>
                 <div class="bar-track">
                   <div class="bar-fill actual" style="width:13.9%;"><span class="val">2.0%</span></div>
-                  <div class="thresh"></div>
-                </div>
+                                  </div>
               </div>
               <div class="bar-wrap">
-                <div class="bar-label">EOY</div>
+                <div class="bar-label">EOY CY26</div>
                 <div class="bar-track">
                   <div class="bar-fill burn-danger" style="width:95.5%;"><span class="val">13.75%</span></div>
-                  <div class="thresh"></div>
-                </div>
+                  <div class="burn-thresh"></div>
+                                  </div>
               </div>
             </div>
           </div>
@@ -364,15 +360,14 @@
                 <div class="bar-label">Now</div>
                 <div class="bar-track">
                   <div class="bar-fill actual" style="width:6.4%;"></div>
-                  <div class="thresh"></div>
-                </div>
+                                  </div>
               </div>
               <div class="bar-wrap">
-                <div class="bar-label">EOY</div>
+                <div class="bar-label">EOY CY26</div>
                 <div class="bar-track">
                   <div class="bar-fill burn-warn" style="width:44.2%;"><span class="val">6.36%</span></div>
-                  <div class="thresh"></div>
-                </div>
+                  <div class="burn-thresh"></div>
+                                  </div>
               </div>
             </div>
           </div>
@@ -390,15 +385,14 @@
                 <div class="bar-label">Now</div>
                 <div class="bar-track">
                   <div class="bar-fill actual" style="width:5.6%;"></div>
-                  <div class="thresh"></div>
-                </div>
+                                  </div>
               </div>
               <div class="bar-wrap">
-                <div class="bar-label">EOY</div>
+                <div class="bar-label">EOY CY26</div>
                 <div class="bar-track">
                   <div class="bar-fill burn-ok" style="width:38.1%;"><span class="val">5.49%</span></div>
-                  <div class="thresh"></div>
-                </div>
+                  <div class="burn-thresh"></div>
+                                  </div>
               </div>
             </div>
           </div>
@@ -416,15 +410,14 @@
                 <div class="bar-label">Now</div>
                 <div class="bar-track">
                   <div class="bar-fill actual" style="width:4.9%;"></div>
-                  <div class="thresh"></div>
-                </div>
+                                  </div>
               </div>
               <div class="bar-wrap">
-                <div class="bar-label">EOY</div>
+                <div class="bar-label">EOY CY26</div>
                 <div class="bar-track">
                   <div class="bar-fill burn-ok" style="width:33.5%;"><span class="val">4.82%</span></div>
-                  <div class="thresh"></div>
-                </div>
+                  <div class="burn-thresh"></div>
+                                  </div>
               </div>
             </div>
           </div>
@@ -442,15 +435,14 @@
                 <div class="bar-label">Now</div>
                 <div class="bar-track">
                   <div class="bar-fill actual" style="width:3.2%;"></div>
-                  <div class="thresh"></div>
-                </div>
+                                  </div>
               </div>
               <div class="bar-wrap">
-                <div class="bar-label">EOY</div>
+                <div class="bar-label">EOY CY26</div>
                 <div class="bar-track">
                   <div class="bar-fill burn-ok" style="width:21.9%;"><span class="val">3.16%</span></div>
-                  <div class="thresh"></div>
-                </div>
+                  <div class="burn-thresh"></div>
+                                  </div>
               </div>
             </div>
           </div>
@@ -468,15 +460,14 @@
                 <div class="bar-label">Now</div>
                 <div class="bar-track">
                   <div class="bar-fill actual" style="width:3.0%;"></div>
-                  <div class="thresh"></div>
-                </div>
+                                  </div>
               </div>
               <div class="bar-wrap">
-                <div class="bar-label">EOY</div>
+                <div class="bar-label">EOY CY26</div>
                 <div class="bar-track">
                   <div class="bar-fill burn-ok" style="width:20.7%;"><span class="val">2.98%</span></div>
-                  <div class="thresh"></div>
-                </div>
+                  <div class="burn-thresh"></div>
+                                  </div>
               </div>
             </div>
           </div>
@@ -494,15 +485,14 @@
                 <div class="bar-label">Now</div>
                 <div class="bar-track">
                   <div class="bar-fill actual" style="width:2.0%;"></div>
-                  <div class="thresh"></div>
-                </div>
+                                  </div>
               </div>
               <div class="bar-wrap">
-                <div class="bar-label">EOY</div>
+                <div class="bar-label">EOY CY26</div>
                 <div class="bar-track">
                   <div class="bar-fill burn-ok" style="width:13.8%;"><span class="val">1.98%</span></div>
-                  <div class="thresh"></div>
-                </div>
+                  <div class="burn-thresh"></div>
+                                  </div>
               </div>
             </div>
           </div>
@@ -531,15 +521,14 @@
                 <div class="bar-label">Now</div>
                 <div class="bar-track">
                   <div class="bar-fill actual" style="width:12.6%;"><span class="val">1.82%</span></div>
-                  <div class="thresh"></div>
-                </div>
+                                  </div>
               </div>
               <div class="bar-wrap">
-                <div class="bar-label">EOY</div>
+                <div class="bar-label">EOY CY26</div>
                 <div class="bar-track">
                   <div class="bar-fill burn-danger" style="width:87.2%;"><span class="val">12.55%</span></div>
-                  <div class="thresh"></div>
-                </div>
+                  <div class="burn-thresh"></div>
+                                  </div>
               </div>
             </div>
           </div>
@@ -557,15 +546,14 @@
                 <div class="bar-label">Now</div>
                 <div class="bar-track">
                   <div class="bar-fill actual" style="width:8.3%;"><span class="val">1.2%</span></div>
-                  <div class="thresh"></div>
-                </div>
+                                  </div>
               </div>
               <div class="bar-wrap">
-                <div class="bar-label">EOY</div>
+                <div class="bar-label">EOY CY26</div>
                 <div class="bar-track">
                   <div class="bar-fill burn-warn" style="width:57.2%;"><span class="val">8.24%</span></div>
-                  <div class="thresh"></div>
-                </div>
+                  <div class="burn-thresh"></div>
+                                  </div>
               </div>
             </div>
           </div>
@@ -583,15 +571,14 @@
                 <div class="bar-label">Now</div>
                 <div class="bar-track">
                   <div class="bar-fill actual" style="width:7.8%;"></div>
-                  <div class="thresh"></div>
-                </div>
+                                  </div>
               </div>
               <div class="bar-wrap">
-                <div class="bar-label">EOY</div>
+                <div class="bar-label">EOY CY26</div>
                 <div class="bar-track">
                   <div class="bar-fill burn-warn" style="width:53.8%;"><span class="val">7.74%</span></div>
-                  <div class="thresh"></div>
-                </div>
+                  <div class="burn-thresh"></div>
+                                  </div>
               </div>
             </div>
           </div>
@@ -609,15 +596,14 @@
                 <div class="bar-label">Now</div>
                 <div class="bar-track">
                   <div class="bar-fill actual" style="width:5.8%;"></div>
-                  <div class="thresh"></div>
-                </div>
+                                  </div>
               </div>
               <div class="bar-wrap">
-                <div class="bar-label">EOY</div>
+                <div class="bar-label">EOY CY26</div>
                 <div class="bar-track">
                   <div class="bar-fill burn-ok" style="width:39.6%;"><span class="val">5.7%</span></div>
-                  <div class="thresh"></div>
-                </div>
+                  <div class="burn-thresh"></div>
+                                  </div>
               </div>
             </div>
           </div>
@@ -635,15 +621,14 @@
                 <div class="bar-label">Now</div>
                 <div class="bar-track">
                   <div class="bar-fill actual" style="width:5.6%;"></div>
-                  <div class="thresh"></div>
-                </div>
+                                  </div>
               </div>
               <div class="bar-wrap">
-                <div class="bar-label">EOY</div>
+                <div class="bar-label">EOY CY26</div>
                 <div class="bar-track">
                   <div class="bar-fill burn-ok" style="width:38.5%;"><span class="val">5.55%</span></div>
-                  <div class="thresh"></div>
-                </div>
+                  <div class="burn-thresh"></div>
+                                  </div>
               </div>
             </div>
           </div>
@@ -672,15 +657,14 @@
                 <div class="bar-label">Now</div>
                 <div class="bar-track">
                   <div class="bar-fill actual" style="width:9.6%;"><span class="val">1.38%</span></div>
-                  <div class="thresh"></div>
-                </div>
+                                  </div>
               </div>
               <div class="bar-wrap">
-                <div class="bar-label">EOY</div>
+                <div class="bar-label">EOY CY26</div>
                 <div class="bar-track">
                   <div class="bar-fill burn-danger" style="width:66.1%;"><span class="val">9.52%</span></div>
-                  <div class="thresh"></div>
-                </div>
+                  <div class="burn-thresh"></div>
+                                  </div>
               </div>
             </div>
           </div>
@@ -698,15 +682,14 @@
                 <div class="bar-label">Now</div>
                 <div class="bar-track">
                   <div class="bar-fill actual" style="width:7.5%;"></div>
-                  <div class="thresh"></div>
-                </div>
+                                  </div>
               </div>
               <div class="bar-wrap">
-                <div class="bar-label">EOY</div>
+                <div class="bar-label">EOY CY26</div>
                 <div class="bar-track">
                   <div class="bar-fill burn-warn" style="width:51.9%;"><span class="val">7.47%</span></div>
-                  <div class="thresh"></div>
-                </div>
+                  <div class="burn-thresh"></div>
+                                  </div>
               </div>
             </div>
           </div>
@@ -724,15 +707,14 @@
                 <div class="bar-label">Now</div>
                 <div class="bar-track">
                   <div class="bar-fill actual" style="width:3.8%;"></div>
-                  <div class="thresh"></div>
-                </div>
+                                  </div>
               </div>
               <div class="bar-wrap">
-                <div class="bar-label">EOY</div>
+                <div class="bar-label">EOY CY26</div>
                 <div class="bar-track">
                   <div class="bar-fill burn-ok" style="width:25.8%;"><span class="val">3.72%</span></div>
-                  <div class="thresh"></div>
-                </div>
+                  <div class="burn-thresh"></div>
+                                  </div>
               </div>
             </div>
           </div>
@@ -750,15 +732,14 @@
                 <div class="bar-label">Now</div>
                 <div class="bar-track">
                   <div class="bar-fill actual" style="width:3.0%;"></div>
-                  <div class="thresh"></div>
-                </div>
+                                  </div>
               </div>
               <div class="bar-wrap">
-                <div class="bar-label">EOY</div>
+                <div class="bar-label">EOY CY26</div>
                 <div class="bar-track">
                   <div class="bar-fill burn-ok" style="width:20.5%;"><span class="val">2.95%</span></div>
-                  <div class="thresh"></div>
-                </div>
+                  <div class="burn-thresh"></div>
+                                  </div>
               </div>
             </div>
           </div>
@@ -787,15 +768,14 @@
                 <div class="bar-label">Now</div>
                 <div class="bar-track">
                   <div class="bar-fill actual" style="width:10.2%;"><span class="val">1.47%</span></div>
-                  <div class="thresh"></div>
-                </div>
+                                  </div>
               </div>
               <div class="bar-wrap">
-                <div class="bar-label">EOY</div>
+                <div class="bar-label">EOY CY26</div>
                 <div class="bar-track">
                   <div class="bar-fill burn-danger" style="width:70.3%;"><span class="val">10.13%</span></div>
-                  <div class="thresh"></div>
-                </div>
+                  <div class="burn-thresh"></div>
+                                  </div>
               </div>
             </div>
           </div>
@@ -813,15 +793,14 @@
                 <div class="bar-label">Now</div>
                 <div class="bar-track">
                   <div class="bar-fill actual" style="width:7.8%;"></div>
-                  <div class="thresh"></div>
-                </div>
+                                  </div>
               </div>
               <div class="bar-wrap">
-                <div class="bar-label">EOY</div>
+                <div class="bar-label">EOY CY26</div>
                 <div class="bar-track">
                   <div class="bar-fill burn-warn" style="width:53.4%;"><span class="val">7.69%</span></div>
-                  <div class="thresh"></div>
-                </div>
+                  <div class="burn-thresh"></div>
+                                  </div>
               </div>
             </div>
           </div>
@@ -839,15 +818,14 @@
                 <div class="bar-label">Now</div>
                 <div class="bar-track">
                   <div class="bar-fill actual" style="width:6.9%;"></div>
-                  <div class="thresh"></div>
-                </div>
+                                  </div>
               </div>
               <div class="bar-wrap">
-                <div class="bar-label">EOY</div>
+                <div class="bar-label">EOY CY26</div>
                 <div class="bar-track">
                   <div class="bar-fill burn-warn" style="width:47.6%;"><span class="val">6.86%</span></div>
-                  <div class="thresh"></div>
-                </div>
+                  <div class="burn-thresh"></div>
+                                  </div>
               </div>
             </div>
           </div>
@@ -865,15 +843,14 @@
                 <div class="bar-label">Now</div>
                 <div class="bar-track">
                   <div class="bar-fill actual" style="width:6.0%;"></div>
-                  <div class="thresh"></div>
-                </div>
+                                  </div>
               </div>
               <div class="bar-wrap">
-                <div class="bar-label">EOY</div>
+                <div class="bar-label">EOY CY26</div>
                 <div class="bar-track">
                   <div class="bar-fill burn-ok" style="width:41.5%;"><span class="val">5.98%</span></div>
-                  <div class="thresh"></div>
-                </div>
+                  <div class="burn-thresh"></div>
+                                  </div>
               </div>
             </div>
           </div>
@@ -885,7 +862,7 @@
       <div class="callout-desc">Top 10 highest leak rate stores — prioritize for repair dispatches</div>
       <div class="callout-chips"><div class="callout-chip"><span class="rate">33.35%</span>#6489 CALUMET CITY<span class="dir-tag">(Brandon Williams)</span></div><div class="callout-chip"><span class="rate">18.97%</span>#8174 MERRILLVILLE<span class="dir-tag">(DJ Czizek)</span></div><div class="callout-chip"><span class="rate">16.02%</span>#6678 PITTSBURGH<span class="dir-tag">(Jeff Mikesell)</span></div><div class="callout-chip"><span class="rate">15.46%</span>#4529 NEW LENOX<span class="dir-tag">(Brandon Williams)</span></div><div class="callout-chip"><span class="rate">14.42%</span>#8205 SAINT LOUIS<span class="dir-tag">(TJ Evans)</span></div><div class="callout-chip"><span class="rate">14.26%</span>#1210 NICHOLASVILLE<span class="dir-tag">(Bradley Stotts)</span></div><div class="callout-chip"><span class="rate">14.03%</span>#1998 SKOKIE<span class="dir-tag">(Richard Varela)</span></div><div class="callout-chip"><span class="rate">13.64%</span>#51 FULTON<span class="dir-tag">(Tony Frankovic)</span></div><div class="callout-chip"><span class="rate">12.38%</span>#2215 DARIEN<span class="dir-tag">(Brandon Williams)</span></div><div class="callout-chip"><span class="rate">12.29%</span>#1265 SAINT LOUIS<span class="dir-tag">(Justin Burner)</span></div></div>
     </div>
-    <div class="footer"><span>★</span> Actual = CY Trigger Qty ÷ Static Charge &nbsp;•&nbsp; Burn Rate = annualized projection at current daily pace (661 lbs/day) &nbsp;•&nbsp; Threshold: 9%</div>
+    <div class="footer"><span>★</span> Actual = CY Trigger Qty ÷ Static Charge &nbsp;•&nbsp; Burn Rate = EOY CY26 annualized projection at current daily pace (661 lbs/day) &nbsp;•&nbsp; Threshold: 9%</div>
   </div>
 </div>
 </body></html>

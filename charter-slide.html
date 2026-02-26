@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; background: white; color: #1E293B; }
+  .slide { width: 1280px; height: 720px; margin: 0 auto; display: flex; flex-direction: column; overflow: hidden; background: white; }
+  .banner { background: linear-gradient(135deg, #0071CE 0%, #004C91 100%); padding: 14px 32px; display: flex; justify-content: space-between; align-items: center; }
+  .banner-left { display: flex; align-items: center; gap: 14px; }
+  .banner h1 { font-size: 24px; font-weight: 800; color: white; }
+  .banner .divider { width: 2px; height: 24px; background: rgba(255,194,32,0.5); border-radius: 1px; }
+  .banner .sub { font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.9); }
+  .banner-right { text-align: right; }
+  .banner-org { font-size: 12px; font-weight: 600; color: #FFC220; }
+  .banner-date { font-size: 10px; color: rgba(255,255,255,0.6); margin-top: 2px; }
+  .gold-bar { height: 4px; background: linear-gradient(90deg, #FFC220 0%, #FFD860 50%, #FFC220 100%); }
+  .body { flex: 1; padding: 20px 40px 12px; display: flex; gap: 28px; min-height: 0; }
+
+  /* Left panel */
+  .left { flex: 0 0 180px; display: flex; flex-direction: column; gap: 12px; }
+  .members-card { background: #F7F9FC; border: 1.5px solid #E2E8F0; border-radius: 10px; padding: 14px 14px; }
+  .members-card h3 { font-size: 7px; text-transform: uppercase; letter-spacing: 1.4px; font-weight: 700; color: #94A3B8; margin-bottom: 10px; text-align: center; }
+  .member { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+  .avatar { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 800; color: white; flex-shrink: 0; }
+  .member-name { font-size: 11px; font-weight: 600; color: #1E293B; }
+
+  .score-ring { text-align: center; background: #F7F9FC; border: 1.5px solid #E2E8F0; border-radius: 10px; padding: 14px; }
+  .score-ring h3 { font-size: 7px; text-transform: uppercase; letter-spacing: 1.4px; font-weight: 700; color: #94A3B8; margin-bottom: 8px; }
+  .ring-wrap { position: relative; width: 100px; height: 100px; margin: 0 auto; }
+  .ring-label { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); }
+  .ring-pct { font-size: 26px; font-weight: 900; color: #0071CE; line-height: 1; }
+  .ring-sub { font-size: 8px; color: #94A3B8; font-weight: 600; }
+  .mini-stats { display: flex; justify-content: center; gap: 10px; margin-top: 10px; }
+  .mini-stat { text-align: center; }
+  .mini-stat .v { font-size: 16px; font-weight: 900; line-height: 1; }
+  .mini-stat .l { font-size: 6px; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 700; color: #94A3B8; margin-top: 2px; }
+
+  /* Right panel — bars */
+  .right { flex: 1; display: flex; flex-direction: column; gap: 0; min-height: 0; }
+
+  .section-label { font-size: 7px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; color: #94A3B8; padding: 6px 0 4px; border-bottom: 1px solid #F1F5F9; margin-bottom: 2px; }
+  .section-label:not(:first-child) { margin-top: 6px; }
+
+  .init-row { display: flex; align-items: center; gap: 0; height: 30px; }
+  .init-name { flex: 0 0 250px; font-size: 11px; font-weight: 600; color: #334155; text-align: right; padding-right: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .init-track { flex: 1; height: 18px; background: #F1F5F9; border-radius: 3px; position: relative; overflow: visible; }
+  .init-fill { height: 100%; border-radius: 3px; display: flex; align-items: center; padding-left: 8px; font-size: 7px; font-weight: 800; letter-spacing: 0.3px; }
+  .init-fill.done { background: #16A34A; color: white; width: 100%; }
+  .init-fill.live { background: linear-gradient(90deg, #0071CE, #3B82F6); color: white; width: 100%; }
+  .init-fill.ip { background: linear-gradient(90deg, #FFC220, #F59E0B); color: #78350F; }
+  .init-fill.ns { background: #E2E8F0; width: 0%; }
+  .init-tag { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); font-size: 7px; font-weight: 700; color: #B0B8C4; letter-spacing: 0.3px; }
+
+  .footer { text-align: center; font-size: 9px; color: #B0B8C4; margin-top: auto; padding-top: 6px; border-top: 1px solid #EEF0F4; }
+  .footer span { color: #FFC220; font-weight: 700; }
+</style>
+</head><body>
+<div class="slide">
+  <div class="banner">
+    <div class="banner-left">
+      <h1>Refrigeration Quality</h1>
+      <div class="divider"></div>
+      <div class="sub">Charter Update</div>
+    </div>
+    <div class="banner-right">
+      <div class="banner-org">North BU — Upstream Facilities</div>
+      <div class="banner-date">February 2026</div>
+    </div>
+  </div>
+  <div class="gold-bar"></div>
+  <div class="body">
+
+    <div class="left">
+      <div class="members-card">
+        <h3>Charter Members</h3>
+        <div class="member"><div class="avatar" style="background:#0071CE;">JS</div><div class="member-name">James Savage</div></div>
+        <div class="member"><div class="avatar" style="background:#005BA1;">DS</div><div class="member-name">Derrick Sharp</div></div>
+        <div class="member"><div class="avatar" style="background:#0071CE;">TF</div><div class="member-name">Tony Frankovic</div></div>
+        <div class="member"><div class="avatar" style="background:#004C91;">JS</div><div class="member-name">Joe Stockwell</div></div>
+        <div class="member"><div class="avatar" style="background:#005BA1;">BS</div><div class="member-name">Bradley Stotts</div></div>
+        <div class="member"><div class="avatar" style="background:#004C91;">CP</div><div class="member-name">Chad Pennington</div></div>
+      </div>
+
+      <div class="score-ring">
+        <h3>Overall Progress</h3>
+        <div class="ring-wrap">
+          <svg width="100" height="100" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="42" fill="none" stroke="#F1F5F9" stroke-width="8"/>
+            <circle cx="50" cy="50" r="42" fill="none" stroke="url(#rg)" stroke-width="8"
+              stroke-dasharray="264" stroke-dashoffset="75" stroke-linecap="round"
+              transform="rotate(-90 50 50)"/>
+            <defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#0071CE"/>
+              <stop offset="100%" stop-color="#FFC220"/>
+            </linearGradient></defs>
+          </svg>
+          <div class="ring-label">
+            <div class="ring-pct">71%</div>
+            <div class="ring-sub">10 of 14</div>
+          </div>
+        </div>
+        <div class="mini-stats">
+          <div class="mini-stat"><div class="v" style="color:#16A34A;">3</div><div class="l">Done</div></div>
+          <div class="mini-stat"><div class="v" style="color:#F59E0B;">7</div><div class="l">Active</div></div>
+          <div class="mini-stat"><div class="v" style="color:#CBD5E1;">4</div><div class="l">Next</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="right">
+
+      <div class="section-label">✓ Complete</div>
+      <div class="init-row">
+        <div class="init-name">Own The Orange</div>
+        <div class="init-track"><div class="init-fill done">✓ COMPLETE</div></div>
+      </div>
+      <div class="init-row">
+        <div class="init-name">Crystal Charter Training</div>
+        <div class="init-track"><div class="init-fill done">✓ COMPLETE</div></div>
+      </div>
+      <div class="init-row">
+        <div class="init-name" style="color:#0071CE;font-weight:800;">Refrigerant Tracking Dashboard</div>
+        <div class="init-track"><div class="init-fill live">★ DEPLOYED THIS WEEK</div></div>
+      </div>
+
+      <div class="section-label">In Progress</div>
+      <div class="init-row">
+        <div class="init-name">Crystal Training Guide</div>
+        <div class="init-track"><div class="init-fill ip" style="width:85%;"></div><div class="init-tag">Final Draft</div></div>
+      </div>
+      <div class="init-row">
+        <div class="init-name">Badge / Category Creation</div>
+        <div class="init-track"><div class="init-fill ip" style="width:70%;"></div><div class="init-tag">Defining Criteria</div></div>
+      </div>
+      <div class="init-row">
+        <div class="init-name">ZE Checklist SOP</div>
+        <div class="init-track"><div class="init-fill ip" style="width:65%;"></div><div class="init-tag">MCM Alignment</div></div>
+      </div>
+      <div class="init-row">
+        <div class="init-name">PC Badges / LMS Program</div>
+        <div class="init-track"><div class="init-fill ip" style="width:50%;"></div><div class="init-tag">With LMS Team</div></div>
+      </div>
+      <div class="init-row">
+        <div class="init-name">Targeted Crystal Trainings</div>
+        <div class="init-track"><div class="init-fill ip" style="width:45%;"></div><div class="init-tag">Scheduling</div></div>
+      </div>
+      <div class="init-row">
+        <div class="init-name">Crystal Interactive ULearns</div>
+        <div class="init-track"><div class="init-fill ip" style="width:35%;"></div><div class="init-tag">Building</div></div>
+      </div>
+      <div class="init-row">
+        <div class="init-name">Crystal LOFSM Videos</div>
+        <div class="init-track"><div class="init-fill ip" style="width:30%;"></div><div class="init-tag">Editing</div></div>
+      </div>
+
+      <div class="section-label">Pipeline</div>
+      <div class="init-row">
+        <div class="init-name" style="color:#94A3B8;">Cold/Hot Weather Exception Report</div>
+        <div class="init-track"><div class="init-fill ns"></div><div class="init-tag">Planned</div></div>
+      </div>
+      <div class="init-row">
+        <div class="init-name" style="color:#94A3B8;">OTO Manager Training</div>
+        <div class="init-track"><div class="init-fill ns"></div><div class="init-tag">Planned</div></div>
+      </div>
+      <div class="init-row">
+        <div class="init-name" style="color:#94A3B8;">TCO2/CO2 Response Support</div>
+        <div class="init-track"><div class="init-fill ns"></div><div class="init-tag">Planned</div></div>
+      </div>
+      <div class="init-row">
+        <div class="init-name" style="color:#94A3B8;">Crystal Report Overhaul</div>
+        <div class="init-track"><div class="init-fill ns"></div><div class="init-tag">Planned</div></div>
+      </div>
+
+    </div>
+
+  </div>
+  <div class="footer"><span>★</span> Refrigeration Quality Charter &nbsp;•&nbsp; North BU &nbsp;•&nbsp; 14 Initiatives</div>
+</div>
+</body></html>
